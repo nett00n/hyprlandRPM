@@ -464,7 +464,7 @@ packages:
     license: BSD-3-Clause
     summary: An idle management daemon for Hyprland
     description: |
-      FIXME
+      Hyprland's idle daemon
     url: https://github.com/hyprwm/hypridle
     sources:
       - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
@@ -493,7 +493,7 @@ packages:
     license: BSD-3-Clause
     summary: A gpu-accelerated screen lock for Hyprland
     description: |
-      FIXME
+      Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility.
     url: https://github.com/hyprwm/hyprlock
     sources:
       - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
@@ -598,31 +598,31 @@ packages:
 
       This project is still in early development. I'm working on adding docs and improving the protocol, but it's not set in stone yet.
 
-    url: https://github.com/hyprwm/hyprtavern
-    commit:
-      full: 946aa84275af9c97773935b94c1f9cbd4dc3286b
-      date: "20260131"
+  hyprland-guiutils:
+    version: "0.2.1"
+    release: "%autorelease"
+    license: BSD-3-Clause
+    summary: Hyprland GUI utilities
+    description: |
+      Hyprland GUI utilities (successor to hyprland-qtutils)
+    url: https://github.com/hyprwm/hyprland-guiutils
     sources:
-      - url: "%{url}/archive/%{commit}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
     build_system: cmake
-    bundled_deps:
-      - name: glaze
-        version: "7.0.0"
-        url: "https://github.com/stephenberry/glaze/archive/refs/tags/v7.0.0.tar.gz"
     build_requires:
+      - aquamarine-devel
       - cmake
-      - ninja-build
       - gcc-c++
-      - pkgconfig(hyprutils)
-      - pkgconfig(hyprwire)
+      - hyprgraphics-devel
+      - ninja-build
+      - pkgconfig(cairo)
       - pkgconfig(hyprlang)
-      - pkgconfig(uuid)
-      - pkgconfig(openssl)
       - pkgconfig(hyprtoolkit)
-      - pkgconfig(pixman-1)
+      - pkgconfig(hyprutils)
       - pkgconfig(libdrm)
-      - hyprwire-devel
+      - pkgconfig(pixman-1)
+      - pkgconfig(xkbcommon)
     files:
-      - "%license LICENSE"
       - "%doc README.md"
-      - # FIXME: add installed files
+      - "%license LICENSE"
+      - "%{_prefix}/bin/hyprland-*"
