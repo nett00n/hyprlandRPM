@@ -27,6 +27,7 @@ from lib.paths import LOG_DIR, ROOT
 from lib.reporting import print_summary
 from lib.yaml_utils import (
     BUILD_STATUS_YAML,
+    STAGES,
     filter_packages,
     get_packages,
     load_build_status,
@@ -35,6 +36,25 @@ from lib.yaml_utils import (
 
 PYTHON = sys.executable
 SCRIPTS = ROOT / "scripts"
+
+
+def print_proceed_status(packages: dict, build_status: dict, copr_repo: str) -> None:
+    """Print per-package per-stage status when resuming with PROCEED_BUILD=true."""
+    stages = STAGES if copr_repo else [s for s in STAGES if s != "copr"]
+    status_label = {"success": "skip", "failed": "retry", None: "run"}
+    print("\nPROCEED_BUILD=true — resuming from existing build-status.yaml")
+    print(f"  {'package':<30} " + "  ".join(f"{s:<8}" for s in stages))
+    print("  " + "-" * (30 + 10 * len(stages)))
+    for pkg in packages:
+        row = []
+        for stage in stages:
+            state = (
+                build_status.get("stages", {}).get(stage, {}).get(pkg, {}).get("state")
+            )
+            label = status_label.get(state, state or "run")
+            row.append(f"{label:<8}")
+        print(f"  {pkg:<30} " + "  ".join(row))
+    print()
 
 
 def run_stage(script: Path, env: dict) -> bool:
@@ -64,16 +84,28 @@ def main() -> None:
     if package_filter:
         graph = build_dep_graph(all_packages)
         expanded: dict = {}
+        dep_reason: dict[str, str] = {}  # dep -> "pulled in by <name>"
         for name in packages:
             for dep in transitive_deps(name, graph):
                 if dep not in expanded:
                     expanded[dep] = all_packages[dep]
+                    dep_reason[dep] = name
             expanded[name] = all_packages[name]
         try:
             order = topological_sort({k: graph[k] & set(expanded) for k in expanded})
         except ValueError as e:
             sys.exit(f"error: {e}")
         packages = {k: expanded[k] for k in order if k in expanded}
+
+        requested = {n.strip() for n in package_filter.split(",") if n.strip()}
+        print(f"\nPackage build plan ({len(packages)} total):")
+        for pkg in order:
+            if pkg not in expanded:
+                continue
+            reason = (
+                "" if pkg in requested else f"  (dep of {dep_reason.get(pkg, '?')})"
+            )
+            print(f"  {pkg}{reason}")
 
     LOG_DIR.mkdir(exist_ok=True)
     # Clean old logs for selected packages
@@ -89,6 +121,7 @@ def main() -> None:
         build_status.setdefault("run", {})["timestamp"] = datetime.now(
             timezone.utc
         ).isoformat(timespec="seconds")
+        print_proceed_status(packages, build_status, copr_repo)
     else:
         build_status = {
             "run": {

@@ -1,17 +1,17 @@
-# Single source of truth for all package metadata.
-# Run `make gen-spec PKG=<name>` (or `make gen-spec` for all) to regenerate spec files.
+# Single source of truth for all package metadata
+# Run `make gen-spec PKG=<name>` (or `make gen-spec` for all) to regenerate spec files
 #
 # build_system: cmake | meson | autotools | make
-# sources: list of dicts with `url:` key; index (Source0, Source1, ...) is auto-assigned.
-# files: RPM macros like %{_bindir} are passed through verbatim.
-# build_requires / requires: use pkgconfig() form where possible.
+# sources: list of dicts with `url:` key; index (Source0, Source1, ...) is auto-assigned
+# files: RPM macros like %{_bindir} are passed through verbatim
+# build_requires / requires: use pkgconfig() form where possible
 #
 # ORDER OF PACKAGES IS IMPORTANT BECAUSE OF PACKAGES DEPENDENCIES
 # Prefixes list can be checked in docs/rpm-dir-prefixes.md
 # automated prefix <-> absolute path converter in scripts/rpm-dir-prefixes-convert.py
 #
-# groups: logical groupings for the build report. A package may belong to several groups.
-# documents.badge_style: shields.io style for all badges (e.g. for-the-badge, flat, flat-square).
+# groups: logical groupings for the build report. A package may belong to several groups
+# documents.badge_style: shields.io style for all badges (e.g. for-the-badge, flat, flat-square)
 
 repo:
   name: Hyprland Copr automation bundle for Fedora Linux
@@ -20,24 +20,25 @@ repo:
     alt: logo
   license: GPLv3
   license_tldr: |
-    **TL;DR** — You are free to use, modify, and distribute this software.
+    **TL;DR** — You are free to use, modify, and distribute this software
     If you distribute a modified version, you must release it under GPLv3
-    as well and make the source available. No warranty is provided.
+    as well and make the source available. No warranty is provided
   description: |
-    This repo provides automations for managing COPR repo `nett00n/hyprland`.
-    `nett00n/hyprland` COPR repo provides packages of official and non-official
+    This repo provides automations for managing COPR repo `nett00n/hyprland`
+
+    `nett00n/hyprland` COPR repo provides both official and non-official
     but useful packages to running Hyprland on your Fedora system
 
-    [📎 Officially recommended](https://wiki.hypr.land/Getting-Started/Installation/#packages) repo solopasha/hyprland ([📎 Git](https://github.com/solopasha/hyprlandRPM/tree/master), [📎 solopasha/hyprland COPR](https://copr.fedorainfracloud.org/coprs/solopasha/hyprland/)) seems to be abandoned: it has no commits in last 4+ month now
+    [📎 Officially recommended](https://wiki.hypr.land/Getting-Started/Installation/#packages) repo `solopasha/hyprland` ([📎 Git](https://github.com/solopasha/hyprlandRPM/tree/master), [📎 solopasha/hyprland COPR](https://copr.fedorainfracloud.org/coprs/solopasha/hyprland/)) seems to be abandoned: it has no commits in last 4+ month now
 
     This repository is created with reproduced builds and future support convenience in mind
 
-    Feel free to reuse automation from this repository for your own copr-projects.
+    Feel free to reuse automation from this repository for your own copr-projects
 
     - [📎 Check my hyprland repo on COPR](https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/)
     - [📎 Check my hyprland repo on GitHub](https://Github.com/nett00n/hyprland-copr/)
   bottom_info: |
-    There is an [📎 lionheartp/Hyprland COPR](https://copr.fedorainfracloud.org/coprs/lionheartp/Hyprland/).
+    There is an [📎 lionheartp/Hyprland COPR](https://copr.fedorainfracloud.org/coprs/lionheartp/Hyprland/)
     It looks more like original `solopasha/hyprland` repo but with no ARM support
   support_info: |
     [📎 Support me on Ko-fi ☕](https://ko-fi.com/nett00n)
@@ -101,7 +102,7 @@ groups:
   apps:
     label: "Useful apps"
     packages:
-      []
+      - pyprland
 
   deps:
     label: "Other dependencies"
@@ -121,9 +122,9 @@ groups:
       - Hyprshot
     packages_from_global_repo:
       - name: waybar
-        summary: Highly customizable Wayland bar for Sway and Wlroots based compositors. ✌️ 🎉
+        summary: Highly customizable Wayland bar for Sway and Wlroots based compositors
       - name: wofi
-        summary: Wofi is a launcher/menu program for wlroots based wayland compositors such as sway.
+        summary: Wofi is a launcher/menu program for wlroots based wayland compositors such as sway
       - name: swaync
         summary: "A simple GTK based notification daemon for any Wayland compositor"
 
@@ -135,10 +136,10 @@ packages:
     summary: A Wayland scanner replacement for Hypr projects
     description: |
       hyprwayland-scanner is a Wayland protocol scanner / code generator
-      used by the Hypr ecosystem to generate C++ protocol bindings.
+      used by the Hypr ecosystem to generate C++ protocol bindings
     url: https://github.com/hyprwm/hyprwayland-scanner
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     build_requires:
       - cmake
@@ -160,10 +161,10 @@ packages:
     summary: Small C++ library for utilities used across the Hypr ecosystem
     description: |
       hyprutils is a small C++ library used across the Hypr* ecosystem for
-      various utilities such as memory management, signals, and more.
+      various utilities such as memory management, signals, and more
     url: https://github.com/hyprwm/hyprutils
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     build_requires:
       - cmake
@@ -184,10 +185,10 @@ packages:
     license: BSD-3-Clause
     summary: The hypr configuration language library
     description: |
-      hyprlang is the official implementation library for the hypr configuration language.
+      hyprlang is the official implementation library for the hypr configuration language
     url: https://github.com/hyprwm/hyprlang
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprutils
@@ -211,10 +212,10 @@ packages:
     summary: Small C++ library for graphics utilities across the Hypr ecosystem
     description: |
       hyprgraphics is a small C++ library used across the Hypr* ecosystem for
-      graphics-related utilities such as image loading and color management.
+      graphics-related utilities such as image loading and color management
     url: https://github.com/hyprwm/hyprgraphics
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprutils
@@ -245,14 +246,14 @@ packages:
     license: BSD-3-Clause
     summary: A very light linux rendering backend library
     description: |
-      Aquamarine is a very light linux rendering backend library. It provides basic abstractions for an application to render on a Wayland session (in a window) or a native DRM session.
+      Aquamarine is a very light linux rendering backend library. It provides basic abstractions for an application to render on a Wayland session (in a window) or a native DRM session
 
-      It is agnostic of the rendering API (Vulkan/OpenGL) and designed to be lightweight, performant, and minimal.
+      It is agnostic of the rendering API (Vulkan/OpenGL) and designed to be lightweight, performant, and minimal
 
-      Aquamarine provides no bindings for other languages. It is C++-only.
+      Aquamarine provides no bindings for other languages. It is C++-only
     url: https://github.com/hyprwm/aquamarine
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - aquamarine
@@ -294,7 +295,7 @@ packages:
       A modern C++ Wayland-native GUI toolkit
     url: https://github.com/hyprwm/hyprtoolkit
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - aquamarine
@@ -339,7 +340,7 @@ packages:
       A fast and consistent wire protocol for IPC
     url: https://github.com/hyprwm/hyprwire
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprutils
@@ -367,10 +368,10 @@ packages:
     license: BSD-3-Clause
     summary: A blazing fast Wayland wallpaper utility
     description: |
-      hyprpaper is a blazing fast Wayland wallpaper utility with IPC controls.
+      hyprpaper is a blazing fast Wayland wallpaper utility with IPC controls
     url: https://github.com/hyprwm/hyprpaper
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - aquamarine
@@ -414,10 +415,10 @@ packages:
     license: BSD-3-Clause
     summary: QT6 Theme Provider for Hyprland
     description: |
-      QT6 Theme Provider for Hyprland. Compatible with KDE, replaces qt6ct.
+      QT6 Theme Provider for Hyprland. Compatible with KDE, replaces qt6ct
     url: https://github.com/hyprwm/hyprqt6engine
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprlang
@@ -456,16 +457,16 @@ packages:
     license: BSD-3-Clause
     summary: Wayland protocol extensions for Hyprland
     description: |
-      Wayland protocol extensions for Hyprland.
+      Wayland protocol extensions for Hyprland
 
-      This repository exists in an effort to bridge the gap between Hyprland and KDE/Gnome's functionality, as well as allow apps for some extra neat functionality under Hyprland.
+      This repository exists in an effort to bridge the gap between Hyprland and KDE/Gnome's functionality, as well as allow apps for some extra neat functionality under Hyprland
 
-      Since wayland-protocols is slow to change (on top of Hyprland not being allowed to contribute), we have to maintain a set of protocols Hyprland uses to plumb some things / add some useful features.
+      Since wayland-protocols is slow to change (on top of Hyprland not being allowed to contribute), we have to maintain a set of protocols Hyprland uses to plumb some things / add some useful features
 
-      Some of the protocols here also do not belong in w-p, as they are specific to Hyprland.
+      Some of the protocols here also do not belong in w-p, as they are specific to Hyprland
     url: https://github.com/hyprwm/hyprland-protocols
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: meson
     build_requires:
       - meson
@@ -487,7 +488,7 @@ packages:
       xdg-desktop-portal backend for Hyprland
     url: https://github.com/hyprwm/xdg-desktop-portal-hyprland
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprland-protocols
@@ -532,10 +533,10 @@ packages:
     license: MIT
     summary: Extremely fast, in memory, JSON and reflection library for modern C++. BEVE, CBOR, CSV, MessagePack, TOML, YAML, EETF
     description: |
-      One of the fastest JSON libraries in the world. Glaze reads and writes from object memory, simplifying interfaces and offering incredible performance.
+      One of the fastest JSON libraries in the world. Glaze reads and writes from object memory, simplifying interfaces and offering incredible performance
     url: https://github.com/stephenberry/glaze
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     no_debug_package: true
     build_commands:
@@ -561,13 +562,13 @@ packages:
     license: BSD-3-Clause
     summary: A Modern C++ Wayland Compositor
     description: |
-      Hyprland is a 100% independent, dynamic tiling Wayland compositor that doesn't sacrifice on its looks.
+      Hyprland is a 100% independent, dynamic tiling Wayland compositor that doesn't sacrifice on its looks
 
-      It provides the latest Wayland features, is highly customizable, has all the eyecandy, the most powerful plugins, easy IPC, much more QoL stuff than other compositors and more...
+      It provides the latest Wayland features, is highly customizable, has all the eyecandy, the most powerful plugins, easy IPC, much more QoL stuff than other compositors and more..
     url: https://github.com/hyprwm/Hyprland
     source_name: Hyprland
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - aquamarine
@@ -614,12 +615,10 @@ packages:
       - pkgconfig(xcursor)
       - pkgconfig(xkbcommon)
       - udis86-devel
-    bundled_deps:
-      []
     prep_commands:
       # start/CMakeLists.txt does not link glaze::glaze and is add_subdirectory'd
       # before hyprpm (where FetchContent declares glaze), so the target doesn't
-      # exist yet. Patch in an explicit include_dir using a cmake-relative path.
+      # exist yet. Patch in an explicit include_dir using a cmake-relative path
       - "sed -i 's|^install(TARGETS start-hyprland)|target_include_directories(start-hyprland PRIVATE \"${CMAKE_CURRENT_SOURCE_DIR}/../glaze-src/include\")\\ninstall(TARGETS start-hyprland)|' start/CMakeLists.txt"
     files:
       - "%doc README.md"
@@ -654,7 +653,7 @@ packages:
       Hyprland's idle daemon
     url: https://github.com/hyprwm/hypridle
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprland-protocols
@@ -685,10 +684,10 @@ packages:
     license: BSD-3-Clause
     summary: A gpu-accelerated screen lock for Hyprland
     description: |
-      Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility.
+      Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility
     url: https://github.com/hyprwm/hyprlock
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprgraphics
@@ -696,7 +695,6 @@ packages:
       - hyprutils
       - hyprwayland-scanner
     build_requires:
-      # - pkgconfig(libpam)
       - cmake
       - gcc-c++
       - hyprwayland-scanner-devel
@@ -728,9 +726,9 @@ packages:
     license: GPL-3.0-only
     summary: Utility to easily take screenshots in Hyprland using your mouse
     description: |
-      Hyprshot is an utility to easily take screenshot in Hyprland using your mouse.
+      Hyprshot is an utility to easily take screenshot in Hyprland using your mouse
       It allows taking screenshots of windows, regions and monitors which are saved
-      to a folder of your choosing and copied to your clipboard.
+      to a folder of your choosing and copied to your clipboard
     url: https://github.com/Gustash/Hyprshot
     source_name: Hyprshot
     sources:
@@ -757,10 +755,10 @@ packages:
     license: BSD-3-Clause
     summary: A library and toolkit for the Hyprland cursor format
     description: |
-      The hyprland cursor format, library and utilities.
+      The hyprland cursor format, library and utilities
     url: https://github.com/hyprwm/hyprcursor
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprlang
@@ -793,7 +791,7 @@ packages:
       Hyprland GUI utilities (successor to hyprland-qtutils)
     url: https://github.com/hyprwm/hyprland-guiutils
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - aquamarine
@@ -825,14 +823,14 @@ packages:
     license: MIT
     summary: FA library to create panels and other desktop components for Wayland using the Layer Shell protocol and GTK4
     description: |
-      A library for using the Layer Shell and Session Lock Wayland protocols with GTK4. This Library is compatible with C, C++ and any language that supports GObject introspection files (Python, Vala, etc).
+      A library for using the Layer Shell and Session Lock Wayland protocols with GTK4. This Library is compatible with C, C++ and any language that supports GObject introspection files (Python, Vala, etc)
 
-      The Layer Shell protocol allows building desktop shell components such as panels, notifications and wallpapers. It can be used to anchor your windows to a corner or edge of the output, or stretch them across the entire output.
+      The Layer Shell protocol allows building desktop shell components such as panels, notifications and wallpapers. It can be used to anchor your windows to a corner or edge of the output, or stretch them across the entire output
 
-      The Session Lock protocol allows building lock screens.
+      The Session Lock protocol allows building lock screens
     url: https://github.com/wmww/gtk4-layer-shell
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: meson
     build_requires:
       - gcc-c++
@@ -866,12 +864,12 @@ packages:
     license: GPL-3.0-or-later
     summary: Scaffolding CLI for Astal+Gnim
     description: |
-      Scaffolding CLI tool for Astal+Gnim projects. Astal is a set of libraries written in Vala/C that makes writing a Desktop Shell easy. Gnim is a library which introduces JSX to GJS. GJS is a JavaScript runtime built on Firefox's SpiderMonkey JavaScript engine and the GNOME platform libraries, the same runtime GNOME Shell runs on.
+      Scaffolding CLI tool for Astal+Gnim projects. Astal is a set of libraries written in Vala/C that makes writing a Desktop Shell easy. Gnim is a library which introduces JSX to GJS. GJS is a JavaScript runtime built on Firefox's SpiderMonkey JavaScript engine and the GNOME platform libraries, the same runtime GNOME Shell runs on
     url: https://github.com/Aylur/ags
     source_name: ags
     go_subdir: cli
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
       - url: "%{name}-%{version}-vendor.tar.gz"
     build_system: meson
     depends_on:
@@ -893,32 +891,6 @@ packages:
       - "%{_prefix}/bin/ags"
       - "%{_prefix}/share/ags/"
 
-  # HyprPanel:
-  #   version: "0^20260106git0e73df1"
-  #   release: "%autorelease"
-  #   license: MIT
-  #   summary: A Bar/Panel for Hyprland with extensive customizability.
-  #   description: |
-  #     A panel built for Hyprland with Astal
-  #   url: https://github.com/Jas-SinghFSU/HyprPanel
-  #   source_name: HyprPanel
-  #   commit:
-  #     full: 0e73df1dfedf0f6fa21ed0ae5e031b0663c8f400
-  #     date: "20260106"
-  #   sources:
-  #     - url: "%{url}/archive/%{commit}.tar.gz"
-  #   build_system: meson
-  #   build_requires:
-  #     - meson
-  #     - ninja-build
-  #     - gcc-c++
-  #     - aylurs-gtk-shell
-  #     - gjs
-  #   files:
-  #     - "%license LICENSE"
-  #     - "%doc README.md"
-  #     - # FIXME: add installed files
-
   hyprland-plugins:
     version: "0.53.0"
     release: "%autorelease"
@@ -939,7 +911,7 @@ packages:
 
     url: https://github.com/hyprwm/hyprland-plugins
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - Hyprland
@@ -956,7 +928,6 @@ packages:
       - pkgconfig(wayland-server)
       - pkgconfig(xkbcommon)
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
 
@@ -1001,7 +972,7 @@ packages:
       A multipurpose and versatile launcher / picker for Hyprland
       Features:
 
-      - Various providers: Desktop, Unicode, Emoji, Math, Font ...
+      - Various providers: Desktop, Unicode, Emoji, Math, Font ..
       - Speedy: Fast, multi-threaded fuzzy searching
       - Daemon by default: instant opening of the launcher
       - Entry frequency caching: commonly used entries appear above others
@@ -1009,7 +980,7 @@ packages:
 
     url: https://github.com/hyprwm/hyprlauncher
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - aquamarine
@@ -1045,10 +1016,10 @@ packages:
     license: BSD-3-Clause
     summary: A wlroots-compatible Wayland color picker that does not suck
     description: |
-      FIXME
+      A wlroots-compatible Wayland color picker that does not suck
     url: https://github.com/hyprwm/hyprpicker
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprutils
@@ -1067,9 +1038,10 @@ packages:
       - pkgconfig(wayland-protocols)
       - pkgconfig(xkbcommon)
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
+      - "%{_prefix}/bin/hyprpicker"
+      - "%{_prefix}/share/man/man1/hyprpicker.1.gz"
 
   hyprpolkitagent:
     version: "0.1.3"
@@ -1077,10 +1049,10 @@ packages:
     license: BSD-3-Clause
     summary: A polkit authentication agent written in QT/QML
     description: |
-      A simple polkit authentication agent for Hyprland, written in QT/QML.
+      A simple polkit authentication agent for Hyprland, written in QT/QML
     url: https://github.com/hyprwm/hyprpolkitagent
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprutils
@@ -1091,10 +1063,14 @@ packages:
       - pkgconfig(hyprutils)
       - pkgconfig(polkit-agent-1)
       - pkgconfig(polkit-qt6-1)
+      - qt6-qtdeclarative-devel
+      - qt6-qtquickcontrols2-devel
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
+      - "%{_prefix}/lib/systemd/user/hyprpolkitagent.service"
+      - "%{_prefix}/libexec/hyprpolkitagent"
+      - "%{_prefix}/share/dbus-1/services/org.hyprland.hyprpolkitagent.service"
 
   hyprpwcenter:
     version: "0.1.2"
@@ -1102,27 +1078,33 @@ packages:
     license: BSD-3-Clause
     summary: Volume management center for Hyprland
     description: |
-      A GUI Pipewire control center built with hyprtoolkit.
+      A GUI Pipewire control center built with hyprtoolkit
     url: https://github.com/hyprwm/hyprpwcenter
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprtoolkit
       - hyprutils
+      - aquamarine
+      - hyprgraphics
     build_requires:
+      - aquamarine-devel
       - cmake
       - gcc-c++
+      - hyprgraphics-devel
       - ninja-build
+      - pkgconfig(cairo)
       - pkgconfig(hyprtoolkit)
       - pkgconfig(hyprutils)
       - pkgconfig(libdrm)
       - pkgconfig(libpipewire-0.3)
       - pkgconfig(pixman-1)
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
+      - "%{_prefix}/bin/hyprpwcenter"
+      - "%{_prefix}/share/applications/hyprpwcenter.desktop"
 
   hyprshutdown:
     version: "0.1.0"
@@ -1130,26 +1112,33 @@ packages:
     license: BSD-3-Clause
     summary: A graceful shutdown utility for Hyprland
     description: |
-      A graceful shutdown/logout utility for Hyprland, which prevents apps from crashing / dying unexpectedly.
+      A graceful shutdown/logout utility for Hyprland, which prevents apps from crashing / dying unexpectedly
     url: https://github.com/hyprwm/hyprshutdown
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprtoolkit
       - hyprutils
+      - glaze
+      - aquamarine
+      - hyprgraphics
     build_requires:
+      - aquamarine-devel
       - cmake
       - gcc-c++
+      - glaze-devel
+      - hyprgraphics-devel
       - ninja-build
+      - pkgconfig(cairo)
       - pkgconfig(hyprtoolkit)
       - pkgconfig(hyprutils)
       - pkgconfig(libdrm)
       - pkgconfig(pixman-1)
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
+      - "%{_prefix}/bin/hyprshutdown"
 
   hyprsunset:
     version: "0.3.3"
@@ -1160,7 +1149,7 @@ packages:
       An application to enable a blue-light filter on Hyprland
     url: https://github.com/hyprwm/hyprsunset
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprland-protocols
@@ -1178,9 +1167,10 @@ packages:
       - pkgconfig(wayland-client)
       - pkgconfig(wayland-protocols)
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
+      - "%{_prefix}/bin/hyprsunset"
+      - "%{_prefix}/lib/systemd/user/hyprsunset.service"
 
   hyprsysteminfo:
     version: "0.1.3"
@@ -1191,7 +1181,7 @@ packages:
       A tiny qt6/qml application to display information about the running system
     url: https://github.com/hyprwm/hyprsysteminfo
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprtoolkit
@@ -1199,14 +1189,18 @@ packages:
     build_requires:
       - cmake
       - gcc-c++
+      - hyprutils-devel
       - ninja-build
       - pkgconfig(hyprtoolkit)
       - pkgconfig(hyprutils)
       - pkgconfig(libdrm)
       - pkgconfig(libpci)
       - pkgconfig(pixman-1)
+      - qt6-qtbase-private-devel
+      - qt6-qtdeclarative-devel
+      - qt6-qtquickcontrols2-devel
+      - qt6-qtwayland-devel
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
 
@@ -1214,50 +1208,63 @@ packages:
     version: "3.1.1"
     release: "%autorelease"
     license: MIT
-    summary: FIXME
+    summary: Scratchpads & many goodies for Hyprland [maintainer=@fdev31]
     description: |
-      FIXME
-    url: https://github.com/hyprland-community/pyprland.git
-    # source_name: top-level directory inside the tarball when it differs from the package name
-    source_name: ""
-    # go_subdir: subdirectory containing go.mod when the Go module is not at the tarball root
-    # go_subdir: cli
-    # buildarch: set to "noarch" for architecture-independent packages (scripts, headers-only, etc.)
-    buildarch: ""
-    # no_debug_package: suppress the automatic -debuginfo subpackage (useful for header-only or noarch)
+      Power up your desktop
+
+      A plugin system that extends your graphical environment with features like scratchpads, dynamic popup nested menus, custom notifications, easy monitor settings and more
+
+      Think of it as a Gnome tweak tool for Hyprland, with options that can run on any desktop. With a fully plugin-based architecture, it's lightweight and easy to customize
+    url: https://github.com/hyprland-community/pyprland
     no_debug_package: false
+    buildarch: noarch
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
-    # build_system: cmake | meson | autotools | make — selects default %build/%install macros
-    build_system: FIXME
+      - url: "%{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+    build_system: python
     build_requires:
-      []
-    requires:
-      []
-    # prep_commands: extra shell commands injected into %prep after %autosetup
-    prep_commands:
-      []
-    # build_commands: override the default build commands derived from build_system
+      - python3-devel
+      - python3-hatchling
+      - python3-pip
     build_commands:
-      []
-    # install_commands: override the default install commands derived from build_system
+      - "python3 -m hatchling build -t wheel"
     install_commands:
-      []
-    # bundled_deps: vendored sources fetched separately and injected via FetchContent
-    # bundled_deps:
-    #   - name: libname
-    #     version: "1.2.3"
-    #     url: "https://github.com/org/repo/archive/refs/tags/v1.2.3.tar.gz"
-    #     cmake_var: LIBNAME  # CMake variable name used in FetchContent_Declare
-    bundled_deps:
-      []
+      - "python3 -m pip install --no-deps --no-build-isolation --root %{buildroot} --prefix /usr dist/*.whl"
+    requires:
+      - python3-aiofiles
+      - python3-aiohttp
+      - python3-pillow
+      - qt6-qtdeclarative-devel
+      - qt6-qtquickcontrols2-devel
     files:
-      # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
-    # devel: generates a -devel subpackage for headers, pkgconfig files, cmake modules, etc.
-    devel:
-      files:
-        # - "%{_includedir}/pyprland/"
-        # - "%{_libdir}/pkgconfig/pyprland.pc"
-        []
+      - "%{_bindir}/pypr"
+      - "%{_bindir}/pypr-quickstart"
+      - "%{python3_sitelib}/pyprland"
+      - "%{python3_sitelib}/pyprland-%{version}.dist-info"
+
+  # HyprPanel:
+  #   version: "0^20260106git0e73df1"
+  #   release: "%autorelease"
+  #   license: MIT
+  #   summary: A Bar/Panel for Hyprland with extensive customizability
+  #   description: |
+  #     A panel built for Hyprland with Astal
+  #   url: https://github.com/Jas-SinghFSU/HyprPanel
+  #   source_name: HyprPanel
+  #   commit:
+  #     full: 0e73df1dfedf0f6fa21ed0ae5e031b0663c8f400
+  #     date: "20260106"
+  #   sources:
+  #     - url: "%{url}/archive/%{commit}.tar.gz"
+  #   build_system: meson
+  #   build_requires:
+  #     - meson
+  #     - ninja-build
+  #     - gcc-c++
+  #     - aylurs-gtk-shell
+  #     - gjs
+  #   files:
+  #     - "%license LICENSE"
+  #     - "%doc README.md"
+  #     - # FIXME: add installed files

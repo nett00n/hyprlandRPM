@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        A very light linux rendering backend library
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/aquamarine
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -25,11 +25,11 @@ BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
 
 %description
-Aquamarine is a very light linux rendering backend library. It provides basic abstractions for an application to render on a Wayland session (in a window) or a native DRM session.
+Aquamarine is a very light linux rendering backend library. It provides basic abstractions for an application to render on a Wayland session (in a window) or a native DRM session
 
-It is agnostic of the rendering API (Vulkan/OpenGL) and designed to be lightweight, performant, and minimal.
+It is agnostic of the rendering API (Vulkan/OpenGL) and designed to be lightweight, performant, and minimal
 
-Aquamarine provides no bindings for other languages. It is C++-only.
+Aquamarine provides no bindings for other languages. It is C++-only
 
 %prep
 %autosetup
@@ -58,12 +58,4 @@ Development files for aquamarine.
 
 %changelog
 * Sun Nov 23 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.10.0-%autorelease
-- A new ABI-breaking release.
-- wayland: send commit after frame
-- backend: implement hyprutils' cli::logger
-- rendernode: dont bother finding one on evdi by @gulafaran in https://github.com/hyprwm/aquamarine/pull/214
-- Ensure disconnect called for removed connectors by @jsierant in https://github.com/hyprwm/aquamarine/pull/215
-- minor renderer changes by @gulafaran in https://github.com/hyprwm/aquamarine/pull/216
-- prevent use-after-free during DRM backend shutdown by @andresilva in https://github.com/hyprwm/aquamarine/pull/218
-- @jsierant made their first contribution in https://github.com/hyprwm/aquamarine/pull/215
-- **Full Changelog**: https://github.com/hyprwm/aquamarine/compare/v0.9.5...v0.10.0
+- version: bump to 0.10.0

@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        Hyprland GUI utilities
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprland-guiutils
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
@@ -39,11 +39,4 @@ Hyprland GUI utilities (successor to hyprland-qtutils)
 
 %changelog
 * Mon Dec 29 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.2.1-%autorelease
-- Some minor stuff
-- welcome: add ecosystem tab
-- welcome: mention launcher keybind
-- welcome: add some missing apps to the dropdown menu by @Honkazel in https://github.com/hyprwm/hyprland-guiutils/pull/9
-- run: escape closes the window by @Havner in https://github.com/hyprwm/hyprland-guiutils/pull/13
-- @Honkazel made their first contribution in https://github.com/hyprwm/hyprland-guiutils/pull/9
-- @Havner made their first contribution in https://github.com/hyprwm/hyprland-guiutils/pull/13
-- **Full Changelog**: https://github.com/hyprwm/hyprland-guiutils/compare/v0.2.0...v0.2.1
+- version: bump to 0.2.1

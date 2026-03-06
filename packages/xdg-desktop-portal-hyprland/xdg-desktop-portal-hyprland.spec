@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        An XDG-Destop-Portal backend for Hyprland (and wlroots)
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/xdg-desktop-portal-hyprland
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -53,8 +53,4 @@ xdg-desktop-portal backend for Hyprland
 
 %changelog
 * Fri Oct 17 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.3.11-%autorelease
-- Minor update with a few fixes
-- portals: Fix use of a potentially destroyed session by @PlasmaPower in https://github.com/hyprwm/xdg-desktop-portal-hyprland/pull/355
-- screencopy: fix callback resetting by @vaxerski in https://github.com/hyprwm/xdg-desktop-portal-hyprland/pull/358
-- @PlasmaPower made their first contribution in https://github.com/hyprwm/xdg-desktop-portal-hyprland/pull/355
-- **Full Changelog**: https://github.com/hyprwm/xdg-desktop-portal-hyprland/compare/v1.3.10...v1.3.11
+- version: bump to 1.3.11

@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        A Wayland scanner replacement for Hypr projects
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprwayland-scanner
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -13,7 +13,7 @@ BuildRequires:  pkgconfig(pugixml)
 
 %description
 hyprwayland-scanner is a Wayland protocol scanner / code generator
-used by the Hypr ecosystem to generate C++ protocol bindings.
+used by the Hypr ecosystem to generate C++ protocol bindings
 
 %prep
 %autosetup
@@ -42,12 +42,4 @@ Development files for hyprwayland-scanner.
 
 %changelog
 * Mon Jul 07 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.4.5-%autorelease
-- A few small fixes and patches
-- server: fix empty interface arrays
-- core: member + designated init and remove redundant cast by @Honkazel in https://github.com/hyprwm/hyprwayland-scanner/pull/14
-- Make CMAKE builds arch independent by @NyxTrail in https://github.com/hyprwm/hyprwayland-scanner/pull/16
-- nix: use gcc15 by @FridayFaerie in https://github.com/hyprwm/hyprwayland-scanner/pull/17
-- @Honkazel made their first contribution in https://github.com/hyprwm/hyprwayland-scanner/pull/14
-- @NyxTrail made their first contribution in https://github.com/hyprwm/hyprwayland-scanner/pull/16
-- @FridayFaerie made their first contribution in https://github.com/hyprwm/hyprwayland-scanner/pull/17
-- **Full Changelog**: https://github.com/hyprwm/hyprwayland-scanner/compare/v0.4.4...v0.4.5
+- version: bump to 0.4.5

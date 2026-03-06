@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        A gpu-accelerated screen lock for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprlock
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -26,7 +26,7 @@ BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  pkgconfig(xkbcommon)
 
 %description
-Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility.
+Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility
 
 %prep
 %autosetup
@@ -47,14 +47,4 @@ Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility
 
 %changelog
 * Thu Oct 02 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.9.2-%autorelease
-- A new patch release with some fixes :)
-- Make detection of PAM library more portable by @tagattie in https://github.com/hyprwm/hyprlock/pull/840
-- background: monitor transforms fixups by @PaideiaDilemma in https://github.com/hyprwm/hyprlock/pull/859
-- core: remove dmabuf listeners after we are done with Screencopy by @PaideiaDilemma in https://github.com/hyprwm/hyprlock/pull/858
-- renderer: move asyncResourceGatherer out of the renderer by @PaideiaDilemma in https://github.com/hyprwm/hyprlock/pull/863
-- core: monitor replug workaround for nvidia by @PaideiaDilemma in https://github.com/hyprwm/hyprlock/pull/845
-- lock-surface: remove redundant sendDestroy calls by @PaideiaDilemma in https://github.com/hyprwm/hyprlock/pull/868
-- Refactor asset management to use shared_ptr by @davc0n in https://github.com/hyprwm/hyprlock/pull/870
-- renderer: fix nvidia workaround by @PaideiaDilemma in https://github.com/hyprwm/hyprlock/pull/878
-- @tagattie made their first contribution in https://github.com/hyprwm/hyprlock/pull/840
-- **Full Changelog**: https://github.com/hyprwm/hyprlock/compare/v0.9.1...v0.9.2
+- version: bump to 0.9.2

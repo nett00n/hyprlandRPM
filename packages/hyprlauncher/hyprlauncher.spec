@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        A multipurpose and versatile launcher / picker for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprlauncher
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
@@ -26,7 +26,7 @@ BuildRequires:  pkgconfig(xkbcommon)
 A multipurpose and versatile launcher / picker for Hyprland
 Features:
 
-- Various providers: Desktop, Unicode, Emoji, Math, Font ...
+- Various providers: Desktop, Unicode, Emoji, Math, Font ..
 - Speedy: Fast, multi-threaded fuzzy searching
 - Daemon by default: instant opening of the launcher
 - Entry frequency caching: commonly used entries appear above others
@@ -49,9 +49,4 @@ Features:
 
 %changelog
 * Sun Jan 04 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.5-%autorelease
-- A small update with a massive improvement
-- fuzzy: massively improve accuracy
-- finders: increase the max amount of results
-- i18n: add Latvian translation by @ocbwoy3 in https://github.com/hyprwm/hyprlauncher/pull/108
-- @ocbwoy3 made their first contribution in https://github.com/hyprwm/hyprlauncher/pull/108
-- **Full Changelog**: https://github.com/hyprwm/hyprlauncher/compare/v0.1.4...v0.1.5
+- version: bump to 0.1.5

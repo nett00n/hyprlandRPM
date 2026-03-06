@@ -67,7 +67,7 @@ def main() -> None:
         # Skip if spec stage failed
         spec_state = spec_stage.get(pkg, {}).get("state", "")
         if spec_state == "failed" or (spec_stage and pkg not in spec_stage):
-            status("vendor", pkg, "skip")
+            status("vendor", pkg, "skip", "spec failed")
             build_status["stages"]["vendor"][pkg] = {
                 "state": "skipped",
                 "version": ver,

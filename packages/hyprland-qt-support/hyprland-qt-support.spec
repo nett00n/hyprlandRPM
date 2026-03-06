@@ -37,6 +37,4 @@ A qml style provider for hypr* qt apps
 
 %changelog
 * Wed Jan 08 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
-- Initial release of hyprland-qt-support.
-- Shoutout to @outfoxxed for this great piece of software.
-- **Full Changelog**: https://github.com/hyprwm/hyprland-qt-support/commits/v0.1.0
+- version: bump to 0.1.0

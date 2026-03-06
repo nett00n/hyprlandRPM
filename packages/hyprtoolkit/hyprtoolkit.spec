@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        A modern C++ Wayland-native GUI toolkit
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprtoolkit
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -56,8 +56,4 @@ Development files for hyprtoolkit.
 
 %changelog
 * Thu Jan 22 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.5.3-%autorelease
-- A small patch release
-- elements/text: fix a possible texture race that would result in an empty texture asset
-- config: add rounding_large and _small
-- Fix build on BSDs by @tagattie in https://github.com/hyprwm/hyprtoolkit/pull/35
-- **Full Changelog**: https://github.com/hyprwm/hyprtoolkit/compare/v0.5.2...v0.5.3
+- version: bump to 0.5.3

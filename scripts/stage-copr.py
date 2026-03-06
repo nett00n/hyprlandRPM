@@ -19,7 +19,7 @@ import sys
 from typing import Any
 
 from lib.paths import LOG_DIR, ROOT
-from lib.reporting import status
+from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
 from lib.yaml_utils import (
@@ -28,7 +28,6 @@ from lib.yaml_utils import (
     load_build_status,
     now_epoch,
     save_build_status,
-    stage_was_success,
 )
 
 
@@ -77,8 +76,11 @@ def main() -> None:
         log.unlink(missing_ok=True)
 
         # Skip if copr stage already succeeded
-        if proceed and stage_was_success(build_status, "copr", pkg):
-            status("copr", pkg, "skip")
+        prior_copr_state = (
+            build_status.get("stages", {}).get("copr", {}).get(pkg, {}).get("state")
+        )
+        if proceed and verbose_proceed_check("copr", pkg, prior_copr_state):
+            status("copr", pkg, "skip", "already succeeded")
             continue
 
         srpm_state = srpm_stage.get(pkg, {}).get("state", "")
@@ -90,7 +92,12 @@ def main() -> None:
             or not srpm_path
             or mock_state in ("failed", "skipped")
         ):
-            status("copr", pkg, "skip")
+            blocker = (
+                f"mock {mock_state}"
+                if mock_state in ("failed", "skipped")
+                else f"srpm {srpm_state}"
+            )
+            status("copr", pkg, "skip", blocker)
             entry: dict[str, Any] = {
                 "state": "skipped",
                 "version": ver,

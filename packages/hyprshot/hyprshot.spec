@@ -15,9 +15,9 @@ Requires:       slurp
 Requires:       wl-clipboard
 
 %description
-Hyprshot is an utility to easily take screenshot in Hyprland using your mouse.
+Hyprshot is an utility to easily take screenshot in Hyprland using your mouse
 It allows taking screenshots of windows, regions and monitors which are saved
-to a folder of your choosing and copied to your clipboard.
+to a folder of your choosing and copied to your clipboard
 
 %prep
 %autosetup -n Hyprshot-%{version}
@@ -34,5 +34,5 @@ install -Dpm0755 hyprshot -t %{buildroot}/%{_bindir}
 %{_bindir}/hyprshot
 
 %changelog
-* Fri Mar 06 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.3.0-%autorelease
-- Update to 1.3.0
+* Sun Jun 16 2024 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.3.0-%autorelease
+- Add -D,--delay option to allow setting a delay after selecting an area to screenshot. (#56)

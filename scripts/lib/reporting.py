@@ -15,10 +15,19 @@ STATUS_EMOJI = {
 BADGE_URL = "https://img.shields.io/badge/{label}-{message}-{color}"
 
 
-def status(stage: str, pkg: str, result: str) -> None:
+def verbose_proceed_check(stage_checked: str, pkg: str, state: str | None) -> bool:
+    """Print PROCEED_BUILD check result. Returns True if stage should be skipped."""
+    skip = state == "success"
+    action = "skip" if skip else ("retry" if state == "failed" else "run")
+    print(f"  [CHECK] {stage_checked}: {pkg} — prior={state or 'none'} → {action}")
+    return skip
+
+
+def status(stage: str, pkg: str, result: str, detail: str = "") -> None:
     """Print a single-line stage status line."""
     tag = {"ok": "[OK]  ", "fail": "[FAIL]", "skip": "[SKIP]"}[result]
-    print(f"  {tag} {stage}: {pkg}")
+    suffix = f" — {detail}" if detail else ""
+    print(f"  {tag} {stage}: {pkg}{suffix}")
 
 
 def print_summary(packages: dict, report: dict, copr_repo: str) -> None:

@@ -13,8 +13,9 @@ import subprocess
 import sys
 import urllib.request
 from datetime import datetime, timezone
+from lib.gitmodules import get_changelog_info, parse_gitmodules
 from lib.jinja_utils import create_jinja_env
-from lib.paths import ROOT
+from lib.paths import GITMODULES, ROOT
 from lib.yaml_utils import get_packages
 
 
@@ -77,10 +78,11 @@ BUILD_SYSTEMS = {
     "meson": ("%meson\n%meson_build", "%meson_install"),
     "autotools": ("%configure\n%make_build", "%make_install"),
     "make": ("make %{?_smp_mflags}", "make install DESTDIR=%{buildroot}"),
+    "python": ("%pyproject_build", "%pyproject_install"),
 }
 
 
-def build_context(name: str, pkg: dict, packager: str) -> dict:
+def build_context(name: str, pkg: dict, packager: str, url_to_submodule: dict) -> dict:
     build_system = pkg.get("build_system", "cmake")
     build_cmd, install_cmd = BUILD_SYSTEMS.get(build_system, BUILD_SYSTEMS["cmake"])
 
@@ -91,7 +93,18 @@ def build_context(name: str, pkg: dict, packager: str) -> dict:
 
     version = pkg["version"]
     release = pkg.get("release", 1)
-    release_info = fetch_github_release(pkg.get("url", ""), version)
+    pkg_url = pkg.get("url", "").rstrip("/")
+    submodule_path = url_to_submodule.get(pkg_url) or url_to_submodule.get(
+        pkg_url.removesuffix(".git")
+    )
+    if submodule_path:
+        commit_meta = pkg.get("commit")
+        commit_hash = commit_meta.get("full") if isinstance(commit_meta, dict) else None
+        release_info = get_changelog_info(submodule_path, str(version), commit_hash)
+    else:
+        release_info = None
+    if release_info is None:
+        release_info = fetch_github_release(pkg_url, version)
     changelog = format_changelog(release_info, version, release, packager)
 
     bundled_deps = []
@@ -184,6 +197,14 @@ def main() -> None:
     template = env.get_template("spec.j2")
     packager = get_packager()
 
+    url_to_submodule: dict[str, object] = {}
+    if GITMODULES.exists():
+        for mod in parse_gitmodules(GITMODULES):
+            url = mod["url"].rstrip("/")
+            path = ROOT / mod["path"]
+            url_to_submodule[url] = path
+            url_to_submodule[url.removesuffix(".git")] = path
+
     for name, pkg in packages.items():
         if target and name != target:
             continue
@@ -191,7 +212,9 @@ def main() -> None:
         spec_dir = ROOT / "packages" / pkg_name
         spec_dir.mkdir(parents=True, exist_ok=True)
         spec_path = spec_dir / f"{pkg_name}.spec"
-        spec_path.write_text(template.render(build_context(pkg_name, pkg, packager)))
+        spec_path.write_text(
+            template.render(build_context(pkg_name, pkg, packager, url_to_submodule))
+        )
         print(f"  generated  {spec_path.relative_to(ROOT)}")
 
 

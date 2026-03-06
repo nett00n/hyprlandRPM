@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        Official plugins for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprland-plugins
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -46,5 +46,11 @@ Official plugins for Hyprland:
 %license LICENSE
 
 %changelog
-* Fri Mar 06 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.53.0-%autorelease
-- Update to 0.53.0
+* Mon Dec 29 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.53.0-%autorelease
+- v0.53.0
+- -----BEGIN SSH SIGNATURE-----
+- U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAg6r0Z7DWuB90jK6uIn817QHwUTW
+- zw79TZqMStVAtQO70AAAADZ2l0AAAAAAAAAAZzaGE1MTIAAABTAAAAC3NzaC1lZDI1NTE5
+- AAAAQJVIuIyMXKeSIiyc31FuBqj2UZHYZkqhexbIaeKqCuswKVLDEZXjnf8qgF9Zu+n56T
+- /ukNE1X5Mg3rmUM3eEpwo=
+- -----END SSH SIGNATURE-----

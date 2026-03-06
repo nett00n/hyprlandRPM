@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from lib.paths import LOG_DIR, ROOT
-from lib.reporting import status
+from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
 from lib.yaml_utils import (
@@ -26,7 +26,6 @@ from lib.yaml_utils import (
     get_packages,
     load_build_status,
     save_build_status,
-    stage_was_success,
 )
 
 
@@ -67,14 +66,17 @@ def main() -> None:
         log.unlink(missing_ok=True)
 
         # Skip if mock stage already succeeded
-        if proceed and stage_was_success(build_status, "mock", pkg):
-            status("srpm", pkg, "skip")
+        prior_mock_state = (
+            build_status.get("stages", {}).get("mock", {}).get(pkg, {}).get("state")
+        )
+        if proceed and verbose_proceed_check("mock", pkg, prior_mock_state):
+            status("srpm", pkg, "skip", "mock already succeeded")
             continue  # preserve existing srpm entry untouched
 
         # Skip if spec stage failed
         spec_state = spec_stage.get(pkg, {}).get("state", "")
         if spec_state == "failed" or (spec_stage and pkg not in spec_stage):
-            status("srpm", pkg, "skip")
+            status("srpm", pkg, "skip", "spec failed")
             entry: dict[str, Any] = {
                 "state": "skipped",
                 "version": ver,

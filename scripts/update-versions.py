@@ -92,7 +92,10 @@ def main() -> None:
             print(f"  {pkg}: {old} -> {new}", file=sys.stderr)
 
         affected = pop_build_stages(changed)
-        print(f"cleared mock/copr build status for: {', '.join(affected)}", file=sys.stderr)
+        print(
+            f"cleared mock/copr build status for: {', '.join(affected)}",
+            file=sys.stderr,
+        )
     else:
         print("packages.yaml: all versions already up to date", file=sys.stderr)
 

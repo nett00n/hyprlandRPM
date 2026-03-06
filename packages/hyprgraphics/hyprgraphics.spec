@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        Small C++ library for graphics utilities across the Hypr ecosystem
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprgraphics
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  file-devel
@@ -21,7 +21,7 @@ BuildRequires:  pkgconfig(pixman-1)
 
 %description
 hyprgraphics is a small C++ library used across the Hypr* ecosystem for
-graphics-related utilities such as image loading and color management.
+graphics-related utilities such as image loading and color management
 
 %prep
 %autosetup
@@ -50,9 +50,4 @@ Development files for hyprgraphics.
 
 %changelog
 * Sun Dec 28 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.5.0-%autorelease
-- New release with a new ABI break
-- image: cleanup format detection
-- image/svg: implement embeded
-- resource/image: add byte stream
-- image: fix missing svg byte stream
-- **Full Changelog**: https://github.com/hyprwm/hyprgraphics/compare/v0.4.0...v0.5.0
+- version: bump to 0.5.0

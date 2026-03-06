@@ -4,7 +4,7 @@ Release:        %autorelease%{?dist}
 Summary:        QT6 Theme Provider for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprqt6engine
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  cmake(KF6ColorScheme)
@@ -25,7 +25,7 @@ BuildRequires:  qt6-qtwayland-devel
 BuildRequires:  qt6-rpm-macros
 
 %description
-QT6 Theme Provider for Hyprland. Compatible with KDE, replaces qt6ct.
+QT6 Theme Provider for Hyprland. Compatible with KDE, replaces qt6ct
 
 %prep
 %autosetup
@@ -46,6 +46,5 @@ sed -i '/target_link_libraries.*hyprqtplugin/i find_package(Qt6 REQUIRED COMPONE
 %{_libdir}/qt6/plugins/styles/libhypr-style.so
 
 %changelog
-* Wed Aug 27 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
-- Initial release of hyprqt6engine
-- **Full Changelog**: https://github.com/hyprwm/hyprqt6engine/commits/v0.1.0
+* Tue Aug 26 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
+- all: initial commit

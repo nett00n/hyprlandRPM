@@ -1,12 +1,12 @@
 ## Enable the repository
 
-Regular Fedora
+**Regular Fedora**:
 
 ```shell
 dnf copr enable nett00n/hyprland
 ```
 
-Fedora Atomic:
+**Fedora Atomic**:
 
 ```shell
 FEDORA_VERSION_ID=$( grep ^VERSION_ID /etc/os-release | awk -F '=' '{print$2}')
@@ -23,13 +23,13 @@ rpm-ostree install hyprland
 
 Replace `hyprland` with any package from this repository. For example:
 
-Regular Fedora:
+**Regular Fedora**:
 
 ```shell
 dnf install hyprland hyprland-plugins hypridle hyprlock hyprpaper
 ```
 
-Fedora Atomic:
+**Fedora Atomic**:
 
 ```shell
 rpm-ostree install hyprland hyprland-plugins hypridle hyprlock hyprpaper

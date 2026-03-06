@@ -4,18 +4,22 @@ Release:        %autorelease%{?dist}
 Summary:        A graceful shutdown utility for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprshutdown
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
+BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  glaze-devel
+BuildRequires:  hyprgraphics-devel
 BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(hyprtoolkit)
 BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(pixman-1)
 
 %description
-A graceful shutdown/logout utility for Hyprland, which prevents apps from crashing / dying unexpectedly.
+A graceful shutdown/logout utility for Hyprland, which prevents apps from crashing / dying unexpectedly
 
 %prep
 %autosetup
@@ -30,8 +34,17 @@ A graceful shutdown/logout utility for Hyprland, which prevents apps from crashi
 %files
 %doc README.md
 %license LICENSE
+%{_prefix}/bin/hyprshutdown
 
 %changelog
-* Thu Jan 29 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
-- Initial release of hyprshutdown yay
-- **Full Changelog**: https://github.com/hyprwm/hyprshutdown/commits/v0.1.0
+* Tue Jan 27 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
+- core: close socket FD on error paths and improve validation (#18)
+- fix: close socket FD on error paths and improve validation
+- HyprlandIPC.cpp:
+- Close socket file descriptor on connect() and write() error paths
+- Prevents FD leak when IPC operations fail
+- AppState.cpp:
+- Add validation for empty address in CApp::quit()
+- Add validation for invalid PID before SIGTERM
+- Fix error check logic: use else-if to avoid dereferencing error result
+- refactor: use CScopeGuard for socket cleanup

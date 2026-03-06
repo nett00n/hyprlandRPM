@@ -24,7 +24,7 @@ from lib.yaml_utils import (
 )
 
 REQUIRED_FIELDS = ["version", "license", "summary", "description", "url", "sources"]
-VALID_BUILD_SYSTEMS = {"cmake", "meson", "autotools", "make"}
+VALID_BUILD_SYSTEMS = {"cmake", "meson", "autotools", "make", "python"}
 DEVEL_INDICATORS = ["%{_includedir}", "pkgconfig/", "/cmake/"]
 
 

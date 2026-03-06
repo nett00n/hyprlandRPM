@@ -23,7 +23,7 @@ from typing import Any
 
 from lib.deps import infer_deps
 from lib.paths import LOCAL_REPO, LOG_DIR, ROOT
-from lib.reporting import status
+from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
 from lib.yaml_utils import (
@@ -32,7 +32,6 @@ from lib.yaml_utils import (
     load_build_status,
     now_epoch,
     save_build_status,
-    stage_was_success,
 )
 
 
@@ -106,8 +105,11 @@ def main() -> None:
         log.unlink(missing_ok=True)
 
         # Skip if mock stage already succeeded
-        if proceed and stage_was_success(build_status, "mock", pkg):
-            status("mock", pkg, "skip")
+        mock_state = (
+            build_status.get("stages", {}).get("mock", {}).get(pkg, {}).get("state")
+        )
+        if proceed and verbose_proceed_check("mock", pkg, mock_state):
+            status("mock", pkg, "skip", "already succeeded")
             continue  # preserve existing entry (has completed_at from prior run)
 
         blocker = failed_local_dep(pkg, meta, packages, failed)
@@ -115,10 +117,13 @@ def main() -> None:
         srpm_path = srpm_stage.get(pkg, {}).get("path")
 
         if srpm_state in ("failed", "skipped") or blocker or not srpm_path:
-            if blocker and srpm_state not in ("failed", "skipped"):
-                print(f"  [SKIP] mock: {pkg} — local dep failed: {blocker}")
+            detail = (
+                f"local dep failed: {blocker}"
+                if blocker and srpm_state not in ("failed", "skipped")
+                else f"srpm {srpm_state}"
+            )
             failed[pkg] = True
-            status("mock", pkg, "skip")
+            status("mock", pkg, "skip", detail)
             entry: dict[str, Any] = {"state": "skipped", "version": ver, "log": None}
             if has_devel:
                 entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
