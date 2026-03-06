@@ -40,9 +40,12 @@ def print_summary(packages: dict, report: dict, copr_repo: str) -> None:
     print(sep)
 
 
-def badge_short(label: str, state: str | None, url: str | None = None, style: str | None = None) -> str:
+def badge_short(
+    label: str, state: str | None, url: str | None = None, style: str | None = None
+) -> str:
     """Generate a shields.io badge with a label, emoji message, and status-colored background."""
     from urllib.parse import quote
+
     state = state or "unknown"
     color = STATE_COLOR.get(state, "orange")
     emoji = STATUS_EMOJI.get(state, "?")
@@ -55,7 +58,9 @@ def badge_short(label: str, state: str | None, url: str | None = None, style: st
     return img
 
 
-def badge(label: str, state: str | None, url: str | None = None, style: str | None = None) -> str:
+def badge(
+    label: str, state: str | None, url: str | None = None, style: str | None = None
+) -> str:
     """Generate a shields.io badge markdown string."""
     state = state or "unknown"
     color = STATE_COLOR.get(state, "orange")

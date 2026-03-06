@@ -25,7 +25,12 @@ from lib.paths import LOG_DIR, ROOT
 from lib.reporting import status
 from lib.vendor import VendorError, generate, is_go_package, vendor_tarball_path
 from lib.version import nvr
-from lib.yaml_utils import get_packages, load_build_status, save_build_status
+from lib.yaml_utils import (
+    filter_packages,
+    get_packages,
+    load_build_status,
+    save_build_status,
+)
 
 SOURCES_DIR = Path.home() / "rpmbuild" / "SOURCES"
 
@@ -35,14 +40,7 @@ def main() -> None:
     package_filter = os.environ.get("PACKAGE", "")
 
     all_packages = get_packages()
-    if package_filter:
-        names = [n.strip() for n in package_filter.split(",") if n.strip()]
-        unknown = [n for n in names if n not in all_packages]
-        if unknown:
-            sys.exit(f"error: unknown package(s): {', '.join(unknown)}")
-        packages = {n: all_packages[n] for n in names}
-    else:
-        packages = all_packages
+    packages = filter_packages(all_packages, package_filter)
 
     LOG_DIR.mkdir(exist_ok=True)
     SOURCES_DIR.mkdir(parents=True, exist_ok=True)
@@ -59,14 +57,22 @@ def main() -> None:
 
         # Skip if not a Go package
         if not is_go_package(meta):
-            build_status["stages"]["vendor"][pkg] = {"state": "skipped", "version": ver, "log": None}
+            build_status["stages"]["vendor"][pkg] = {
+                "state": "skipped",
+                "version": ver,
+                "log": None,
+            }
             continue
 
         # Skip if spec stage failed
         spec_state = spec_stage.get(pkg, {}).get("state", "")
         if spec_state == "failed" or (spec_stage and pkg not in spec_stage):
             status("vendor", pkg, "skip")
-            build_status["stages"]["vendor"][pkg] = {"state": "skipped", "version": ver, "log": None}
+            build_status["stages"]["vendor"][pkg] = {
+                "state": "skipped",
+                "version": ver,
+                "log": None,
+            }
             continue
 
         version = str(meta["version"])

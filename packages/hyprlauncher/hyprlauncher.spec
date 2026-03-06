@@ -7,17 +7,17 @@ URL:            https://github.com/hyprwm/hyprlauncher
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(fontconfig)
+BuildRequires:  pkgconfig(hyprlang)
 BuildRequires:  pkgconfig(hyprtoolkit)
-BuildRequires:  pkgconfig(pixman-1)
-BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(hyprwire)
 BuildRequires:  pkgconfig(icu-uc)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(fontconfig)
+BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libqalculate)
+BuildRequires:  pkgconfig(pixman-1)
 
 %description
 A multipurpose and versatile launcher / picker for Hyprland
@@ -40,8 +40,8 @@ Features:
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
 * Sun Jan 04 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.5-%autorelease

@@ -7,9 +7,9 @@ URL:            https://github.com/hyprwm/hyprland-plugins
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
 BuildRequires:  hyprland-devel
+BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libinput)
 BuildRequires:  pkgconfig(libudev)
@@ -42,9 +42,9 @@ Official plugins for Hyprland:
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
-* Thu Mar 05 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.53.0-%autorelease
+* Fri Mar 06 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.53.0-%autorelease
 - Update to 0.53.0

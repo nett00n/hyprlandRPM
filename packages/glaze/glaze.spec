@@ -8,10 +8,10 @@ URL:            https://github.com/stephenberry/glaze
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
 BuildRequires:  libasan
 BuildRequires:  libubsan
+BuildRequires:  ninja-build
 
 %description
 One of the fastest JSON libraries in the world. Glaze reads and writes from object memory, simplifying interfaces and offering incredible performance.
@@ -27,8 +27,8 @@ One of the fastest JSON libraries in the world. Glaze reads and writes from obje
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %package devel
 Summary:        Development files for Extremely fast, in memory, JSON and reflection library for modern C++. BEVE, CBOR, CSV, MessagePack, TOML, YAML, EETF
@@ -38,8 +38,8 @@ Requires:       %{name} = %{version}-%{release}
 Development files for glaze.
 
 %files devel
-/usr/include/glaze/
-/usr/share/glaze/*.cmake
+%{_prefix}/include/glaze/
+%{_prefix}/share/glaze/*.cmake
 
 %changelog
 * Sat Feb 28 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 7.1.0-%autorelease

@@ -19,20 +19,25 @@ import subprocess
 import sys
 from pathlib import Path
 
+from lib.deps import infer_deps
 from lib.paths import LOCAL_REPO, LOG_DIR, ROOT
 from lib.reporting import status
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
-from lib.yaml_utils import get_packages, load_build_status, save_build_status
+from lib.yaml_utils import (
+    filter_packages,
+    get_packages,
+    load_build_status,
+    save_build_status,
+)
 
 
-def failed_local_dep(meta: dict, all_packages: dict, failed: dict) -> str | None:
-    pkg_by_lower = {k.lower(): k for k in all_packages}
-    for dep in meta.get("build_requires", []):
-        base = dep.removesuffix("-devel").lower()
-        orig = pkg_by_lower.get(base)
-        if orig and failed.get(orig):
-            return orig
+def failed_local_dep(
+    name: str, meta: dict, all_packages: dict, failed: dict
+) -> str | None:
+    for dep in infer_deps(name, meta, all_packages):
+        if failed.get(dep):
+            return dep
     return None
 
 
@@ -74,14 +79,7 @@ def main() -> None:
     package_filter = os.environ.get("PACKAGE", "")
 
     all_packages = get_packages()
-    if package_filter:
-        names = [n.strip() for n in package_filter.split(",") if n.strip()]
-        unknown = [n for n in names if n not in all_packages]
-        if unknown:
-            sys.exit(f"error: unknown package(s): {', '.join(unknown)}")
-        packages = {n: all_packages[n] for n in names}
-    else:
-        packages = all_packages
+    packages = filter_packages(all_packages, package_filter)
 
     LOG_DIR.mkdir(exist_ok=True)
     build_status = load_build_status()
@@ -98,7 +96,7 @@ def main() -> None:
         log = LOG_DIR / f"{pkg}-20-mock.log"
         log.unlink(missing_ok=True)
 
-        blocker = failed_local_dep(meta, packages, failed)
+        blocker = failed_local_dep(pkg, meta, packages, failed)
         srpm_state = srpm_stage.get(pkg, {}).get("state", "")
         srpm_path = srpm_stage.get(pkg, {}).get("path")
 

@@ -16,7 +16,7 @@ endif
 CONTAINER    := rpm$(FEDORA_VERSION)
 TOOLBOX_RUN  := toolbox run -c $(CONTAINER)
 
-ALL_PACKAGES := $(shell grep -oP '^\s{2}\K[a-z][a-z0-9_-]+(?=:)' packages.yaml)
+ALL_PACKAGES := $(shell grep -oP '^\s{2}\K[a-zA-Z][a-zA-Z0-9_-]+(?=:)' packages.yaml)
 _PKGS        := $(if $(PACKAGE),$(PACKAGE),$(ALL_PACKAGES))
 
 PYTHON           := .venv/bin/python3
@@ -31,7 +31,7 @@ COPR_INSTRUCTIONS := docs/INSTALL.copr.md
         gen-report readme readme-github readme-copr copr-description normalize-paths sort-lists \
         container-build container-enter container-clean container-all \
         pkg-sources pkg-srpm pkg-mock pkg-copr pkg-full-cycle \
-        stage-spec stage-srpm stage-mock stage-copr
+        stage-validate stage-spec stage-srpm stage-mock stage-copr
 
 help: ## Show this help
 	@echo "Usage: make [TARGET] [PACKAGE=<name>] [FEDORA_VERSION=<version>]"
@@ -176,6 +176,12 @@ pkg-copr: pkg-srpm ## Submit PACKAGE (or all) SRPMs to Copr (requires COPR_REPO 
 		echo "==> copr: $$pkg"; \
 		$(TOOLBOX_RUN) copr-cli build $(COPR_REPO) ~/rpmbuild/SRPMS/$$pkg-*.src.rpm || exit 1; \
 	done
+
+stage-validate: ## Run validation stage (PACKAGE=<name>, runs in toolbox)
+	$(TOOLBOX_RUN) env \
+		FEDORA_VERSION=$(FEDORA_VERSION) \
+		PACKAGE=$(PACKAGE) \
+		python3 scripts/stage-validate.py
 
 stage-spec: ## Run spec generation stage (PACKAGE=<name>, runs in toolbox)
 	$(TOOLBOX_RUN) env \

@@ -7,13 +7,13 @@ URL:            https://github.com/hyprwm/hyprpwcenter
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
-BuildRequires:  pkgconfig(libpipewire-0.3)
+BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(hyprtoolkit)
-BuildRequires:  pkgconfig(pixman-1)
-BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(hyprutils)
+BuildRequires:  pkgconfig(libdrm)
+BuildRequires:  pkgconfig(libpipewire-0.3)
+BuildRequires:  pkgconfig(pixman-1)
 
 %description
 A GUI Pipewire control center built with hyprtoolkit.
@@ -29,8 +29,8 @@ A GUI Pipewire control center built with hyprtoolkit.
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
 * Tue Feb 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.2-%autorelease

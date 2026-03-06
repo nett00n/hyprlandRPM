@@ -25,6 +25,16 @@
       - url: {{ source_url }}
     # build_system: cmake | meson | autotools | make — selects default %build/%install macros
     build_system: {{ build_system }}
+{% if depends_on %}
+    depends_on:
+{% for dep in depends_on %}
+      - {{ dep }}
+{% endfor %}
+{% else %}
+    # depends_on: local packages that must be built before this one
+    # depends_on:
+    #   - hyprutils
+{% endif %}
 {% if build_requires %}
     build_requires:
 {% for dep in build_requires %}
@@ -63,6 +73,3 @@
         []
         # - "%{_includedir}/{{ key }}/"
         # - "%{_libdir}/pkgconfig/{{ key }}.pc"
-    debuginfo:
-      files:
-        []

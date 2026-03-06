@@ -7,17 +7,17 @@ URL:            https://github.com/hyprwm/hyprpicker
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(cairo)
+BuildRequires:  pkgconfig(hyprutils)
+BuildRequires:  pkgconfig(hyprwayland-scanner)
+BuildRequires:  pkgconfig(libjpeg)
+BuildRequires:  pkgconfig(pango)
+BuildRequires:  pkgconfig(pangocairo)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  pkgconfig(xkbcommon)
-BuildRequires:  pkgconfig(cairo)
-BuildRequires:  pkgconfig(pango)
-BuildRequires:  pkgconfig(pangocairo)
-BuildRequires:  pkgconfig(libjpeg)
-BuildRequires:  pkgconfig(hyprutils)
-BuildRequires:  pkgconfig(hyprwayland-scanner)
 
 %description
 FIXME
@@ -33,8 +33,8 @@ FIXME
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
 * Tue Feb 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.4.6-%autorelease

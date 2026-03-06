@@ -7,12 +7,12 @@ URL:            https://github.com/hyprwm/hyprshutdown
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
+BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(hyprtoolkit)
 BuildRequires:  pkgconfig(hyprutils)
-BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(libdrm)
+BuildRequires:  pkgconfig(pixman-1)
 
 %description
 A graceful shutdown/logout utility for Hyprland, which prevents apps from crashing / dying unexpectedly.
@@ -28,8 +28,8 @@ A graceful shutdown/logout utility for Hyprland, which prevents apps from crashi
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
 * Thu Jan 29 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease

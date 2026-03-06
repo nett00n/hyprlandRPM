@@ -20,7 +20,12 @@ from lib.paths import LOG_DIR, ROOT
 from lib.reporting import status
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
-from lib.yaml_utils import get_packages, load_build_status, save_build_status
+from lib.yaml_utils import (
+    filter_packages,
+    get_packages,
+    load_build_status,
+    save_build_status,
+)
 
 
 def parse_build_id(output: str) -> int | None:
@@ -46,14 +51,7 @@ def main() -> None:
         sys.exit(2)
 
     all_packages = get_packages()
-    if package_filter:
-        names = [n.strip() for n in package_filter.split(",") if n.strip()]
-        unknown = [n for n in names if n not in all_packages]
-        if unknown:
-            sys.exit(f"error: unknown package(s): {', '.join(unknown)}")
-        packages = {n: all_packages[n] for n in names}
-    else:
-        packages = all_packages
+    packages = filter_packages(all_packages, package_filter)
 
     LOG_DIR.mkdir(exist_ok=True)
     build_status = load_build_status()
@@ -73,7 +71,11 @@ def main() -> None:
         srpm_path = srpm_stage.get(pkg, {}).get("path")
         mock_state = mock_stage.get(pkg, {}).get("state", "")
 
-        if srpm_state in ("failed", "skipped") or not srpm_path or mock_state in ("failed", "skipped"):
+        if (
+            srpm_state in ("failed", "skipped")
+            or not srpm_path
+            or mock_state in ("failed", "skipped")
+        ):
             status("copr", pkg, "skip")
             entry = {"state": "skipped", "version": ver, "build_id": None, "log": None}
             if has_devel:

@@ -12,12 +12,14 @@ templates/packages-entry.yaml.j2   # Jinja2 template for new packages.yaml entri
 scripts/gen-spec.py                # renders specs from packages.yaml + templates/spec.j2
 scripts/gen-report.py              # renders the build report from build-report.yaml
 scripts/gen-vendor-tarball.py      # standalone: generate Go vendor tarball for one package
+scripts/stage-validate.py          # pipeline stage: validate packages.yaml entries
 scripts/stage-spec.py              # pipeline stage: generate spec files
 scripts/stage-vendor.py            # pipeline stage: generate Go vendor tarballs
 scripts/stage-srpm.py              # pipeline stage: build SRPMs
 scripts/stage-mock.py              # pipeline stage: local mock build
 scripts/stage-copr.py              # pipeline stage: submit to Copr
 scripts/lib/                       # shared library modules for all scripts
+scripts/lib/deps.py                # dependency inference + topological sort
 requirements.txt                   # Python deps (jinja2, pyyaml)
 submodules/<org>/<name>/           # upstream sources as git submodules
 ```
@@ -89,6 +91,8 @@ Alternatively, step by step:
         sources:             # auto-indexed: Source0, Source1, ...
           - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
         build_system: cmake  # cmake | meson | autotools | make
+        depends_on:          # local packages that must be built first (authoritative)
+          - hyprutils        # add any local packages referenced in build_requires
         build_requires:
           - cmake
           - pkgconfig(wayland-client)
@@ -96,6 +100,14 @@ Alternatively, step by step:
           - "%license LICENSE"
           - "%{_bindir}/<name>"
     ```
+
+    The `depends_on` field lists other packages from this repo that must be built
+    before this one. It is the authoritative source for dependency ordering — it
+    overrides the `-devel` heuristic used when the field is absent. The
+    `scaffold-package.py` script auto-detects `depends_on` from `build_requires`
+    entries that match existing package keys (both `-devel` and `pkgconfig()` forms).
+    `make stage-validate` will warn about any `build_requires` entries that reference
+    local packages but are missing from `depends_on`.
 6. Update FIXME fields with your ones
 7. Start build cycle:
     ```shell
@@ -166,15 +178,20 @@ make pkg-mock PACKAGE=<name> FEDORA_VERSION=43
 
 ```shell
 # Run stages individually (each reads/writes logs/build-status.yaml)
-make stage-spec   PKG=<name>
-make stage-vendor PKG=<name>   # Go packages only: generates vendor tarball
-make stage-srpm   PKG=<name>
-make stage-mock   PKG=<name>
-make stage-copr   PKG=<name> COPR_REPO=nett00n/hyprland
+make stage-validate PKG=<name>   # validate packages.yaml (required fields, conventions)
+make stage-spec     PKG=<name>
+make stage-vendor   PKG=<name>   # Go packages only: generates vendor tarball
+make stage-srpm     PKG=<name>
+make stage-mock     PKG=<name>
+make stage-copr     PKG=<name> COPR_REPO=nett00n/hyprland
 
 # Compose a custom pipeline (e.g. skip copr)
-make stage-spec stage-vendor stage-srpm stage-mock PKG=<name>
+make stage-validate stage-spec stage-vendor stage-srpm stage-mock PKG=<name>
 ```
+
+`PACKAGE` (or `PKG`) is matched case-insensitively, so `PACKAGE=hyprland` and `PACKAGE=Hyprland` both work.
+
+When `PACKAGE` is set, `pkg-full-cycle` automatically includes transitive build dependencies and processes them in topological order.
 
 ## Submitting to Copr
 
@@ -188,6 +205,7 @@ Requires `copr-cli` configured with `~/.config/copr`.
 ## Checklist Before Opening a PR
 
 - [ ] `packages.yaml` entry is complete and correct
+- [ ] `make stage-validate PACKAGE=<name>` passes with no errors
 - [ ] `rpmlint` passes with no errors
 - [ ] Builds cleanly with `make pkg-mock PKG=<name>`
 - [ ] `Source0:` points to an upstream release tarball (not a manual archive)

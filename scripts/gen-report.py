@@ -58,9 +58,15 @@ def collect_packages(
                 "spec_badge": badge("spec", spec.get("state"), style=badge_style),
                 "srpm_badge": badge("srpm", srpm.get("state"), style=badge_style),
                 "mock_badge": badge("mock", mock.get("state"), style=badge_style),
-                "mock_badge_short": badge_short("mock", mock.get("state"), style=badge_style),
-                "copr_badge": badge("copr", copr.get("state"), copr_url, style=badge_style),
-                "copr_badge_short": badge_short("copr", copr.get("state"), copr_url, style=badge_style),
+                "mock_badge_short": badge_short(
+                    "mock", mock.get("state"), style=badge_style
+                ),
+                "copr_badge": badge(
+                    "copr", copr.get("state"), copr_url, style=badge_style
+                ),
+                "copr_badge_short": badge_short(
+                    "copr", copr.get("state"), copr_url, style=badge_style
+                ),
             }
         )
     return packages
@@ -74,11 +80,13 @@ def collect_groups(groups_cfg: dict, pkg_by_name: dict) -> list[dict]:
             for name in (group_data.get("packages") or [])
             if name in pkg_by_name
         ]
-        groups.append({
-            "label": group_data.get("label", _key),
-            "badge": group_data.get("badge"),
-            "packages": pkgs,
-        })
+        groups.append(
+            {
+                "label": group_data.get("label", _key),
+                "badge": group_data.get("badge"),
+                "packages": pkgs,
+            }
+        )
     return groups
 
 
@@ -136,7 +144,7 @@ def main() -> None:
     pkg_badge: dict[str, dict] = {}
     for group_data in groups_cfg.values():
         if group_cfg_badge := group_data.get("badge"):
-            for name in (group_data.get("packages") or []):
+            for name in group_data.get("packages") or []:
                 if isinstance(name, str):
                     pkg_badge[name] = group_cfg_badge
 

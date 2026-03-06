@@ -26,7 +26,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate a Go vendor tarball for a package defined in packages.yaml."
     )
-    parser.add_argument("package", metavar="PACKAGE", help="package name, e.g. spf13-cobra")
+    parser.add_argument(
+        "package", metavar="PACKAGE", help="package name, e.g. spf13-cobra"
+    )
     parser.add_argument(
         "--output-dir",
         metavar="DIR",
@@ -52,7 +54,7 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = vendor_tarball_path(pkg_name, version, output_dir)
 
-    print(f"\n{'='*20} {pkg_name} {version} {'='*20}")
+    print(f"\n{'=' * 20} {pkg_name} {version} {'=' * 20}")
     print(f"  vendor tarball: {output_path}")
 
     try:

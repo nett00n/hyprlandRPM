@@ -8,6 +8,7 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  glaze-devel
 BuildRequires:  hyprutils-devel
 BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  hyprwire-devel
@@ -39,7 +40,6 @@ BuildRequires:  pkgconfig(xcb-icccm)
 BuildRequires:  pkgconfig(xcursor)
 BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  udis86-devel
-BuildRequires:  glaze-devel
 
 %description
 Hyprland is a 100% independent, dynamic tiling Wayland compositor that doesn't sacrifice on its looks.
@@ -62,7 +62,6 @@ sed -i 's|^install(TARGETS start-hyprland)|target_include_directories(start-hypr
 %license LICENSE
 %{_bindir}/hyprctl
 %{_bindir}/hyprland
-%{_prefix}/bin/Hyprland
 %{_bindir}/hyprpm
 %{_bindir}/start-hyprland
 %{_datadir}/bash-completion/completions/hyprctl
@@ -76,6 +75,7 @@ sed -i 's|^install(TARGETS start-hyprland)|target_include_directories(start-hypr
 %{_datadir}/zsh/site-functions/_hyprpm
 %{_mandir}/man1/hyprctl.1.gz
 %{_mandir}/man1/Hyprland.1.gz
+%{_prefix}/bin/Hyprland
 
 %package devel
 Summary:        Development files for A Modern C++ Wayland Compositor

@@ -19,13 +19,20 @@ from lib.paths import LOG_DIR, ROOT
 from lib.reporting import status
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
-from lib.yaml_utils import get_packages, load_build_status, save_build_status
+from lib.yaml_utils import (
+    filter_packages,
+    get_packages,
+    load_build_status,
+    save_build_status,
+)
 
 
 def find_srpm(pkg: str) -> str | None:
     srpm_dir = Path.home() / "rpmbuild" / "SRPMS"
     matches = sorted(
-        srpm_dir.glob(f"{pkg.lower()}-*.src.rpm"), key=lambda p: p.stat().st_mtime, reverse=True
+        srpm_dir.glob(f"{pkg.lower()}-*.src.rpm"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
     )
     return str(matches[0]) if matches else None
 
@@ -35,14 +42,7 @@ def main() -> None:
     package_filter = os.environ.get("PACKAGE", "")
 
     all_packages = get_packages()
-    if package_filter:
-        names = [n.strip() for n in package_filter.split(",") if n.strip()]
-        unknown = [n for n in names if n not in all_packages]
-        if unknown:
-            sys.exit(f"error: unknown package(s): {', '.join(unknown)}")
-        packages = {n: all_packages[n] for n in names}
-    else:
-        packages = all_packages
+    packages = filter_packages(all_packages, package_filter)
 
     LOG_DIR.mkdir(exist_ok=True)
     build_status = load_build_status()

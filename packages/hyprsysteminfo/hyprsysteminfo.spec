@@ -7,8 +7,8 @@ URL:            https://github.com/hyprwm/hyprsysteminfo
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
+BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(hyprtoolkit)
 BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
@@ -29,8 +29,8 @@ A tiny qt6/qml application to display information about the running system
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
 * Fri Jan 10 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.3-%autorelease

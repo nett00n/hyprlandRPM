@@ -7,14 +7,14 @@ URL:            https://github.com/hyprwm/hyprsunset
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(hyprland-protocols)
+BuildRequires:  pkgconfig(hyprlang)
+BuildRequires:  pkgconfig(hyprutils)
+BuildRequires:  pkgconfig(hyprwayland-scanner)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
-BuildRequires:  pkgconfig(hyprutils)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprwayland-scanner)
-BuildRequires:  pkgconfig(hyprland-protocols)
 
 %description
 An application to enable a blue-light filter on Hyprland
@@ -30,8 +30,8 @@ An application to enable a blue-light filter on Hyprland
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
 * Fri Oct 03 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.3.3-%autorelease

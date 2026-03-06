@@ -17,7 +17,37 @@ PKG_URL_LINE_RE = re.compile(r"^    url: \S+")
 SOURCE_TAG_URL_RE = re.compile(r'^      - url: ".*?/archive/refs/tags/.*?"')
 
 BUILD_STATUS_YAML = LOG_DIR / "build-status.yaml"
-STAGES = ["spec", "vendor", "srpm", "mock", "copr"]
+STAGES = ["validate", "spec", "vendor", "srpm", "mock", "copr"]
+
+
+def find_package_name(packages: dict, query: str) -> str | None:
+    """Case-insensitive lookup: return the actual key matching query, or None."""
+    query_lower = query.lower()
+    for name in packages:
+        if name.lower() == query_lower:
+            return name
+    return None
+
+
+def filter_packages(all_packages: dict, package_env: str) -> dict:
+    """Parse PACKAGE env var, resolve names case-insensitively, return filtered dict.
+
+    Exits with error if any name cannot be resolved.
+    """
+    if not package_env:
+        return all_packages
+    names = [n.strip() for n in package_env.split(",") if n.strip()]
+    resolved: dict[str, dict] = {}
+    unknown: list[str] = []
+    for n in names:
+        key = find_package_name(all_packages, n)
+        if key is None:
+            unknown.append(n)
+        else:
+            resolved[key] = all_packages[key]
+    if unknown:
+        sys.exit(f"error: unknown package(s): {', '.join(unknown)}")
+    return resolved
 
 
 def load_packages_yaml(path: Path = PACKAGES_YAML) -> dict:

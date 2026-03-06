@@ -21,9 +21,15 @@ from pathlib import Path
 
 import yaml
 
+from lib.deps import build_dep_graph, topological_sort, transitive_deps
 from lib.paths import LOG_DIR, ROOT
 from lib.reporting import print_summary
-from lib.yaml_utils import get_packages, load_build_status, save_build_status
+from lib.yaml_utils import (
+    filter_packages,
+    get_packages,
+    load_build_status,
+    save_build_status,
+)
 
 PYTHON = sys.executable
 SCRIPTS = ROOT / "scripts"
@@ -49,13 +55,23 @@ def main() -> None:
     copr_repo = os.environ.get("COPR_REPO", "")
     package_filter = os.environ.get("PACKAGE", "")
 
-    packages = get_packages()
+    all_packages = get_packages()
+    packages = filter_packages(all_packages, package_filter)
+
+    # Expand selected packages to include transitive deps, then sort topologically
     if package_filter:
-        names = [n.strip() for n in package_filter.split(",") if n.strip()]
-        unknown = [n for n in names if n not in packages]
-        if unknown:
-            sys.exit(f"error: unknown package(s): {', '.join(unknown)}")
-        packages = {n: packages[n] for n in names}
+        graph = build_dep_graph(all_packages)
+        expanded: dict = {}
+        for name in packages:
+            for dep in transitive_deps(name, graph):
+                if dep not in expanded:
+                    expanded[dep] = all_packages[dep]
+            expanded[name] = all_packages[name]
+        try:
+            order = topological_sort({k: graph[k] & set(expanded) for k in expanded})
+        except ValueError as e:
+            sys.exit(f"error: {e}")
+        packages = {k: expanded[k] for k in order if k in expanded}
 
     LOG_DIR.mkdir(exist_ok=True)
     # Clean old logs for selected packages
@@ -72,17 +88,25 @@ def main() -> None:
             else int(fedora_version),
             "mock_chroot": mock_chroot,
         },
-        "stages": {"spec": {}, "vendor": {}, "srpm": {}, "mock": {}, "copr": {}},
+        "stages": {
+            "validate": {},
+            "spec": {},
+            "vendor": {},
+            "srpm": {},
+            "mock": {},
+            "copr": {},
+        },
     }
     save_build_status(build_status)
 
     stage_env = {
         "FEDORA_VERSION": fedora_version,
         "MOCK_CHROOT": mock_chroot,
-        "PACKAGE": package_filter,
+        "PACKAGE": ",".join(packages.keys()) if package_filter else "",
         "COPR_REPO": copr_repo,
     }
 
+    run_stage(SCRIPTS / "stage-validate.py", stage_env)
     run_stage(SCRIPTS / "stage-spec.py", stage_env)
     run_stage(SCRIPTS / "stage-vendor.py", stage_env)
     run_stage(SCRIPTS / "stage-srpm.py", stage_env)

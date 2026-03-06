@@ -92,6 +92,23 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
     for dep in pkg_deps:
         build_requires.append(f"pkgconfig({dep})")
 
+    # Auto-detect depends_on from build_requires matching existing packages
+    existing: dict = {}
+    if PACKAGES_YAML.exists():
+        existing = (yaml.safe_load(PACKAGES_YAML.read_text()) or {}).get("packages", {})
+    pkg_by_lower = {k.lower(): k for k in existing}
+    depends_on: list[str] = []
+    for req in build_requires:
+        base: str | None = None
+        if req.endswith("-devel"):
+            base = req[:-6].lower()
+        elif req.startswith("pkgconfig(") and req.endswith(")"):
+            base = req[10:-1].lower()
+        if base and base in pkg_by_lower and pkg_by_lower[base] != key:
+            resolved = pkg_by_lower[base]
+            if resolved not in depends_on:
+                depends_on.append(resolved)
+
     env = create_jinja_env()
     template = env.get_template("packages-entry.yaml.j2")
     block = template.render(
@@ -107,6 +124,7 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
         source_url=source_url,
         build_system=build_system,
         build_requires=build_requires,
+        depends_on=depends_on,
     )
 
     if PACKAGES_YAML.exists():

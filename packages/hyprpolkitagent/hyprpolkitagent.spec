@@ -7,8 +7,8 @@ URL:            https://github.com/hyprwm/hyprpolkitagent
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
+BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(polkit-agent-1)
 BuildRequires:  pkgconfig(polkit-qt6-1)
@@ -27,8 +27,8 @@ A simple polkit authentication agent for Hyprland, written in QT/QML.
 %cmake_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 
 %changelog
 * Thu Jul 31 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.3-%autorelease

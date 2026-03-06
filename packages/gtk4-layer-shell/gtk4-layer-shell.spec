@@ -6,13 +6,13 @@ License:        MIT
 URL:            https://github.com/wmww/gtk4-layer-shell
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
 
-BuildRequires:  meson
-BuildRequires:  ninja-build
 BuildRequires:  gcc-c++
 BuildRequires:  glib2-devel
-BuildRequires:  gtk4-devel
-BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  gobject-introspection-devel
+BuildRequires:  gtk4-devel
+BuildRequires:  meson
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  vala
 
 %description
@@ -33,8 +33,8 @@ The Session Lock protocol allows building lock screens.
 %meson_install
 
 %files
-%license LICENSE
 %doc README.md
+%license LICENSE
 %{_prefix}/lib64/girepository-*/Gtk4LayerShell-*.typelib
 %{_prefix}/lib64/girepository-*/Gtk4SessionLock-*.typelib
 %{_prefix}/lib64/libgtk4-layer-shell.so*
