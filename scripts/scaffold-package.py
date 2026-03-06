@@ -61,7 +61,9 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
     commit = None
     if latest:
         version = latest.lstrip("v") if isinstance(latest, str) else str(latest)
-        source_url = '"%{url}/archive/refs/tags/v%{version}.tar.gz"'
+        source_url = (
+            '"%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"'
+        )
     else:
         commit_info = get_submodule_commit(repo)
         if commit_info:
@@ -71,7 +73,7 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
             source_url = '"%{url}/archive/%{commit}.tar.gz"'
         else:
             version = "FIXME"
-            source_url = '"%{url}/archive/refs/tags/v%{version}.tar.gz"'
+            source_url = '"%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"'
 
     build_system = detect_build_system(repo) or "FIXME"
     license_id = detect_license(repo) or "FIXME"

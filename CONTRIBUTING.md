@@ -160,7 +160,7 @@ Then add the vendor tarball as Source1 and extract it in `prep_commands`:
 
 ```yaml
 sources:
-  - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+  - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
   - url: "%{name}-%{version}-vendor.tar.gz"
 prep_commands:
   - "pushd cli"

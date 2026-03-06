@@ -19,6 +19,7 @@ from lib.yaml_utils import (
     filter_packages,
     get_packages,
     load_build_status,
+    load_packages_yaml,
     save_build_status,
 )
 
@@ -91,6 +92,25 @@ def validate_package(
     return errors, warnings
 
 
+def validate_group_membership(all_packages: dict) -> tuple[list[str], list[str]]:
+    """Check every package appears in at least one group's packages list."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    data = load_packages_yaml()
+    groups = data.get("groups") or {}
+    grouped: set[str] = set()
+    for group_meta in groups.values():
+        for pkg in group_meta.get("packages") or []:
+            grouped.add(pkg)
+
+    for pkg in all_packages:
+        if pkg not in grouped:
+            errors.append(f"package '{pkg}' is not listed in any group")
+
+    return errors, warnings
+
+
 def validate_gitmodules(root_path=ROOT) -> tuple[list[str], list[str]]:
     """Validate .gitmodules: paths under submodules/, URLs use https."""
     errors: list[str] = []
@@ -156,6 +176,18 @@ def main() -> None:
             "errors": len(errors),
             "warnings": len(warnings),
         }
+
+    # Validate group membership (global, not per-package)
+    grp_errors, grp_warnings = validate_group_membership(all_packages)
+    if grp_errors:
+        failed = True
+        print("  [FAIL] groups membership")
+        for e in grp_errors:
+            print(f"    error: {e}")
+    else:
+        print("  [ ok ] groups membership")
+    total_errors += len(grp_errors)
+    total_warnings += len(grp_warnings)
 
     # Validate .gitmodules (global, not per-package)
     gm_errors, gm_warnings = validate_gitmodules(ROOT)
