@@ -16,6 +16,7 @@ Environment variables:
 
 import os
 import sys
+from typing import Any
 
 from lib.paths import LOG_DIR, ROOT
 from lib.reporting import status
@@ -90,7 +91,12 @@ def main() -> None:
             or mock_state in ("failed", "skipped")
         ):
             status("copr", pkg, "skip")
-            entry = {"state": "skipped", "version": ver, "build_id": None, "log": None}
+            entry: dict[str, Any] = {
+                "state": "skipped",
+                "version": ver,
+                "build_id": None,
+                "log": None,
+            }
             if has_devel:
                 entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
             build_status["stages"]["copr"][pkg] = entry

@@ -15,6 +15,7 @@ Environment variables:
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from lib.paths import LOG_DIR, ROOT
 from lib.reporting import status
@@ -74,7 +75,12 @@ def main() -> None:
         spec_state = spec_stage.get(pkg, {}).get("state", "")
         if spec_state == "failed" or (spec_stage and pkg not in spec_stage):
             status("srpm", pkg, "skip")
-            entry = {"state": "skipped", "version": ver, "path": None, "log": None}
+            entry: dict[str, Any] = {
+                "state": "skipped",
+                "version": ver,
+                "path": None,
+                "log": None,
+            }
             if has_devel:
                 entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
             build_status["stages"]["srpm"][pkg] = entry

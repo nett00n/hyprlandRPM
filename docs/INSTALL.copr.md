@@ -1,7 +1,7 @@
-
 ## Enable the repository
 
 Regular Fedora
+
 ```shell
 dnf copr enable nett00n/hyprland
 ```

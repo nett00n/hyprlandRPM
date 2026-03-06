@@ -80,6 +80,23 @@ def collect_groups(groups_cfg: dict, pkg_by_name: dict) -> list[dict]:
             for name in (group_data.get("packages") or [])
             if name in pkg_by_name
         ]
+        # Add packages from global repo (external packages)
+        for global_pkg in group_data.get("packages_from_global_repo") or []:
+            if isinstance(global_pkg, dict):
+                pkgs.append(
+                    {
+                        "name": global_pkg.get("name", ""),
+                        "summary": global_pkg.get("summary", ""),
+                        "version": None,
+                        "badge": None,
+                        "spec_badge": None,
+                        "srpm_badge": None,
+                        "mock_badge": None,
+                        "mock_badge_short": None,
+                        "copr_badge": None,
+                        "copr_badge_short": None,
+                    }
+                )
         groups.append(
             {
                 "label": group_data.get("label", _key),

@@ -1,6 +1,7 @@
 FEDORA_VERSION  ?= 43
 SUPPORTED        := 42 43 44 rawhide
 IMAGE_NAME       := rpm-toolbox
+HIGHLIGHT_PREFIX ?= "█▓▒░"
 
 # Accept either PACKAGE or PKG; PACKAGE takes precedence
 PACKAGE      ?=
@@ -23,9 +24,15 @@ PYTHON           := .venv/bin/python3
 README_COPR      := docs/README.copr.md
 COPR_INSTRUCTIONS := docs/INSTALL.copr.md
 
+# Helper: run command and show result message
+# Usage: $(call run_with_result,command,success_msg,fail_msg)
+define run_with_result
+	@$1 && echo $(HIGHLIGHT_PREFIX) "✓ $2" || (echo $(HIGHLIGHT_PREFIX) "✗ $3"; exit 1)
+endef
+
 
 .DEFAULT_GOAL := help
-.PHONY: help setup-venv lint fmt \
+.PHONY: help setup-venv lint ruff-format fmt pre-commit \
         pkg-spec update-versions list-tags scaffold-package \
         add-submodule add-package add-new \
         gen-report readme readme-github readme-copr copr-description normalize-paths sort-lists \
@@ -52,11 +59,27 @@ setup-venv: ## Create .venv and install Python dependencies
 	python3 -m venv .venv
 	.venv/bin/pip install -q -r requirements.txt
 
-lint: ## Run ruff check on all scripts
-	.venv/bin/ruff check scripts/
+lint: ## Run all linters inside toolbox (ruff, mypy, yamllint)
+	$(TOOLBOX_RUN) pip3 install -q -r requirements-dev.txt
+	@echo $(HIGHLIGHT_PREFIX) "Ruff (Python linter)"
+	$(call run_with_result,$(TOOLBOX_RUN) ruff check scripts/,Ruff check passed,Ruff check failed)
+	@echo $(HIGHLIGHT_PREFIX) "Mypy (Type checker)"
+	$(call run_with_result,$(TOOLBOX_RUN) mypy scripts/ --ignore-missing-imports 2>&1 | grep -v "submodules/",Mypy check passed,Mypy check failed)
+	@echo $(HIGHLIGHT_PREFIX) "Yamllint (YAML validator)"
+	$(call run_with_result,$(TOOLBOX_RUN) yamllint -d relaxed *.yaml docs/*.yaml 2>&1 | grep -v "submodules/",Yamllint check passed,Yamllint check failed)
+	@echo $(HIGHLIGHT_PREFIX) "✓✓✓ All linting passed: ruff, mypy, yamllint"
 
-fmt: ## Run ruff format on all scripts
-	.venv/bin/ruff format scripts/
+ruff-format: ## Run ruff format on all scripts inside toolbox
+	$(TOOLBOX_RUN) pip3 install -q -r requirements-dev.txt
+	$(call run_with_result,$(TOOLBOX_RUN) ruff format scripts/,Ruff format applied,Ruff format failed)
+
+fmt: ruff-format ## Format and normalize: ruff, paths, and YAML lists
+	$(call run_with_result,$(PYTHON) scripts/rpm-dir-prefixes-convert.py,RPM dir prefixes normalized,RPM dir prefixes failed)
+	$(call run_with_result,$(PYTHON) scripts/sort-yaml-lists.py,YAML lists sorted,YAML lists sorting failed)
+	@echo $(HIGHLIGHT_PREFIX) "✓✓✓ Formatting complete: ruff format, rpm-dir-prefixes, YAML lists"
+
+pre-commit: lint fmt sort-lists ## Run all checks and formatting (linting + formatting)
+	@echo $(HIGHLIGHT_PREFIX) "✓✓✓ Pre-commit complete: all linting + formatting passed"
 
 pkg-spec: ## Generate spec file(s) from packages.yaml (PACKAGE=<name> for one package)
 	$(PYTHON) scripts/gen-spec.py $(PACKAGE)
@@ -75,7 +98,7 @@ add-submodule: ## Register git submodule for an existing package (PACKAGE=<name>
 	@_url=$$($(PYTHON) -c "import yaml; d=yaml.safe_load(open('packages.yaml')); print(d['packages']['$(PACKAGE)']['url'])"); \
 	 _name=$$(basename $$_url); \
 	 _org=$$(basename $$(dirname $$_url)); \
-	 echo "==> adding submodule submodules/$$_org/$$_name"; \
+	 echo $(HIGHLIGHT_PREFIX) "adding submodule submodules/$$_org/$$_name"; \
 	 git submodule add $$_url submodules/$$_org/$$_name
 
 add-package: ## Scaffold a packages.yaml entry from an existing submodule (PACKAGE=<name> required)
@@ -106,7 +129,7 @@ copr-description: $(README_COPR) $(COPR_INSTRUCTIONS) ## Push description and in
 	$(TOOLBOX_RUN) copr-cli modify "$(COPR_REPO)" \
 		--description "$$(cat $(README_COPR))" \
 		--instructions "$$(cat $(COPR_INSTRUCTIONS))"
-	@echo "Description updated → $(COPR_REPO)"
+	@echo $(HIGHLIGHT_PREFIX) "Description updated → $(COPR_REPO)"
 
 normalize-paths: ## Normalize paths in packages.yaml abs->macros (ARGS=--reverse or --dry-run)
 	$(PYTHON) scripts/rpm-dir-prefixes-convert.py $(ARGS)
@@ -135,25 +158,25 @@ container-clean: ## Remove toolbox container, image, and volumes for FEDORA_VERS
 
 container-all: ## Build toolboxes for all supported Fedora versions
 	@for v in $(SUPPORTED); do \
-		echo "==> Fedora $$v"; \
+		echo $(HIGHLIGHT_PREFIX) "Fedora $$v"; \
 		$(MAKE) container-build FEDORA_VERSION=$$v; \
 	done
 
 pkg-sources: ## Download sources for PACKAGE (or all) using spectool (runs in toolbox)
 	@for pkg in $(_PKGS); do \
-		echo "==> sources: $$pkg"; \
+		echo $(HIGHLIGHT_PREFIX) "sources: $$pkg"; \
 		$(TOOLBOX_RUN) spectool -g -R packages/$$pkg/$$pkg.spec || exit 1; \
 	done
 
 pkg-srpm: pkg-sources ## Build SRPM for PACKAGE (or all) (runs in toolbox)
 	@for pkg in $(_PKGS); do \
-		echo "==> srpm: $$pkg"; \
+		echo $(HIGHLIGHT_PREFIX) "srpm: $$pkg"; \
 		$(TOOLBOX_RUN) rpmbuild -bs packages/$$pkg/$$pkg.spec || exit 1; \
 	done
 
 pkg-mock: pkg-srpm ## Build and test PACKAGE (or all) with mock for FEDORA_VERSION (runs in toolbox)
 	@for pkg in $(_PKGS); do \
-		echo "==> mock-build: $$pkg"; \
+		echo $(HIGHLIGHT_PREFIX) "mock-build: $$pkg"; \
 		srpm=$$(ls -t ~/rpmbuild/SRPMS/$$pkg-*.src.rpm 2>/dev/null | head -1); \
 		test -n "$$srpm" || { echo "ERROR: no SRPM found for $$pkg"; exit 1; }; \
 		$(TOOLBOX_RUN) mock -r $(MOCK_CHROOT) --rebuild $$srpm || exit 1; \
@@ -175,7 +198,7 @@ pkg-full-cycle: ## Run full cycle with YAML report: spec → srpm → mock → c
 pkg-copr: pkg-srpm ## Submit PACKAGE (or all) SRPMs to Copr (requires COPR_REPO env var, runs in toolbox)
 	@test -n "$(COPR_REPO)" || (echo "Error: COPR_REPO is not set (e.g. export COPR_REPO=nett00n/hyprland)"; exit 1)
 	@for pkg in $(_PKGS); do \
-		echo "==> copr: $$pkg"; \
+		echo $(HIGHLIGHT_PREFIX) "copr: $$pkg"; \
 		$(TOOLBOX_RUN) copr-cli build $(COPR_REPO) ~/rpmbuild/SRPMS/$$pkg-*.src.rpm || exit 1; \
 	done
 

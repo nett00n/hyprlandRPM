@@ -19,6 +19,7 @@ CMake Error at /usr/share/cmake/Modules/FindPkgConfig.cmake:645 (message):
 ## Fix
 
 **`packages.yaml`:**
+
 ```diff
  hyprlang:
    build_requires:

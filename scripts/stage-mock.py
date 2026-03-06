@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from lib.deps import infer_deps
 from lib.paths import LOCAL_REPO, LOG_DIR, ROOT
@@ -118,7 +119,7 @@ def main() -> None:
                 print(f"  [SKIP] mock: {pkg} — local dep failed: {blocker}")
             failed[pkg] = True
             status("mock", pkg, "skip")
-            entry = {"state": "skipped", "version": ver, "log": None}
+            entry: dict[str, Any] = {"state": "skipped", "version": ver, "log": None}
             if has_devel:
                 entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
             build_status["stages"]["mock"][pkg] = entry

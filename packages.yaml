@@ -20,19 +20,25 @@ repo:
     alt: logo
   license: GPLv3
   license_tldr: |
-    **TL;DR** — You are free to use, modify, and distribute this software. If you distribute a modified version, you must release it under GPLv3 as well and make the source available. No warranty is provided.
+    **TL;DR** — You are free to use, modify, and distribute this software.
+    If you distribute a modified version, you must release it under GPLv3
+    as well and make the source available. No warranty is provided.
   description: |
     This repo provides automations for managing COPR repo `nett00n/hyprland`.
-    `nett00n/hyprland` COPR repo provides packages of official and non-official but useful packages to running Hyprland on your Fedora system
+    `nett00n/hyprland` COPR repo provides packages of official and non-official
+    but useful packages to running Hyprland on your Fedora system
 
-    [📎 Officially recommended](https://wiki.hypr.land/Getting-Started/Installation/#packages) repo solopasha/hyprland ([📎 Git](https://github.com/solopasha/hyprlandRPM/tree/master), [📎 COPR](https://copr.fedorainfracloud.org/coprs/solopasha/hyprland/)) seems to be abandoned: it has no commits in last 4+ month now
+    [📎 Officially recommended](https://wiki.hypr.land/Getting-Started/Installation/#packages) repo solopasha/hyprland ([📎 Git](https://github.com/solopasha/hyprlandRPM/tree/master), [📎 solopasha/hyprland COPR](https://copr.fedorainfracloud.org/coprs/solopasha/hyprland/)) seems to be abandoned: it has no commits in last 4+ month now
 
     This repository is created with reproduced builds and future support convenience in mind
 
     Feel free to reuse automation from this repository for your own copr-projects.
 
-    [📎 Check my hyprland repo on COPR](https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/)
-    [📎 Check my hyprland repo on GitHub](https://Github.com/nett00n/hyprland-copr/)
+    - [📎 Check my hyprland repo on COPR](https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/)
+    - [📎 Check my hyprland repo on GitHub](https://Github.com/nett00n/hyprland-copr/)
+  bottom_info: |
+    There is an [📎 lionheartp/Hyprland COPR](https://copr.fedorainfracloud.org/coprs/lionheartp/Hyprland/).
+    It looks more like original `solopasha/hyprland` repo but with no ARM support
   support_info: |
     [📎 Support me on Ko-fi ☕](https://ko-fi.com/nett00n)
   short_description:
@@ -56,23 +62,23 @@ groups:
       color: A5F3FC
       logo_color: black
     packages:
-      - Hyprland
       - hypridle
-      - hyprlock
-      - hyprpaper
-      - hyprqt6engine
-      - xdg-desktop-portal-hyprland
+      - Hyprland
+      - hyprland-guiutils
       - hyprland-plugins
       - hyprland-qt-support
-      - hyprland-guiutils
       - hyprlauncher
+      - hyprlock
+      - hyprpaper
       - hyprpicker
       - hyprpolkitagent
       - hyprpwcenter
+      - hyprqt6engine
+      - Hyprshot
       - hyprshutdown
       - hyprsunset
       - hyprsysteminfo
-      - Hyprshot
+      - xdg-desktop-portal-hyprland
 
   hyprland-deps:
     label: "Hyprland dependencies"
@@ -81,15 +87,16 @@ groups:
       color: A5F3FC
       logo_color: black
     packages:
-      - hyprwayland-scanner
-      - hyprutils
-      - hyprlang
-      - hyprgraphics
       - aquamarine
-      - hyprtoolkit
-      - hyprwire
       - hyprcursor
+      - hyprgraphics
       - hyprland-protocols
+      - hyprland-qt-support
+      - hyprlang
+      - hyprtoolkit
+      - hyprutils
+      - hyprwayland-scanner
+      - hyprwire
 
   apps:
     label: "Useful apps"
@@ -102,6 +109,23 @@ groups:
       - aylurs-gtk-shell
       - glaze
       - gtk4-layer-shell
+
+  starter-pack:
+    label: "Hyprland new user starter-pack"
+    packages:
+      - hypridle
+      - Hyprland
+      - hyprland-guiutils
+      - hyprlock
+      - hyprpaper
+      - Hyprshot
+    packages_from_global_repo:
+      - name: waybar
+        summary: Highly customizable Wayland bar for Sway and Wlroots based compositors. ✌️ 🎉
+      - name: wofi
+        summary: Wofi is a launcher/menu program for wlroots based wayland compositors such as sway.
+      - name: swaync
+        summary: "A simple GTK based notification daemon for any Wayland compositor"
 
 packages:
   hyprwayland-scanner:
@@ -754,9 +778,9 @@ packages:
       - "%{_libdir}/libhyprcursor.so*"
     devel:
       files:
-      - "%{_includedir}/hyprcursor.hpp"
-      - "%{_includedir}/hyprcursor/"
-      - "%{_libdir}/pkgconfig/hyprcursor.pc"
+        - "%{_includedir}/hyprcursor.hpp"
+        - "%{_includedir}/hyprcursor/"
+        - "%{_libdir}/pkgconfig/hyprcursor.pc"
 
   hyprland-guiutils:
     version: "0.2.1"
@@ -826,13 +850,13 @@ packages:
       - "%{_prefix}/lib64/liblayer-shell-preload.so"
     devel:
       files:
-      - "%{_prefix}/include/gtk4-layer-shell/gtk4-layer-shell.h"
-      - "%{_prefix}/include/gtk4-layer-shell/gtk4-session-lock.h"
-      - "%{_prefix}/lib64/pkgconfig/gtk4-layer-shell-0.pc"
-      - "%{_prefix}/share/gir-1.0/Gtk4LayerShell-1.0.gir"
-      - "%{_prefix}/share/gir-1.0/Gtk4SessionLock-1.0.gir"
-      - "%{_prefix}/share/vala/vapi/gtk4-layer-shell-0.deps"
-      - "%{_prefix}/share/vala/vapi/gtk4-layer-shell-0.vapi"
+        - "%{_prefix}/include/gtk4-layer-shell/gtk4-layer-shell.h"
+        - "%{_prefix}/include/gtk4-layer-shell/gtk4-session-lock.h"
+        - "%{_prefix}/lib64/pkgconfig/gtk4-layer-shell-0.pc"
+        - "%{_prefix}/share/gir-1.0/Gtk4LayerShell-1.0.gir"
+        - "%{_prefix}/share/gir-1.0/Gtk4SessionLock-1.0.gir"
+        - "%{_prefix}/share/vala/vapi/gtk4-layer-shell-0.deps"
+        - "%{_prefix}/share/vala/vapi/gtk4-layer-shell-0.vapi"
 
   aylurs-gtk-shell:
     version: "3.1.1"
@@ -943,19 +967,28 @@ packages:
       A qml style provider for hypr* qt apps
     url: https://github.com/hyprwm/hyprland-qt-support
     sources:
-      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz"
+      - url: "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
     build_system: cmake
     depends_on:
       - hyprlang
     build_requires:
       - cmake
+      - cmake(Qt6Qml)
+      - cmake(Qt6Quick)
+      - cmake(Qt6QuickControls2)
       - gcc-c++
       - ninja-build
       - pkgconfig(hyprlang)
+      - qt6-rpm-macros
+    build_commands:
+      - "%cmake -DINSTALL_QMLDIR=%{_libdir}/qt6/qml"
+      - "%cmake_build"
     files:
-      - # FIXME: add installed files
       - "%doc README.md"
       - "%license LICENSE"
+      - "%{_libdir}/qt6/qml/org/hyprland/"
+      - "%{_prefix}/lib/libhyprland-quick-style-impl.so"
+      - "%{_prefix}/lib/libhyprland-quick-style.so"
 
   hyprlauncher:
     version: "0.1.5"

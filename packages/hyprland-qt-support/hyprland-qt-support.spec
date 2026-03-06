@@ -4,12 +4,16 @@ Release:        %autorelease%{?dist}
 Summary:        A qml style provider for hypr* qt apps
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprland-qt-support
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cmake
+BuildRequires:  cmake(Qt6Qml)
+BuildRequires:  cmake(Qt6Quick)
+BuildRequires:  cmake(Qt6QuickControls2)
 BuildRequires:  gcc-c++
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(hyprlang)
+BuildRequires:  qt6-rpm-macros
 
 %description
 A qml style provider for hypr* qt apps
@@ -18,7 +22,7 @@ A qml style provider for hypr* qt apps
 %autosetup
 
 %build
-%cmake
+%cmake -DINSTALL_QMLDIR=%{_libdir}/qt6/qml
 %cmake_build
 
 %install
@@ -27,6 +31,9 @@ A qml style provider for hypr* qt apps
 %files
 %doc README.md
 %license LICENSE
+%{_libdir}/qt6/qml/org/hyprland/
+%{_prefix}/lib/libhyprland-quick-style-impl.so
+%{_prefix}/lib/libhyprland-quick-style.so
 
 %changelog
 * Wed Jan 08 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
