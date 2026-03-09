@@ -13,6 +13,7 @@ Environment variables:
 """
 
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,11 +23,27 @@ from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
 from lib.yaml_utils import (
+    apply_os_overrides,
     filter_packages,
     get_packages,
     load_build_status,
     save_build_status,
 )
+
+
+SOURCES_DIR = Path.home() / "rpmbuild" / "SOURCES"
+
+
+def copy_local_patches(pkg: str, meta: dict) -> None:
+    patches = meta.get("source", {}).get("patches", [])
+    if not patches:
+        return
+    SOURCES_DIR.mkdir(parents=True, exist_ok=True)
+    pkg_dir = ROOT / "packages" / pkg.lower()
+    for patch in patches:
+        src = pkg_dir / patch
+        if src.exists():
+            shutil.copy2(src, SOURCES_DIR / patch)
 
 
 def find_srpm(pkg: str) -> str | None:
@@ -59,6 +76,16 @@ def main() -> None:
     failed = False
     print("\n=== srpm ===")
     for pkg, meta in packages.items():
+        meta = apply_os_overrides(meta, fedora_version)
+        if meta.get("_skip"):
+            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+            build_status["stages"]["srpm"][pkg] = {
+                "state": "skipped",
+                "version": None,
+                "path": None,
+                "log": None,
+            }
+            continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
         has_devel = "devel" in meta
         spec = ROOT / "packages" / pkg.lower() / f"{pkg.lower()}.spec"
@@ -103,6 +130,7 @@ def main() -> None:
             build_status["stages"]["srpm"][pkg] = entry
             continue
 
+        copy_local_patches(pkg, meta)
         ok, _, _ = run_cmd(f"rpmbuild -bs {spec}", log)
         if not ok:
             failed = True

@@ -332,6 +332,53 @@ myapp-with-bundled:
   build:
     system: cmake
 
+# --- OS-version-specific overrides ----------------------------------------
+# Use the fedora: key to override fields for specific Fedora versions.
+# Supported versions: 42, 43, 44, rawhide
+#
+# Semantics:
+#   fedora.<version>.skip: true        — exclude this package entirely for that version
+#   fedora.<version>.build_requires    — replaces base build_requires (full replacement)
+#   fedora.<version>.requires          — replaces base requires (full replacement)
+#   fedora.<version>.build.prep        — replaces base build.prep
+#   fedora.<version>.build.commands    — replaces base build.commands
+#   fedora.<version>.build.install     — replaces base build.install
+#
+# Full replacement (not merge) keeps logic simple and predictable.
+# If a version needs one extra dep, copy the full list + the extra dep.
+myoverridepkg:
+  version: "1.0.0"
+  release: "%autorelease"
+  license: MIT
+  summary: A package with Fedora-version-specific build deps
+  description: |
+    myoverridepkg needs a different dep name on Fedora 44.
+    It should be skipped entirely on Fedora 42.
+  url: https://github.com/myorg/myoverridepkg
+  build_requires:
+    - cmake
+    - pkgconfig(olddep)
+  requires: []
+  files:
+    - "%license LICENSE"
+    - "%{_bindir}/myoverridepkg"
+  devel:
+    files: []
+  source:
+    archives:
+      - "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+  build:
+    system: cmake
+  fedora:
+    # On Fedora 44, the dep was renamed — replace build_requires entirely
+    44:
+      build_requires:
+        - cmake
+        - pkgconfig(newdep)
+    # On Fedora 42, skip this package completely
+    42:
+      skip: true
+
 # --- package with extra %prep commands ------------------------------------
 mypatched:
   version: "5.3.2"

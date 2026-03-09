@@ -8,6 +8,7 @@ Must be run inside the rpm toolbox container (invoked via Makefile).
 
 Environment variables:
   PACKAGE         Validate only this package (optional, comma-separated)
+  FEDORA_VERSION  Fedora version to target (default: 43)
 """
 
 import os
@@ -16,6 +17,8 @@ import sys
 from lib.gitmodules import parse_gitmodules
 from lib.paths import GITMODULES, ROOT
 from lib.yaml_utils import (
+    SUPPORTED_FEDORA_VERSIONS,
+    apply_os_overrides,
     filter_packages,
     get_packages,
     load_build_status,
@@ -26,6 +29,7 @@ from lib.yaml_utils import (
 REQUIRED_FIELDS = ["version", "license", "summary", "description", "url"]
 VALID_BUILD_SYSTEMS = {"cmake", "meson", "autotools", "make", "python", "configure"}
 DEVEL_INDICATORS = ["%{_includedir}", "pkgconfig/", "/cmake/"]
+VALID_FEDORA_OVERRIDE_KEYS = {"skip", "build_requires", "requires", "build"}
 
 
 def validate_package(
@@ -93,6 +97,25 @@ def validate_package(
                     " — add to depends_on"
                 )
 
+    # Validate fedora: override blocks
+    fedora_blocks = meta.get("fedora", {})
+    if fedora_blocks:
+        for ver_key, override in fedora_blocks.items():
+            ver_str = str(ver_key)
+            if ver_str not in SUPPORTED_FEDORA_VERSIONS:
+                warnings.append(
+                    f"fedora: block '{ver_key}' is not a supported version"
+                    f" (supported: {', '.join(sorted(SUPPORTED_FEDORA_VERSIONS))})"
+                )
+            if not isinstance(override, dict):
+                errors.append(f"fedora.{ver_key}: must be a mapping")
+                continue
+            unknown_keys = set(override) - VALID_FEDORA_OVERRIDE_KEYS
+            if unknown_keys:
+                errors.append(
+                    f"fedora.{ver_key}: unknown override key(s): {', '.join(sorted(unknown_keys))}"
+                )
+
     return errors, warnings
 
 
@@ -139,6 +162,7 @@ def validate_gitmodules(root_path=ROOT) -> tuple[list[str], list[str]]:
 
 
 def main() -> None:
+    fedora_version = os.environ.get("FEDORA_VERSION", "43")
     package_filter = os.environ.get("PACKAGE", "")
 
     all_packages = get_packages()
@@ -154,7 +178,12 @@ def main() -> None:
     print("\n=== validate ===")
 
     for pkg, meta in packages.items():
-        errors, warnings = validate_package(pkg, meta, all_packages)
+        resolved = apply_os_overrides(meta, fedora_version)
+        if resolved.get("_skip"):
+            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+            build_status["stages"]["validate"][pkg] = {"state": "skipped"}
+            continue
+        errors, warnings = validate_package(pkg, resolved, all_packages)
         total_errors += len(errors)
         total_warnings += len(warnings)
 

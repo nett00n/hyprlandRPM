@@ -25,6 +25,9 @@ Source{{ loop.index0 }}:        {{ source }}
 %global {{ dep.name }}_version {{ dep.version }}
 Source{{ dep.source_index }}:        {{ dep.url }}
 {% endfor %}
+{% for patch in patches %}
+Patch{{ loop.index0 }}:         {{ patch }}
+{% endfor %}
 
 {% for dep in build_requires %}
 BuildRequires:  {{ dep }}
@@ -54,7 +57,7 @@ Commit:            {{ changelog.commit }}
 {% endif %}
 
 %prep
-%autosetup{% if commit %} -n {{ source_name or '%{name}' }}-%{commit}{% elif source_name %} -n {{ source_name }}-%{version}{% endif %}
+%autosetup -p1{% if commit %} -n {{ source_name or '%{name}' }}-%{commit}{% elif source_name %} -n {{ source_name }}-%{version}{% endif %}
 
 {% for cmd in prep_commands %}
 {{ cmd }}

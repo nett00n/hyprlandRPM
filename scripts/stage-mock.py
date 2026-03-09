@@ -27,6 +27,7 @@ from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
 from lib.yaml_utils import (
+    apply_os_overrides,
     filter_packages,
     get_packages,
     load_build_status,
@@ -99,6 +100,15 @@ def main() -> None:
     failed_overall = False
     print("\n=== mock ===")
     for pkg, meta in packages.items():
+        meta = apply_os_overrides(meta, fedora_version)
+        if meta.get("_skip"):
+            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+            build_status["stages"]["mock"][pkg] = {
+                "state": "skipped",
+                "version": None,
+                "log": None,
+            }
+            continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
         has_devel = "devel" in meta
         log = LOG_DIR / f"{pkg}-20-mock.log"

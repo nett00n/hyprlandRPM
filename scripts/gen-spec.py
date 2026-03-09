@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from lib.gitmodules import get_changelog_info, parse_gitmodules
 from lib.jinja_utils import create_jinja_env
 from lib.paths import GITMODULES, ROOT
-from lib.yaml_utils import get_packages, load_repo_yaml
+from lib.yaml_utils import apply_os_overrides, get_packages, load_repo_yaml
 
 
 def get_packager() -> str:
@@ -225,6 +225,7 @@ def build_context(
         "source_name": source.get("name"),
         "url": pkg["url"],
         "sources": source.get("archives", []),
+        "patches": source.get("patches", []),
         "bundled_deps": bundled_deps,
         "build_requires": pkg.get("build_requires") or [],
         "requires": pkg.get("requires") or [],
@@ -248,6 +249,8 @@ def build_context(
 
 
 def main() -> None:
+    import os
+
     parser = argparse.ArgumentParser(
         description="Generate RPM spec files from packages.yaml + templates/spec.j2."
     )
@@ -259,6 +262,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    fedora_version = os.environ.get("FEDORA_VERSION", "43")
     packages = get_packages()
     repo = load_repo_yaml()
     source_url = repo.get("source_url") or None
@@ -282,6 +286,10 @@ def main() -> None:
 
     for name, pkg in packages.items():
         if target and name != target:
+            continue
+        pkg = apply_os_overrides(pkg, fedora_version)
+        if pkg.get("_skip"):
+            print(f"  skipped   {name} (fedora:{fedora_version} skip)")
             continue
         pkg_name = name.lower()
         spec_dir = ROOT / "packages" / pkg_name

@@ -18,6 +18,7 @@ from lib.paths import LOG_DIR, ROOT
 from lib.reporting import status
 from lib.version import nvr
 from lib.yaml_utils import (
+    apply_os_overrides,
     filter_packages,
     get_packages,
     load_build_status,
@@ -41,6 +42,11 @@ def main() -> None:
     failed = False
     print("\n=== spec ===")
     for pkg, meta in packages.items():
+        meta = apply_os_overrides(meta, fedora_version)
+        if meta.get("_skip"):
+            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+            build_status["stages"]["spec"][pkg] = {"state": "skipped", "version": None}
+            continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
         log = LOG_DIR / f"{pkg}-00-spec.log"
         log.unlink(missing_ok=True)

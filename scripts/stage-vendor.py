@@ -26,6 +26,7 @@ from lib.reporting import status
 from lib.vendor import VendorError, generate, is_go_package, vendor_tarball_path
 from lib.version import nvr
 from lib.yaml_utils import (
+    apply_os_overrides,
     filter_packages,
     get_packages,
     load_build_status,
@@ -51,6 +52,15 @@ def main() -> None:
     failed = False
     print("\n=== vendor ===")
     for pkg, meta in packages.items():
+        meta = apply_os_overrides(meta, fedora_version)
+        if meta.get("_skip"):
+            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+            build_status["stages"]["vendor"][pkg] = {
+                "state": "skipped",
+                "version": None,
+                "log": None,
+            }
+            continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
         log = LOG_DIR / f"{pkg}-05-vendor.log"
         log.unlink(missing_ok=True)

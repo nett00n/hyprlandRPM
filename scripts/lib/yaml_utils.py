@@ -84,6 +84,70 @@ def get_packages(path: Path = PACKAGES_YAML) -> dict:
 # Alias for compatibility
 load_packages = get_packages
 
+SUPPORTED_FEDORA_VERSIONS = {"42", "43", "44", "rawhide"}
+OVERRIDE_LIST_FIELDS = {"build_requires", "requires"}
+OVERRIDE_BUILD_SUBKEYS = {"prep", "commands", "install"}
+OVERRIDE_SOURCE_SUBKEYS = {"patches"}
+
+
+def apply_os_overrides(pkg: dict, fedora_version: str) -> dict:
+    """Apply fedora-version-specific overrides to a package dict.
+
+    Returns a new dict with overrides applied, or the original if no overrides.
+    Sets pkg["_skip"] = True if this version should be skipped.
+    """
+    fedora_blocks = pkg.get("fedora", {})
+    if not fedora_blocks:
+        return pkg
+
+    # Try exact string match first (for "rawhide"), then int match
+    override = fedora_blocks.get(fedora_version) or fedora_blocks.get(
+        int(fedora_version) if fedora_version.isdigit() else None
+    )
+    if override is None:
+        result = {k: v for k, v in pkg.items() if k != "fedora"}
+        return result
+
+    result = {k: v for k, v in pkg.items() if k != "fedora"}
+
+    if override.get("skip"):
+        result["_skip"] = True
+        return result
+
+    for field in OVERRIDE_LIST_FIELDS:
+        if field in override:
+            result[field] = override[field]
+
+    if "build" in override:
+        build_override = override["build"]
+        merged_build = dict(result.get("build") or {})
+        for subkey in OVERRIDE_BUILD_SUBKEYS:
+            if subkey in build_override:
+                merged_build[subkey] = build_override[subkey]
+        result["build"] = merged_build
+
+    if "source" in override:
+        source_override = override["source"]
+        merged_source = dict(result.get("source") or {})
+        for subkey in OVERRIDE_SOURCE_SUBKEYS:
+            if subkey in source_override:
+                merged_source[subkey] = source_override[subkey]
+        result["source"] = merged_source
+
+    return result
+
+
+def get_active_packages(fedora_version: str, path: Path = PACKAGES_YAML) -> dict:
+    """Return packages dict with OS overrides applied and skipped packages removed."""
+    packages = get_packages(path)
+    result = {}
+    for name, pkg in packages.items():
+        resolved = apply_os_overrides(pkg, fedora_version)
+        if resolved.get("_skip"):
+            continue
+        result[name] = resolved
+    return result
+
 
 def load_build_status(path: Path = BUILD_STATUS_YAML) -> dict:
     """Load build-status.yaml or return empty structure."""
