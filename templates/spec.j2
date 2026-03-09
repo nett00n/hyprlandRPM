@@ -1,6 +1,9 @@
 {% if no_debug_package %}
 %global debug_package %{nil}
 {% endif %}
+{% if no_lto %}
+%global _lto_cflags %{nil}
+{% endif %}
 {% if commit %}
 %global commit {{ commit.full }}
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
@@ -16,7 +19,7 @@ BuildArch:      {{ buildarch }}
 License:        {{ license }}
 URL:            {{ url }}
 {% for source in sources %}
-Source{{ loop.index0 }}:        {{ source.url }}
+Source{{ loop.index0 }}:        {{ source }}
 {% endfor %}
 {% for dep in bundled_deps %}
 %global {{ dep.name }}_version {{ dep.version }}
@@ -32,6 +35,23 @@ Requires:       {{ dep }}
 
 %description
 {{ description }}
+{% if changelog.source_url or changelog.copr_url or changelog.tag or changelog.commit %}
+
+Maintainer info:
+{% if changelog.source_url %}
+Source repository: {{ changelog.source_url }}
+{% endif %}
+{% if changelog.copr_url %}
+COPR repository:   {{ changelog.copr_url }}
+{% endif %}
+Package info:
+{% if changelog.tag %}
+Tag:               {{ changelog.tag }}
+{% endif %}
+{% if changelog.commit %}
+Commit:            {{ changelog.commit }}
+{% endif %}
+{% endif %}
 
 %prep
 %autosetup{% if commit %} -n {{ source_name or '%{name}' }}-%{commit}{% elif source_name %} -n {{ source_name }}-%{version}{% endif %}
@@ -69,23 +89,7 @@ Development files for {{ name }}.
 {% endif %}
 
 %changelog
-Package is built:
 * {{ changelog.date }} {{ changelog.packager }} - {{ changelog.version }}-{{ changelog.release }}
-{% if changelog.source_url %}
-- source: {{ changelog.source_url }}
-{% endif %}
-{% if changelog.copr_url %}
-- copr: {{ changelog.copr_url }}
-{% endif %}
-Package is build from:
-{% if changelog.tag and changelog.commit %}
-- tag: {{ changelog.tag }}, commit: {{ changelog.commit }}
-{% elif changelog.tag %}
-- tag: {{ changelog.tag }}
-{% elif changelog.commit %}
-- commit: {{ changelog.commit }}
-{% endif %}
-Changelog notes:
 {% for note in changelog.notes %}
 - {{ note }}
 {% endfor %}

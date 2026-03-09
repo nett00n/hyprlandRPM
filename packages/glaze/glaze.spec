@@ -16,6 +16,13 @@ BuildRequires:  ninja-build
 %description
 One of the fastest JSON libraries in the world. Glaze reads and writes from object memory, simplifying interfaces and offering incredible performance
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v7.1.0
+Commit:            b71542bb16c9d793545062185d7fd9bedbc0b638
+
 %prep
 %autosetup
 
@@ -43,5 +50,4 @@ Development files for glaze.
 
 %changelog
 * Sat Feb 28 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 7.1.0-%autorelease
-- tag: v7.1.0, commit: b71542bb16c9d793545062185d7fd9bedbc0b638
 - v7.1.0 bump

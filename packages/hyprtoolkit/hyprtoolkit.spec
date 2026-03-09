@@ -29,6 +29,13 @@ BuildRequires:  pkgconfig(xkbcommon)
 %description
 A modern C++ Wayland-native GUI toolkit
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.5.3
+Commit:            71515e83eb7ad0ec921c913e1d5772e5fe55daa9
+
 %prep
 %autosetup
 
@@ -56,5 +63,4 @@ Development files for hyprtoolkit.
 
 %changelog
 * Thu Jan 22 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.5.3-%autorelease
-- tag: v0.5.3, commit: 71515e83eb7ad0ec921c913e1d5772e5fe55daa9
 - version: bump to 0.5.3

@@ -8,11 +8,21 @@ Environment variables:
 import os
 import sys
 
-from lib.yaml_utils import get_packages, pop_build_stages
+from lib.yaml_utils import find_package_name, get_packages, pop_build_stages
 
 package_env = os.environ.get("PACKAGE", "")
 if package_env:
-    pkgs = [p.strip() for p in package_env.split(",") if p.strip()]
+    all_packages = get_packages()
+    pkgs = []
+    unknown = []
+    for name in [n.strip() for n in package_env.split(",") if n.strip()]:
+        key = find_package_name(all_packages, name)
+        if key is None:
+            unknown.append(name)
+        else:
+            pkgs.append(key)
+    if unknown:
+        sys.exit(f"error: unknown package(s): {', '.join(unknown)}")
 else:
     pkgs = list(get_packages())
 
@@ -21,4 +31,7 @@ if not pkgs:
     sys.exit(0)
 
 affected = pop_build_stages(pkgs)
-print(f"cleared mock/copr for: {', '.join(affected)}")
+if affected:
+    print(f"cleared mock/copr for: {', '.join(affected)}")
+else:
+    print(f"nothing to clear (mock/copr already empty for: {', '.join(sorted(pkgs))})")

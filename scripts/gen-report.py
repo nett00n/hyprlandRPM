@@ -9,8 +9,9 @@ from pathlib import Path
 import yaml
 
 from lib.jinja_utils import create_jinja_env
-from lib.paths import PACKAGES_YAML, ROOT
+from lib.paths import GROUPS_YAML, PACKAGES_YAML, REPO_YAML, ROOT
 from lib.version import clean_version
+from lib.yaml_utils import get_packages, load_groups_yaml, load_repo_yaml
 
 REPORT_YAML = ROOT / "build-report.yaml"
 COPR_BUILD_URL = "https://copr.fedorainfracloud.org/coprs/build/{}/"
@@ -133,16 +134,10 @@ def main() -> None:
     run = data.get("run", {})
     stages = data.get("stages", {})
 
-    repo = {}
-    pkg_meta = {}
-    groups_cfg = {}
-    badge_style = None
-    if PACKAGES_YAML.exists():
-        yaml_data = yaml.safe_load(PACKAGES_YAML.read_text())
-        repo = yaml_data.get("repo", {})
-        pkg_meta = yaml_data.get("packages", {})
-        groups_cfg = yaml_data.get("groups", {})
-        badge_style = repo.get("documents", {}).get("badge_style")
+    pkg_meta = get_packages() if PACKAGES_YAML.exists() else {}
+    repo = load_repo_yaml() if REPO_YAML.exists() else {}
+    groups_cfg = load_groups_yaml() if GROUPS_YAML.exists() else {}
+    badge_style = repo.get("documents", {}).get("badge_style")
 
     pkg_badge: dict[str, dict] = {}
     for group_data in groups_cfg.values():

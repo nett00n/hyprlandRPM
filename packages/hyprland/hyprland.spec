@@ -46,6 +46,13 @@ Hyprland is a 100% independent, dynamic tiling Wayland compositor that doesn't s
 
 It provides the latest Wayland features, is highly customizable, has all the eyecandy, the most powerful plugins, easy IPC, much more QoL stuff than other compositors and more..
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.54.1
+Commit:            4b07770b9ef1cceb2e6f56d33538aaffb9186b9c
+
 %prep
 %autosetup -n Hyprland-%{version}
 sed -i 's|^install(TARGETS start-hyprland)|target_include_directories(start-hyprland PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../glaze-src/include")\ninstall(TARGETS start-hyprland)|' start/CMakeLists.txt
@@ -90,5 +97,4 @@ Development files for hyprland.
 
 %changelog
 * Tue Mar 03 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.54.1-%autorelease
-- tag: v0.54.1, commit: 4b07770b9ef1cceb2e6f56d33538aaffb9186b9c
 - [gha] Nix: update inputs

@@ -17,7 +17,7 @@ endif
 CONTAINER    := rpm$(FEDORA_VERSION)
 TOOLBOX_RUN  := toolbox run -c $(CONTAINER)
 
-ALL_PACKAGES := $(shell grep -oP '^\s{2}\K[a-zA-Z][a-zA-Z0-9_-]+(?=:)' packages.yaml)
+ALL_PACKAGES := $(shell grep -oP '^[a-zA-Z][a-zA-Z0-9_-]+(?=:)' packages.yaml)
 _PKGS        := $(if $(PACKAGE),$(PACKAGE),$(ALL_PACKAGES))
 
 PYTHON           := .venv/bin/python3
@@ -95,7 +95,7 @@ scaffold-package: ## Scaffold a new packages.yaml entry from a submodule (PACKAG
 
 add-submodule: ## Register git submodule for an existing package (PACKAGE=<name> required)
 	@test -n "$(PACKAGE)" || (echo "Error: PACKAGE is required"; exit 1)
-	@_url=$$($(PYTHON) -c "import yaml; d=yaml.safe_load(open('packages.yaml')); print(d['packages']['$(PACKAGE)']['url'])"); \
+	@_url=$$($(PYTHON) -c "import yaml; d=yaml.safe_load(open('packages.yaml')); print(d['$(PACKAGE)']['url'])"); \
 	 _name=$$(basename $$_url); \
 	 _org=$$(basename $$(dirname $$_url)); \
 	 echo $(HIGHLIGHT_PREFIX) "adding submodule submodules/$$_org/$$_name"; \

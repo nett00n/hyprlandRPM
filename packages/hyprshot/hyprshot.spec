@@ -19,11 +19,16 @@ Hyprshot is an utility to easily take screenshot in Hyprland using your mouse
 It allows taking screenshots of windows, regions and monitors which are saved
 to a folder of your choosing and copied to your clipboard
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+
 %prep
 %autosetup -n Hyprshot-%{version}
 
 %build
-
+# nothing to compile
 
 %install
 install -Dpm0755 hyprshot -t %{buildroot}/%{_bindir}
@@ -34,5 +39,5 @@ install -Dpm0755 hyprshot -t %{buildroot}/%{_bindir}
 %{_bindir}/hyprshot
 
 %changelog
-* Sat Mar 07 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.3.0-%autorelease
+* Mon Mar 09 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.3.0-%autorelease
 - Update to 1.3.0

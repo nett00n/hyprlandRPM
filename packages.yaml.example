@@ -1,0 +1,363 @@
+# packages.yaml.example — reference for reusing this repo's structure in another COPR project
+#
+# Run `python3 scripts/gen-spec.py` (or `make gen-spec`) to regenerate spec files from this file.
+# Run `python3 scripts/scaffold-package.py <name>` to auto-detect fields from a git submodule.
+#
+# Build metadata is split across three files:
+#   packages.yaml — one entry per RPM package (packages at root level, no wrapper key)
+#   repo.yaml     — top-level metadata (name, URLs, badge config, etc.)
+#   groups.yaml   — logical groupings shown in the build report / README badges
+#
+# Nested sub-objects per package:
+#   source: — archive URLs, commit info, bundled deps, source_name
+#   build:  — build system, flags, prep/build/install overrides, no_lto
+#   rpm:    — buildarch, no_debug_package
+#
+# build.system: cmake | meson | autotools | configure | make | python
+# source.archives: list of plain URL strings; index (Source0, Source1, ...) is auto-assigned
+# files: RPM macros like %{_bindir} are passed through verbatim
+# build_requires / requires: use pkgconfig() form where possible
+#
+# RPM directory macro reference: docs/rpm-dir-prefixes.md
+# Macro converter: scripts/rpm-dir-prefixes-convert.py
+
+# ---------------------------------------------------------------------------
+# packages: one entry per RPM package to build (root-level keys, no wrapper)
+# ---------------------------------------------------------------------------
+
+# --- cmake package with devel subpackage ----------------------------------
+mylib:
+  version: "1.2.3"
+  release: "%autorelease"
+  license: MIT                    # SPDX identifier
+  summary: A short one-line description
+  description: |
+    Longer description of the package.
+    May span multiple lines.
+  url: https://github.com/myorg/mylib
+  # depends_on: local packages (from this packages.yaml) that must be built first
+  depends_on:
+    - mybaselib
+  build_requires:
+    - cmake
+    - gcc-c++
+    - ninja-build
+    - pkgconfig(somedep)
+  requires: []
+  files:
+    - "%license LICENSE"
+    - "%doc README.md"
+    - "%{_libdir}/libmylib.so.*"
+  devel:
+    requires:
+      - pkgconfig(somedep)
+    files:
+      - "%{_includedir}/mylib/"
+      - "%{_libdir}/libmylib.so"
+      - "%{_libdir}/pkgconfig/mylib.pc"
+      - "%{_libdir}/cmake/mylib/"
+  source:
+    # name: set when the top-level directory inside the tarball differs from the package name
+    # name: MyLib
+    archives:
+      - "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+    bundled_deps: []
+  build:
+    system: cmake
+
+# --- meson package --------------------------------------------------------
+myapp:
+  version: "3.0.1"
+  release: "%autorelease"
+  license: GPL-3.0-or-later
+  summary: A GTK application built with meson
+  description: |
+    myapp is a graphical application for doing things.
+  url: https://github.com/myorg/myapp
+  depends_on:
+    - mylib
+  build_requires:
+    - meson
+    - gcc-c++
+    - ninja-build
+    - pkgconfig(gtk4)
+    - pkgconfig(mylib)
+  requires:
+    - mylib
+  files:
+    - "%license LICENSE"
+    - "%doc README.md"
+    - "%{_bindir}/myapp"
+    - "%{_datadir}/myapp/"
+    - "%{_datadir}/applications/myapp.desktop"
+  devel:
+    files: []
+  source:
+    archives:
+      - "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+  build:
+    system: meson
+    # no_lto: set to true when LTO breaks the build (e.g. packages using .incbin assembly)
+    no_lto: false
+
+# --- autotools package (autoconf + automake: configure.ac present) --------
+mylegacylib:
+  version: "2.4.0"
+  release: "%autorelease"
+  license: LGPL-2.1-or-later
+  summary: A classic autotools-based library
+  description: |
+    mylegacylib is a C library using the GNU autotools build system.
+  url: https://example.org/projects/mylegacylib
+  build_requires:
+    - autoconf
+    - automake
+    - libtool
+    - gcc
+    - pkgconfig(zlib)
+  requires: []
+  files:
+    - "%license COPYING"
+    - "%{_libdir}/libmylegacylib.so.*"
+  devel:
+    files:
+      - "%{_includedir}/mylegacylib.h"
+      - "%{_libdir}/libmylegacylib.so"
+      - "%{_libdir}/pkgconfig/mylegacylib.pc"
+  source:
+    archives:
+      - "https://example.org/releases/mylegacylib-%{version}.tar.gz"
+  build:
+    # autotools: generates %configure (with full Fedora macro flags) + %make_build
+    system: autotools
+
+# --- configure package (hand-written configure script, no autoconf) -------
+# Use instead of autotools when configure does NOT accept the full Fedora RPM macro flags
+myhomegrownlib:
+  version: "1.10.0"
+  release: "%autorelease"
+  license: ISC
+  summary: A library with a hand-written configure script
+  description: |
+    myhomegrownlib uses a minimal hand-rolled configure script
+    that only accepts a subset of standard flags.
+  url: https://example.org/git/myhomegrownlib
+  build_requires:
+    - gcc
+    - alsa-lib-devel
+  requires: []
+  files:
+    - "%license LICENSE"
+    - "%{_libdir}/libmyhomegrownlib.so.*"
+    - "%{_bindir}/myhomegrowntool"
+  devel:
+    files:
+      - "%{_includedir}/myhomegrownlib.h"
+      - "%{_libdir}/libmyhomegrownlib.so"
+      - "%{_libdir}/pkgconfig/myhomegrownlib.pc"
+  source:
+    archives:
+      - "https://example.org/myhomegrownlib-%{version}.tar.gz"
+  build:
+    # configure: calls ./configure with only the flags listed in configure_flags
+    system: configure
+    configure_flags:
+      - --prefix=%{_prefix}
+      - --exec-prefix=%{_exec_prefix}
+      - --bindir=%{_bindir}
+      - --datadir=%{_datadir}
+      - --includedir=%{_includedir}
+      - --libdir=%{_libdir}
+      - --mandir=%{_mandir}
+
+# --- plain make package ---------------------------------------------------
+mysimpletool:
+  version: "0.9.0"
+  release: "%autorelease"
+  license: BSD-2-Clause
+  summary: A simple C program with a plain Makefile
+  description: |
+    mysimpletool is built with a bare Makefile and no configure step.
+  url: https://github.com/myorg/mysimpletool
+  build_requires:
+    - gcc
+    - make
+  requires: []
+  files:
+    - "%license LICENSE"
+    - "%{_bindir}/mysimpletool"
+  devel:
+    files: []
+  source:
+    archives:
+      - "%{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+  build:
+    system: make
+
+# --- python package -------------------------------------------------------
+mypytool:
+  version: "1.0.0"
+  release: "%autorelease"
+  license: MIT
+  summary: A Python CLI tool
+  description: |
+    mypytool is a Python command-line utility distributed via PyPI conventions.
+  url: https://github.com/myorg/mypytool
+  build_requires:
+    - python3-devel
+    - python3-build
+    - python3-setuptools
+  requires:
+    - python3
+  files:
+    - "%license LICENSE"
+    - "%doc README.md"
+    - "%{_bindir}/mypytool"
+    - "%{python3_sitelib}/mypytool/"
+  devel:
+    files: []
+  source:
+    archives:
+      - "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+  build:
+    system: python
+  rpm:
+    buildarch: noarch
+    no_debug_package: true
+
+# --- noarch script package with custom install commands ------------------
+myscript:
+  version: "2.1.0"
+  release: "%autorelease"
+  license: MIT
+  summary: A shell script installed without a build step
+  description: |
+    myscript is a POSIX shell utility that requires no compilation.
+  url: https://github.com/myorg/myscript
+  build_requires: []
+  requires:
+    - bash
+    - curl
+    - jq
+  files:
+    - "%license LICENSE"
+    - "%doc README.md"
+    - "%{_bindir}/myscript"
+    - "%{_mandir}/man1/myscript.1*"
+  devel:
+    files: []
+  source:
+    # name: set when tarball extracts as myscript/ not myscript-2.1.0/
+    name: myscript
+    archives:
+      - "%{url}/archive/refs/tags/%{version}.tar.gz"
+  build:
+    system: make              # ignored when commands overrides
+    commands: []              # nothing to compile
+    install:
+      - "install -Dpm0755 myscript -t %{buildroot}/%{_bindir}"
+      - "install -Dpm0644 myscript.1 -t %{buildroot}/%{_mandir}/man1"
+  rpm:
+    buildarch: noarch
+    no_debug_package: true
+
+# --- git snapshot (no version tag available) ------------------------------
+myuntaggedproject:
+  # version format for snapshots: 0^<date>git<shorthash>
+  version: "0^20241015git4a3f9c1"
+  release: "%autorelease"
+  license: MIT
+  summary: A project tracked by commit instead of version tag
+  description: |
+    myuntaggedproject has no stable release tags yet.
+  url: https://github.com/myorg/myuntaggedproject
+  build_requires:
+    - cmake
+    - gcc-c++
+    - ninja-build
+  requires: []
+  files:
+    - "%license LICENSE"
+    - "%{_bindir}/myuntaggedproject"
+  devel:
+    files: []
+  source:
+    # commit: used when there is no version tag; drives source URL and %autosetup -n
+    commit:
+      full: 4a3f9c1bde82f1a7c2e3d456789abcdef1234567
+      date: "20241015"
+    archives:
+      - "%{url}/archive/%{commit}.tar.gz"
+  build:
+    system: cmake
+
+# --- cmake package with bundled (offline-vendored) FetchContent deps ------
+myapp-with-bundled:
+  version: "4.0.0"
+  release: "%autorelease"
+  license: Apache-2.0
+  summary: An app that vendors its dependencies for offline RPM builds
+  description: |
+    myapp-with-bundled uses CMake FetchContent for some deps.
+    The bundled_deps list provides them as extra Source archives so
+    the build works in network-isolated mock environments.
+  url: https://github.com/myorg/myapp-with-bundled
+  build_requires:
+    - cmake
+    - gcc-c++
+    - ninja-build
+  requires: []
+  files:
+    - "%license LICENSE"
+    - "%{_bindir}/myapp-with-bundled"
+  devel:
+    files: []
+  source:
+    archives:
+      - "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+    # bundled_deps: each entry becomes an extra SourceN archive.
+    # The spec will extract it, rename the directory to <name>-src/, and pass
+    # -DFETCHCONTENT_SOURCE_DIR_<CMAKE_VAR>= pointing at that directory.
+    bundled_deps:
+      - name: somedep
+        version: "1.5.0"
+        url: "https://github.com/vendor/somedep/archive/refs/tags/v1.5.0.tar.gz"
+        cmake_var: SOMEDEP            # must match the name in FetchContent_Declare()
+      - name: anotherdep
+        version: "2.0.1"
+        url: "https://github.com/vendor/anotherdep/archive/refs/tags/v2.0.1.tar.gz"
+        cmake_var: ANOTHERDEP
+        # source_subdir: set when the FetchContent path lives in a subdirectory
+        source_subdir: src
+  build:
+    system: cmake
+
+# --- package with extra %prep commands ------------------------------------
+mypatched:
+  version: "5.3.2"
+  release: "%autorelease"
+  license: MIT
+  summary: A package that needs source tree adjustments before building
+  description: |
+    mypatched requires a compatibility symlink and config substitution
+    before the normal build can proceed.
+  url: https://github.com/myorg/mypatched
+  build_requires:
+    - meson
+    - ninja-build
+    - gcc-c++
+  requires: []
+  files:
+    - "%license LICENSE"
+    - "%{_bindir}/mypatched"
+  devel:
+    files: []
+  source:
+    archives:
+      - "%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"
+  build:
+    system: meson
+    # prep: injected into %prep after %autosetup, one shell command per entry
+    prep:
+      - "ln -sf ../include/compat.h src/compat.h"
+      - "sed -i 's|/usr/local|%{_prefix}|g' config/defaults.conf"

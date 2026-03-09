@@ -1,75 +1,82 @@
 
-  {{ key }}:
-    version: "{{ version }}"
-    release: "%autorelease"
-    license: {{ license_id }}
-    summary: {{ summary }}
-    description: |
-      FIXME
-    url: {{ url }}
+{{ key }}:
+  version: "{{ version }}"
+  release: "%autorelease"
+  license: {{ license_id }}
+  summary: {{ summary }}
+  description: |
+    FIXME
+  url: {{ url }}
+  depends_on:
+{% if depends_on %}
+{% for dep in depends_on %}
+    - {{ dep }}
+{% endfor %}
+{% else %}
+    []
+    # - hyprutils
+{% endif %}
+  build_requires:
+{% if build_requires %}
+{% for dep in build_requires %}
+    - {{ dep }}
+{% endfor %}
+{% else %}
+    []
+{% endif %}
+  requires:
+    []
+  files:
+    - "%license LICENSE"
+    - "%doc README.md"
+    # FIXME: add installed files
+  # devel: generates a -devel subpackage for headers, pkgconfig files, cmake modules, etc.
+  devel:
+    files:
+      []
+      # - "%{_includedir}/{{ key }}/"
+      # - "%{_libdir}/pkgconfig/{{ key }}.pc"
+  source:
     # source_name: top-level directory inside the tarball when it differs from the package name
-    source_name: "{{ source_name }}"
-    # go_subdir: subdirectory containing go.mod when the Go module is not at the tarball root
-    # go_subdir: cli
-    # buildarch: set to "noarch" for architecture-independent packages (scripts, headers-only, etc.)
-    buildarch: "{{ buildarch }}"
-    # no_debug_package: suppress the automatic -debuginfo subpackage (useful for header-only or noarch)
-    no_debug_package: {{ 'true' if no_debug_package else 'false' }}
+{% if source_name %}
+    name: "{{ source_name }}"
+{% else %}
+    # name: "{{ key }}"
+{% endif %}
 {% if commit %}
     # commit: used for git snapshot releases when no version tag is available
     commit:
       full: {{ commit.full }}
       date: "{{ commit.date }}"
 {% endif %}
-    sources:
-      - url: {{ source_url }}
-    # build_system: cmake | meson | autotools | make — selects default %build/%install macros
-    build_system: {{ build_system }}
-{% if depends_on %}
-    depends_on:
-{% for dep in depends_on %}
-      - {{ dep }}
-{% endfor %}
-{% else %}
-    # depends_on: local packages that must be built before this one
-    # depends_on:
-    #   - hyprutils
-{% endif %}
-{% if build_requires %}
-    build_requires:
-{% for dep in build_requires %}
-      - {{ dep }}
-{% endfor %}
-{% else %}
-    build_requires:
-      []
-{% endif %}
-    requires:
-      []
-    # prep_commands: extra shell commands injected into %prep after %autosetup
-    prep_commands:
-      []
-    # build_commands: override the default build commands derived from build_system
-    build_commands:
-      []
-    # install_commands: override the default install commands derived from build_system
-    install_commands:
-      []
-    # bundled_deps: vendored sources fetched separately and injected via FetchContent
-    # bundled_deps:
-    #   - name: libname
-    #     version: "1.2.3"
-    #     url: "https://github.com/org/repo/archive/refs/tags/v1.2.3.tar.gz"
-    #     cmake_var: LIBNAME  # CMake variable name used in FetchContent_Declare
+    archives:
+      - {{ source_url }}
     bundled_deps:
       []
-    files:
-      - "%license LICENSE"
-      - "%doc README.md"
-      # FIXME: add installed files
-    # devel: generates a -devel subpackage for headers, pkgconfig files, cmake modules, etc.
-    devel:
-      files:
-        []
-        # - "%{_includedir}/{{ key }}/"
-        # - "%{_libdir}/pkgconfig/{{ key }}.pc"
+  build:
+    # system: cmake | meson | autotools | make | configure | python
+    system: {{ build_system }}
+    # go_subdir: subdirectory containing go.mod when the Go module is not at the tarball root
+    # go_subdir: cli
+    # configure_flags: extra flags passed to ./configure (only used with system: configure)
+    # configure_flags: []
+    # prep: extra shell commands injected into %prep after %autosetup
+    prep:
+      []
+    # commands: override the default build commands derived from system
+    commands:
+      []
+    # install: override the default install commands derived from system
+    install:
+      []
+    # no_lto: disable LTO (Link-Time Optimization) for packages that don't support it
+    no_lto: false
+  rpm:
+    # buildarch: set to "noarch" for architecture-independent packages (scripts, headers-only, etc.)
+{% if buildarch %}
+    buildarch: "{{ buildarch }}"
+{% else %}
+    # buildarch: noarch
+{% endif %}
+    # no_debug_package: suppress the automatic -debuginfo subpackage (useful for header-only or noarch)
+    no_debug_package: {{ 'true' if no_debug_package else 'false' }}

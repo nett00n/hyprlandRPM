@@ -20,7 +20,7 @@ def infer_deps(name: str, meta: dict, all_packages: dict) -> set[str]:
         return deps
     # Fallback: infer from build_requires -devel suffix
     deps = set()
-    for dep in meta.get("build_requires", []):
+    for dep in meta.get("build_requires") or []:
         base = dep.removesuffix("-devel").lower()
         resolved = pkg_by_lower.get(base)
         if resolved and resolved != name:

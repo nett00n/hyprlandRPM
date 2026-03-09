@@ -1,0 +1,73 @@
+Name:           waybar
+Version:        0.15.0
+Release:        %autorelease%{?dist}
+Summary:        Highly customizable Wayland bar for Sway and Wlroots based compositors
+License:        MIT
+URL:            https://github.com/Alexays/Waybar
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+
+BuildRequires:  cava
+BuildRequires:  cava-devel
+BuildRequires:  gcc-c++
+BuildRequires:  gpsd-devel
+BuildRequires:  jack-audio-connection-kit-devel
+BuildRequires:  libdbusmenu-gtk3-devel
+BuildRequires:  libevdev-devel
+BuildRequires:  libinput-devel
+BuildRequires:  libmpdclient-devel
+BuildRequires:  libnl3-devel
+BuildRequires:  meson
+BuildRequires:  ninja-build
+BuildRequires:  pipewire-devel
+BuildRequires:  pkgconfig(fmt)
+BuildRequires:  pkgconfig(gio-unix-2.0)
+BuildRequires:  pkgconfig(gtk-layer-shell-0)
+BuildRequires:  pkgconfig(gtkmm-3.0)
+BuildRequires:  pkgconfig(jsoncpp)
+BuildRequires:  pkgconfig(sigc++-2.0)
+BuildRequires:  pkgconfig(spdlog)
+BuildRequires:  pkgconfig(wayland-client)
+BuildRequires:  pkgconfig(wayland-cursor)
+BuildRequires:  pkgconfig(wayland-protocols)
+BuildRequires:  pkgconfig(xkbregistry)
+BuildRequires:  playerctl-devel
+BuildRequires:  pulseaudio-libs-devel
+BuildRequires:  sndio-devel
+BuildRequires:  systemd
+BuildRequires:  upower-devel
+BuildRequires:  wireplumber-devel
+
+%description
+Highly customizable Wayland bar for Sway and Wlroots based compositors
+
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+
+%prep
+%autosetup -n Waybar-%{version}
+
+%build
+%meson
+%meson_build
+
+%install
+%meson_install
+
+%files
+%doc README.md
+%license LICENSE
+
+%package devel
+Summary:        Development files for Highly customizable Wayland bar for Sway and Wlroots based compositors
+Requires:       %{name} = %{version}-%{release}
+
+%description devel
+Development files for waybar.
+
+%files devel
+
+%changelog
+* Mon Mar 09 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.15.0-%autorelease
+- Update to 0.15.0

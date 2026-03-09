@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from lib.gitmodules import get_changelog_info, parse_gitmodules
 from lib.jinja_utils import create_jinja_env
 from lib.paths import GITMODULES, ROOT
-from lib.yaml_utils import get_packages, load_packages_yaml
+from lib.yaml_utils import get_packages, load_repo_yaml
 
 
 def get_packager() -> str:
@@ -58,14 +58,16 @@ def build_changelog(
 ) -> dict:
     """Return structured changelog data for the Jinja2 template."""
     if release_info and release_info.get("published_at"):
-        dt = datetime.fromisoformat(
-            release_info["published_at"].replace("Z", "+00:00")
-        )
+        dt = datetime.fromisoformat(release_info["published_at"].replace("Z", "+00:00"))
     else:
         dt = datetime.now(timezone.utc)
 
     # Normalise tag/commit across local-git and GitHub-API sources
-    tag = (release_info.get("tag") or release_info.get("tag_name")) if release_info else None
+    tag = (
+        (release_info.get("tag") or release_info.get("tag_name"))
+        if release_info
+        else None
+    )
     commit = release_info.get("commit") if release_info else None
 
     # Parse body into clean note strings (strip markdown bullets/headings)
@@ -100,6 +102,8 @@ BUILD_SYSTEMS = {
     "cmake": ("%cmake\n%cmake_build", "%cmake_install"),
     "meson": ("%meson\n%meson_build", "%meson_install"),
     "autotools": ("%configure\n%make_build", "%make_install"),
+    # Hand-written configure scripts (no autoconf); flags come from configure_flags in packages.yaml
+    "configure": ("./configure\n%make_build", "%make_install"),
     "make": ("make %{?_smp_mflags}", "make install DESTDIR=%{buildroot}"),
     "python": ("%pyproject_build", "%pyproject_install"),
 }
@@ -113,13 +117,25 @@ def build_context(
     source_url: str | None = None,
     copr_url: str | None = None,
 ) -> dict:
-    build_system = pkg.get("build_system", "cmake")
+    source = pkg.get("source", {})
+    build = pkg.get("build", {})
+    rpm = pkg.get("rpm", {})
+
+    build_system = build.get("system", "cmake")
     build_cmd, install_cmd = BUILD_SYSTEMS.get(build_system, BUILD_SYSTEMS["cmake"])
 
-    if "build_commands" in pkg:
-        build_cmd = "\n".join(pkg["build_commands"])
-    if "install_commands" in pkg:
-        install_cmd = "\n".join(pkg["install_commands"])
+    if (
+        build_system == "configure"
+        and build.get("configure_flags")
+        and not build.get("commands")
+    ):
+        flags = " ".join(build["configure_flags"])
+        build_cmd = f"./configure {flags}\n%make_build"
+
+    if build.get("commands"):
+        build_cmd = "\n".join(build["commands"])
+    if build.get("install"):
+        install_cmd = "\n".join(build["install"])
 
     version = pkg["version"]
     release = pkg.get("release", 1)
@@ -128,25 +144,28 @@ def build_context(
         pkg_url.removesuffix(".git")
     )
     if submodule_path:
-        commit_meta = pkg.get("commit")
+        commit_meta = source.get("commit")
         commit_hash = commit_meta.get("full") if isinstance(commit_meta, dict) else None
         release_info = get_changelog_info(submodule_path, str(version), commit_hash)
     else:
         release_info = None
     if release_info is None:
         release_info = fetch_github_release(pkg_url, version)
-    changelog = build_changelog(release_info, version, release, packager, source_url, copr_url)
+    changelog = build_changelog(
+        release_info, version, release, packager, source_url, copr_url
+    )
 
     bundled_deps = []
     extra_prep = []
-    num_main_sources = len(pkg.get("sources", []))
-    for i, dep in enumerate(pkg.get("bundled_deps", [])):
+    num_main_sources = len(source.get("archives", []))
+    for i, dep in enumerate(source.get("bundled_deps", [])):
         dep_name = dep["name"]
         dep_version = dep["version"]
         source_index = num_main_sources + i
         extracted_dir = f"{dep_name}-{dep_version}"
         target_dir = f"{dep_name}-src"
         cmake_var = dep.get("cmake_var", dep_name.upper())
+        dep_source_subdir = dep.get("source_subdir", "")
         local_filename = f"{dep_name}-{dep_version}.tar.gz"
         bundled_deps.append(
             {
@@ -155,6 +174,7 @@ def build_context(
                 "url": f"{dep['url']}#/{local_filename}",
                 "source_index": source_index,
                 "cmake_var": cmake_var,
+                "source_subdir": dep_source_subdir,
             }
         )
         extra_prep += [
@@ -162,17 +182,37 @@ def build_context(
             f"mv {extracted_dir} {target_dir}",
         ]
 
-    if bundled_deps and build_system == "cmake" and "build_commands" not in pkg:
-        src_subdir = "%{name}-%{commit}" if pkg.get("commit") else "%{name}-%{version}"
+    if bundled_deps and build_system == "cmake" and "commands" not in build:
+        src_subdir = (
+            "%{name}-%{commit}" if source.get("commit") else "%{name}-%{version}"
+        )
         flags = ["-DFETCHCONTENT_FULLY_DISCONNECTED=ON"] + [
             f"-DFETCHCONTENT_SOURCE_DIR_{d['cmake_var']}="
             f"%{{_builddir}}/{src_subdir}/{d['name']}-src"
+            + (f"/{d['source_subdir']}" if d.get("source_subdir") else "")
             for d in bundled_deps
         ]
         flags_str = " \\\n    ".join(flags)
         build_cmd = f"%cmake \\\n    {flags_str}\n%cmake_build"
 
-    prep_commands = extra_prep + pkg.get("prep_commands", [])
+    source_subdir = build.get("subdir", "")
+    if source_subdir and not build.get("commands"):
+        if build_system == "cmake":
+            cmake_config, _, _ = build_cmd.rpartition("\n%cmake_build")
+            build_cmd = f"pushd {source_subdir}\n{cmake_config}\npopd\n%cmake_build"
+        elif build_system == "meson":
+            meson_config, _, _ = build_cmd.rpartition("\n%meson_build")
+            build_cmd = f"pushd {source_subdir}\n{meson_config}\npopd\n%meson_build"
+        else:
+            build_cmd = f"pushd {source_subdir}\n{build_cmd}\npopd"
+    if (
+        source_subdir
+        and not build.get("install")
+        and build_system not in ("cmake", "meson")
+    ):
+        install_cmd = f"pushd {source_subdir}\n{install_cmd}\npopd"
+
+    prep_commands = extra_prep + build.get("prep", [])
 
     return {
         "name": name,
@@ -180,14 +220,14 @@ def build_context(
         "release": release,
         "summary": pkg["summary"],
         "license": pkg["license"],
-        "buildarch": pkg.get("buildarch"),
-        "commit": pkg.get("commit"),
-        "source_name": pkg.get("source_name"),
+        "buildarch": rpm.get("buildarch"),
+        "commit": source.get("commit"),
+        "source_name": source.get("name"),
         "url": pkg["url"],
-        "sources": pkg["sources"],
+        "sources": source.get("archives", []),
         "bundled_deps": bundled_deps,
-        "build_requires": pkg.get("build_requires", []),
-        "requires": pkg.get("requires", []),
+        "build_requires": pkg.get("build_requires") or [],
+        "requires": pkg.get("requires") or [],
         "description": pkg["description"].strip(),
         "prep_commands": prep_commands,
         "build_cmd": build_cmd,
@@ -195,7 +235,8 @@ def build_context(
         "files": [
             f for f in pkg.get("files", [f"%{{_bindir}}/{name}"]) if f is not None
         ],
-        "no_debug_package": pkg.get("no_debug_package", False),
+        "no_debug_package": rpm.get("no_debug_package", False),
+        "no_lto": build.get("no_lto", False),
         "changelog": changelog,
         "devel": {
             "requires": [r for r in raw_devel.get("requires", []) if r is not None],
@@ -218,11 +259,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    yaml_data = load_packages_yaml()
-    packages = yaml_data.get("packages") or {}
-    if not packages:
-        sys.exit("error: no packages defined in packages.yaml")
-    repo = yaml_data.get("repo") or {}
+    packages = get_packages()
+    repo = load_repo_yaml()
     source_url = repo.get("source_url") or None
     copr_url = repo.get("copr_url") or None
 
@@ -250,7 +288,11 @@ def main() -> None:
         spec_dir.mkdir(parents=True, exist_ok=True)
         spec_path = spec_dir / f"{pkg_name}.spec"
         spec_path.write_text(
-            template.render(build_context(pkg_name, pkg, packager, url_to_submodule, source_url, copr_url))
+            template.render(
+                build_context(
+                    pkg_name, pkg, packager, url_to_submodule, source_url, copr_url
+                )
+            )
         )
         print(f"  generated  {spec_path.relative_to(ROOT)}")
 

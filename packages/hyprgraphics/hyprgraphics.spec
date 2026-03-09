@@ -23,6 +23,13 @@ BuildRequires:  pkgconfig(pixman-1)
 hyprgraphics is a small C++ library used across the Hypr* ecosystem for
 graphics-related utilities such as image loading and color management
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.5.0
+Commit:            4af02a3925b454deb1c36603843da528b67ded6c
+
 %prep
 %autosetup
 
@@ -50,5 +57,4 @@ Development files for hyprgraphics.
 
 %changelog
 * Sun Dec 28 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.5.0-%autorelease
-- tag: v0.5.0, commit: 4af02a3925b454deb1c36603843da528b67ded6c
 - version: bump to 0.5.0

@@ -16,6 +16,13 @@ BuildRequires:  pkgconfig(pugixml)
 %description
 A fast and consistent wire protocol for IPC
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.3.0
+Commit:            37bc90eed02b0c8b5a77a0b00867baf3005cfb98
+
 %prep
 %autosetup
 
@@ -46,5 +53,4 @@ Development files for hyprwire.
 
 %changelog
 * Wed Feb 04 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.3.0-%autorelease
-- tag: v0.3.0, commit: 37bc90eed02b0c8b5a77a0b00867baf3005cfb98
 - version: bump to 0.3.0

@@ -21,6 +21,13 @@ BuildRequires:  pkgconfig(pixman-1)
 %description
 A GUI Pipewire control center built with hyprtoolkit
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.1.2
+Commit:            2ce8f3d174f2ae1c50c7dcc182d809a5ab33cad2
+
 %prep
 %autosetup
 
@@ -39,5 +46,4 @@ A GUI Pipewire control center built with hyprtoolkit
 
 %changelog
 * Tue Feb 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.2-%autorelease
-- tag: v0.1.2, commit: 2ce8f3d174f2ae1c50c7dcc182d809a5ab33cad2
 - version: bump to 0.1.2

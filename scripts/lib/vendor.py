@@ -14,16 +14,15 @@ class VendorError(Exception):
 
 def is_go_package(meta: dict) -> bool:
     """Return True if the package requires vendoring (has golang in build_requires)."""
-    return "golang" in meta.get("build_requires", [])
+    return "golang" in (meta.get("build_requires") or [])
 
 
 def resolve_source_url(pkg_meta: dict, pkg_name: str) -> str:
     """Resolve the first source URL, expanding %{url} and %{version} macros."""
-    sources = pkg_meta.get("sources", [])
-    if not sources:
+    archives = pkg_meta.get("source", {}).get("archives", [])
+    if not archives:
         raise VendorError(f"no sources defined for '{pkg_name}'")
-    entry = sources[0]
-    raw_url = entry if isinstance(entry, str) else entry.get("url", "")
+    raw_url = archives[0]
     if not raw_url:
         raise VendorError(f"cannot determine source URL for '{pkg_name}'")
     url = pkg_meta.get("url", "")
@@ -84,7 +83,7 @@ def generate(
 
         src_dir = _extract(archive, tmpdir)
 
-        go_subdir = pkg_meta.get("go_subdir", "")
+        go_subdir = pkg_meta.get("build", {}).get("go_subdir", "")
         if go_subdir:
             src_dir = src_dir / go_subdir
 

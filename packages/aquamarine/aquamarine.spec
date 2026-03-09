@@ -31,6 +31,13 @@ It is agnostic of the rendering API (Vulkan/OpenGL) and designed to be lightweig
 
 Aquamarine provides no bindings for other languages. It is C++-only
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.10.0
+Commit:            a20a0e67a33b6848378a91b871b89588d3a12573
+
 %prep
 %autosetup
 
@@ -58,5 +65,4 @@ Development files for aquamarine.
 
 %changelog
 * Sun Nov 23 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.10.0-%autorelease
-- tag: v0.10.0, commit: a20a0e67a33b6848378a91b871b89588d3a12573
 - version: bump to 0.10.0

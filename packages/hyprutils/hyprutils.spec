@@ -15,6 +15,13 @@ BuildRequires:  pkgconfig(pixman-1)
 hyprutils is a small C++ library used across the Hypr* ecosystem for
 various utilities such as memory management, signals, and more
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.11.0
+Commit:            fe686486ac867a1a24f99c753bb40ffed338e4b0
+
 %prep
 %autosetup
 
@@ -42,5 +49,4 @@ Development files for hyprutils.
 
 %changelog
 * Fri Dec 05 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.11.0-%autorelease
-- tag: v0.11.0, commit: fe686486ac867a1a24f99c753bb40ffed338e4b0
 - version: bump to 0.11.0

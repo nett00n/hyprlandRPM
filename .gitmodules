@@ -97,3 +97,12 @@
 [submodule "submodules/hyprland-community/pyprland"]
 	path = submodules/hyprland-community/pyprland
 	url = https://github.com/hyprland-community/pyprland.git
+[submodule "submodules/Alexays/Waybar"]
+	path = submodules/Alexays/Waybar
+	url = https://github.com/Alexays/Waybar.git
+[submodule "submodules/git/sndio"]
+	path = submodules/git/sndio
+	url = https://sndio.org/git/sndio
+[submodule "submodules/karlstav/cava"]
+	path = submodules/karlstav/cava
+	url = https://github.com/karlstav/cava.git

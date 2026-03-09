@@ -1,21 +1,12 @@
 """YAML loading/saving utilities for packages.yaml and build-status.yaml."""
 
-import re
 import sys
 import time
 from pathlib import Path
 
 import yaml
 
-from .paths import LOG_DIR, PACKAGES_YAML
-
-# Regex constants for text-level YAML editing (preserve comments/formatting)
-PKG_HEADER_RE = re.compile(r"^  (\w[\w\-]+):\s*(?:#.*)?$")
-VERSION_LINE_RE = re.compile(r'^    version: "([^"]+)"')
-COMMIT_FULL_RE = re.compile(r"^      full: ([a-f0-9]+)\s*$")
-COMMIT_DATE_RE = re.compile(r'^      date: "(\d+)"\s*$')
-PKG_URL_LINE_RE = re.compile(r"^    url: \S+")
-SOURCE_TAG_URL_RE = re.compile(r'^      - url: ".*?/archive/refs/tags/.*?"')
+from .paths import GROUPS_YAML, LOG_DIR, PACKAGES_YAML, REPO_YAML
 
 BUILD_STATUS_YAML = LOG_DIR / "build-status.yaml"
 STAGES = ["validate", "spec", "vendor", "srpm", "mock", "copr"]
@@ -61,10 +52,30 @@ def load_packages_yaml(path: Path = PACKAGES_YAML) -> dict:
         sys.exit(f"error: failed to parse {path}: {e}")
 
 
+def load_repo_yaml(path: Path = REPO_YAML) -> dict:
+    """Load repo.yaml and return the full dict."""
+    if not path.exists():
+        return {}
+    try:
+        return yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError as e:
+        sys.exit(f"error: failed to parse {path}: {e}")
+
+
+def load_groups_yaml(path: Path = GROUPS_YAML) -> dict:
+    """Load groups.yaml and return the full dict."""
+    if not path.exists():
+        return {}
+    try:
+        return yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError as e:
+        sys.exit(f"error: failed to parse {path}: {e}")
+
+
 def get_packages(path: Path = PACKAGES_YAML) -> dict:
-    """Return the packages dict from packages.yaml."""
+    """Return the packages dict from packages.yaml (packages at root level)."""
     data = load_packages_yaml(path)
-    packages = data.get("packages") or {}
+    packages = data or {}
     if not packages:
         sys.exit("error: no packages defined in packages.yaml")
     return packages
@@ -98,15 +109,18 @@ def pop_build_stages(
 ) -> list[str]:
     """Remove entries for pkgs from given stages in build-status.yaml.
 
-    Returns sorted list of affected package names.
+    Returns sorted list of package names that were actually removed.
     """
     build_status = load_build_status()
     status_stages = build_status.get("stages", {})
+    affected: set[str] = set()
     for stage in stages:
+        stage_data = status_stages.get(stage, {})
         for pkg in pkgs:
-            status_stages.get(stage, {}).pop(pkg, None)
+            if stage_data.pop(pkg, None) is not None:
+                affected.add(pkg)
     save_build_status(build_status)
-    return sorted(pkgs)
+    return sorted(affected)
 
 
 def now_epoch() -> int:
@@ -127,70 +141,40 @@ def write_yaml_preserving_comments(
     url_to_latest: dict[str, str],
     url_to_commit_info: dict[str, tuple[str, str, str]] | None = None,
 ) -> dict[str, tuple[str, str]]:
-    """Update version fields in packages.yaml in-place, preserving comments/formatting.
+    """Update version/commit fields in packages.yaml using yaml load/dump.
 
-    url_to_latest: {url: new_version_string}
-    url_to_commit_info: {url: (full_hash, short_hash, date_str)} for no-tag packages.
-    Only updates commit block fields when a commit: block already exists in the entry.
+    Comments will not be preserved (accepted trade-off for simpler code).
     Returns {pkg_name: (old_version, new_version)} for changed packages.
     """
     if url_to_commit_info is None:
         url_to_commit_info = {}
 
-    try:
-        data = yaml.safe_load(path.read_text())
-    except yaml.YAMLError as e:
-        sys.exit(f"error: failed to parse {path}: {e}")
-    pkg_to_new: dict[str, tuple[str, str]] = {}
-    pkg_to_commit: dict[str, tuple[str, str, str, str]] = {}
-
-    for pkg_name, pkg_data in data.get("packages", {}).items():
-        pkg_url = pkg_data.get("url", "")
-        new_ver = url_to_latest.get(pkg_url)
-        if new_ver and new_ver != str(pkg_data.get("version", "")):
-            pkg_to_new[pkg_name] = (str(pkg_data["version"]), new_ver)
-        elif pkg_url in url_to_commit_info and pkg_data.get("commit"):
-            full_hash, short_hash, date_str = url_to_commit_info[pkg_url]
-            new_commit_ver = f"0^{date_str}git{short_hash}"
-            current_ver = str(pkg_data.get("version", ""))
-            if new_commit_ver != current_ver:
-                pkg_to_commit[pkg_name] = (
-                    current_ver,
-                    new_commit_ver,
-                    full_hash,
-                    date_str,
-                )
-
-    if not pkg_to_new and not pkg_to_commit:
-        return {}
-
-    lines = path.read_text().splitlines(keepends=True)
-    result = []
-    current_pkg = None
-    for line in lines:
-        hdr = PKG_HEADER_RE.match(line)
-        if hdr:
-            current_pkg = hdr.group(1)
-
-        if current_pkg in pkg_to_new:
-            vm = VERSION_LINE_RE.match(line)
-            if vm:
-                _, new_ver = pkg_to_new[current_pkg]
-                line = f'    version: "{new_ver}"\n'
-
-        if current_pkg in pkg_to_commit:
-            _, new_ver, full_hash, date_str = pkg_to_commit[current_pkg]
-            if VERSION_LINE_RE.match(line):
-                line = f'    version: "{new_ver}"\n'
-            elif COMMIT_FULL_RE.match(line):
-                line = f"      full: {full_hash}\n"
-            elif COMMIT_DATE_RE.match(line):
-                line = f'      date: "{date_str}"\n'
-
-        result.append(line)
-
-    path.write_text("".join(result))
+    data = yaml.safe_load(path.read_text())
     changed: dict[str, tuple[str, str]] = {}
-    changed.update(pkg_to_new)
-    changed.update({k: (old, new) for k, (old, new, _, _) in pkg_to_commit.items()})
+
+    for pkg_name, pkg_data in data.items():
+        pkg_url = pkg_data.get("url", "")
+        current_ver = str(pkg_data.get("version", ""))
+
+        new_ver = url_to_latest.get(pkg_url)
+        if new_ver and new_ver != current_ver:
+            pkg_data["version"] = new_ver
+            changed[pkg_name] = (current_ver, new_ver)
+        elif pkg_url in url_to_commit_info:
+            source = pkg_data.get("source", {})
+            if source.get("commit"):
+                full_hash, short_hash, date_str = url_to_commit_info[pkg_url]
+                new_commit_ver = f"0^{date_str}git{short_hash}"
+                if new_commit_ver != current_ver:
+                    pkg_data["version"] = new_commit_ver
+                    source["commit"]["full"] = full_hash
+                    source["commit"]["date"] = date_str
+                    changed[pkg_name] = (current_ver, new_commit_ver)
+
+    if changed:
+        path.write_text(
+            yaml.dump(
+                data, default_flow_style=False, sort_keys=False, allow_unicode=True
+            )
+        )
     return changed

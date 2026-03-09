@@ -24,6 +24,13 @@ BuildRequires:  qt6-qtwayland-devel
 %description
 A tiny qt6/qml application to display information about the running system
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.1.3
+Commit:            17f041e2d539bd63ec116a77236ea37a17c6b3e6
+
 %prep
 %autosetup
 sed -i '/find_package(Qt6.*WaylandClient)/a find_package(Qt6 REQUIRED COMPONENTS WaylandClientPrivate)' CMakeLists.txt
@@ -43,5 +50,4 @@ sed -i '/find_package(Qt6.*WaylandClient)/a find_package(Qt6 REQUIRED COMPONENTS
 
 %changelog
 * Fri Jan 10 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.3-%autorelease
-- tag: v0.1.3, commit: 17f041e2d539bd63ec116a77236ea37a17c6b3e6
 - version: bump to 0.1.3

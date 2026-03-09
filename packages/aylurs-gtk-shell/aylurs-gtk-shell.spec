@@ -17,6 +17,13 @@ BuildRequires:  ninja-build
 %description
 Scaffolding CLI tool for Astal+Gnim projects. Astal is a set of libraries written in Vala/C that makes writing a Desktop Shell easy. Gnim is a library which introduces JSX to GJS. GJS is a JavaScript runtime built on Firefox's SpiderMonkey JavaScript engine and the GNOME platform libraries, the same runtime GNOME Shell runs on
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v3.1.1
+Commit:            e169694390548dfd38ff40f1ef2163d6c3ffe3ea
+
 %prep
 %autosetup -n ags-%{version}
 pushd cli
@@ -38,5 +45,4 @@ popd
 
 %changelog
 * Fri Nov 28 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 3.1.1-%autorelease
-- tag: v3.1.1, commit: e169694390548dfd38ff40f1ef2163d6c3ffe3ea
 - nix: update hash

@@ -28,6 +28,13 @@ BuildRequires:  pkgconfig(xkbcommon)
 %description
 Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.9.2
+Commit:            c48279d1e0f0a4399b5a2d56c16f2ec677ba18f8
+
 %prep
 %autosetup
 
@@ -47,5 +54,4 @@ Hyprland's simple, yet multi-threaded and GPU-accelerated screen locking utility
 
 %changelog
 * Thu Oct 02 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.9.2-%autorelease
-- tag: v0.9.2, commit: c48279d1e0f0a4399b5a2d56c16f2ec677ba18f8
 - version: bump to 0.9.2

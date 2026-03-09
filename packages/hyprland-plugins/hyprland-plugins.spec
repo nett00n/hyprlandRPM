@@ -31,6 +31,13 @@ Official plugins for Hyprland:
 - hyprwinwrap -> clone of xwinwrap, allows you to put any app as a wallpaper
 - xtra-dispatchers -> adds some new dispatchers
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.53.0
+Commit:            d7b67e8f4ba8ebeee4ce899348fcee6291512169
+
 %prep
 %autosetup
 
@@ -47,7 +54,6 @@ Official plugins for Hyprland:
 
 %changelog
 * Mon Dec 29 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.53.0-%autorelease
-- tag: v0.53.0, commit: d7b67e8f4ba8ebeee4ce899348fcee6291512169
 - v0.53.0
 - -----BEGIN SSH SIGNATURE-----
 - U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAg6r0Z7DWuB90jK6uIn817QHwUTW

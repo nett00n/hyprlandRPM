@@ -15,8 +15,10 @@ from lib.detection import (
     detect_build_system,
     detect_license,
     extract_cmake_info,
+    extract_meson_info,
     extract_version,
 )
+from lib.tarball import detect_tarball_source_name
 from lib.gitmodules import (
     fetch_tags,
     get_submodule_commit,
@@ -41,12 +43,12 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
         sys.exit(1)
 
     key = Path(mod["path"]).name
-    url = mod["url"]
+    url = mod["url"].removesuffix(".git")
     repo = ROOT / mod["path"]
 
     if PACKAGES_YAML.exists():
         data = yaml.safe_load(PACKAGES_YAML.read_text()) or {}
-        if key in data.get("packages", {}):
+        if key in data:
             print(f"error: '{key}' already exists in packages.yaml", file=sys.stderr)
             sys.exit(1)
 
@@ -85,6 +87,12 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
         cmake_info = extract_cmake_info(cmake.read_text(errors="replace"))
         summary = cmake_info.get("summary", "FIXME")
         pkg_deps = cmake_info.get("pkg_deps", [])
+    meson_build = repo / "meson.build"
+    if meson_build.exists() and build_system == "meson":
+        meson_info = extract_meson_info(meson_build.read_text(errors="replace"))
+        if summary == "FIXME":
+            summary = meson_info.get("summary", "FIXME")
+        pkg_deps = meson_info.get("pkg_deps", [])
 
     build_requires: list[str] = []
     if build_system == "cmake":
@@ -97,7 +105,7 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
     # Auto-detect depends_on from build_requires matching existing packages
     existing: dict = {}
     if PACKAGES_YAML.exists():
-        existing = (yaml.safe_load(PACKAGES_YAML.read_text()) or {}).get("packages", {})
+        existing = yaml.safe_load(PACKAGES_YAML.read_text()) or {}
     pkg_by_lower = {k.lower(): k for k in existing}
     depends_on: list[str] = []
     for req in build_requires:
@@ -111,6 +119,25 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
             if resolved not in depends_on:
                 depends_on.append(resolved)
 
+    # Detect source_name from the actual tarball's top-level directory
+    if version != "FIXME":
+        if commit:
+            tar_urls = [f"{url}/archive/{commit['full']}.tar.gz"]
+            version_or_commit = commit["full"]
+        else:
+            # Try both v-prefixed and bare version tags (projects differ)
+            tar_urls = [
+                f"{url}/archive/refs/tags/v{version}.tar.gz",
+                f"{url}/archive/refs/tags/{version}.tar.gz",
+            ]
+            version_or_commit = version
+        print("probing tarball for source_name ...", file=sys.stderr)
+        source_name = (
+            detect_tarball_source_name(tar_urls, key.lower(), version_or_commit) or ""
+        )
+    else:
+        source_name = ""
+
     env = create_jinja_env()
     template = env.get_template("packages-entry.yaml.j2")
     block = template.render(
@@ -119,7 +146,7 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
         license_id=license_id,
         summary=summary,
         url=url,
-        source_name="",
+        source_name=source_name,
         buildarch="",
         no_debug_package=False,
         commit=commit,
@@ -133,7 +160,7 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
         with PACKAGES_YAML.open("a") as f:
             f.write(block)
     else:
-        PACKAGES_YAML.write_text(f"packages:\n{block}")
+        PACKAGES_YAML.write_text(block)
 
     print(f"appended '{key}' to {PACKAGES_YAML}", file=sys.stderr)
     print(block)

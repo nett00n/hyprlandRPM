@@ -19,12 +19,12 @@ from lib.yaml_utils import (
     filter_packages,
     get_packages,
     load_build_status,
-    load_packages_yaml,
+    load_groups_yaml,
     save_build_status,
 )
 
-REQUIRED_FIELDS = ["version", "license", "summary", "description", "url", "sources"]
-VALID_BUILD_SYSTEMS = {"cmake", "meson", "autotools", "make", "python"}
+REQUIRED_FIELDS = ["version", "license", "summary", "description", "url"]
+VALID_BUILD_SYSTEMS = {"cmake", "meson", "autotools", "make", "python", "configure"}
 DEVEL_INDICATORS = ["%{_includedir}", "pkgconfig/", "/cmake/"]
 
 
@@ -40,6 +40,10 @@ def validate_package(
         if not meta.get(field):
             errors.append(f"missing required field: {field}")
 
+    # source.archives required
+    if not meta.get("source", {}).get("archives"):
+        errors.append("missing required field: source.archives")
+
     # Deprecated debuginfo section
     if "debuginfo" in meta:
         errors.append(
@@ -47,7 +51,7 @@ def validate_package(
         )
 
     # build_system validity
-    bs = meta.get("build_system", "")
+    bs = meta.get("build", {}).get("system", "")
     if bs and bs != "FIXME" and bs not in VALID_BUILD_SYSTEMS:
         errors.append(
             f"invalid build_system '{bs}' (must be one of: {', '.join(sorted(VALID_BUILD_SYSTEMS))})"
@@ -97,8 +101,7 @@ def validate_group_membership(all_packages: dict) -> tuple[list[str], list[str]]
     errors: list[str] = []
     warnings: list[str] = []
 
-    data = load_packages_yaml()
-    groups = data.get("groups") or {}
+    groups = load_groups_yaml()
     grouped: set[str] = set()
     for group_meta in groups.values():
         for pkg in group_meta.get("packages") or []:

@@ -32,6 +32,13 @@ BuildRequires:  systemd-rpm-macros
 %description
 xdg-desktop-portal backend for Hyprland
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v1.3.11
+Commit:            753bbbdf6a052994da94062e5b753288cef28dfb
+
 %prep
 %autosetup
 
@@ -53,5 +60,4 @@ xdg-desktop-portal backend for Hyprland
 
 %changelog
 * Fri Oct 17 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.3.11-%autorelease
-- tag: v1.3.11, commit: 753bbbdf6a052994da94062e5b753288cef28dfb
 - version: bump to 1.3.11

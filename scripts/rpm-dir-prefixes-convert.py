@@ -23,7 +23,8 @@ from lib.rpm_macros import normalize_file_entry
 
 def iter_file_lists(data: dict):
     """Yield every list from any `files:` key in the packages tree."""
-    for pkg in data.get("packages", {}).values():
+    packages = data.get("packages", data) if "packages" in data else data
+    for pkg in packages.values():
         if "files" in pkg:
             yield pkg["files"]
         if devel := pkg.get("devel"):

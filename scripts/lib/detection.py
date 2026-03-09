@@ -3,6 +3,12 @@
 import re
 from pathlib import Path
 
+# Meson dependency() call — captures name and the rest of the argument list
+MESON_DEP_RE = re.compile(r"dependency\s*\(\s*'([^']+)'([^)]*)\)", re.DOTALL)
+
+# System/virtual deps that have no pkg-config equivalent
+MESON_SKIP_DEPS = {"threads", ""}
+
 LICENSE_MAP = [
     ("BSD 3-Clause", "BSD-3-Clause"),
     ("BSD 2-Clause", "BSD-2-Clause"),
@@ -57,6 +63,8 @@ def detect_build_system(repo: Path) -> str | None:
         return "meson"
     if (repo / "configure.ac").exists():
         return "autotools"
+    if (repo / "configure").exists() and (repo / "Makefile.in").exists():
+        return "autotools"
     if (repo / "Makefile").exists():
         return "make"
     return None
@@ -83,6 +91,38 @@ def extract_cmake_info(cmake_text: str) -> dict:
                 continue
             if re.match(r"^[a-z][a-z0-9\-\.]*$", pkg):
                 deps.append(pkg)
+    if deps:
+        info["pkg_deps"] = deps
+
+    return info
+
+
+def extract_meson_info(meson_text: str) -> dict:
+    """Extract summary and required pkg-config deps from meson.build text."""
+    info: dict = {}
+
+    desc_m = re.search(
+        r"project\s*\([^)]*description\s*:\s*'([^']+)'",
+        meson_text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if desc_m:
+        info["summary"] = desc_m.group(1)
+
+    deps: list[str] = []
+    for m in MESON_DEP_RE.finditer(meson_text):
+        name = m.group(1)
+        args = m.group(2)
+        if name in MESON_SKIP_DEPS:
+            continue
+        # Skip explicitly optional or conditionally optional deps
+        if re.search(r"required\s*:\s*false", args):
+            continue
+        if re.search(r"required\s*:\s*get_option\s*\(", args):
+            continue
+        if name not in deps:
+            deps.append(name)
+
     if deps:
         info["pkg_deps"] = deps
 

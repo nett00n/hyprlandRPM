@@ -18,6 +18,13 @@ BuildRequires:  qt6-rpm-macros
 %description
 A qml style provider for hypr* qt apps
 
+Maintainer info:
+Source repository: https://github.com/nett00n/hyprland-copr
+COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
+Package info:
+Tag:               v0.1.0
+Commit:            9d4437011b4f02e60e98a3e36c7fa14bb053b502
+
 %prep
 %autosetup
 
@@ -37,5 +44,4 @@ A qml style provider for hypr* qt apps
 
 %changelog
 * Wed Jan 08 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
-- tag: v0.1.0, commit: 9d4437011b4f02e60e98a3e36c7fa14bb053b502
 - version: bump to 0.1.0

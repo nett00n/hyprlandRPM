@@ -23,6 +23,7 @@ from pathlib import Path
 import yaml
 
 from lib.deps import build_dep_graph, topological_sort, transitive_deps
+from lib.log_analysis import report_mock_failures, report_srpm_failures
 from lib.paths import LOG_DIR, ROOT
 from lib.reporting import print_summary
 from lib.yaml_utils import (
@@ -153,8 +154,12 @@ def main() -> None:
     run_stage(SCRIPTS / "stage-validate.py", stage_env)
     run_stage(SCRIPTS / "stage-spec.py", stage_env)
     run_stage(SCRIPTS / "stage-vendor.py", stage_env)
-    run_stage(SCRIPTS / "stage-srpm.py", stage_env)
-    run_stage(SCRIPTS / "stage-mock.py", stage_env)
+    srpm_ok = run_stage(SCRIPTS / "stage-srpm.py", stage_env)
+    if not srpm_ok:
+        report_srpm_failures(packages, LOG_DIR)
+    mock_ok = run_stage(SCRIPTS / "stage-mock.py", stage_env)
+    if not mock_ok:
+        report_mock_failures(packages, LOG_DIR)
     if copr_repo:
         run_stage(SCRIPTS / "stage-copr.py", stage_env)
 
