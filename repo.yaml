@@ -4,7 +4,6 @@ bottom_info: |
   It looks more like original `solopasha/hyprland` repo but with no ARM support
 copr_url: https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 description: |
-  ![Fedora 42 Not Ready](https://img.shields.io/badge/Fedora-42-not--ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=595959)
   ![Fedora 43 Ready](https://img.shields.io/badge/Fedora-43-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
   ![Fedora 44 Ready](https://img.shields.io/badge/Fedora-44-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
   ![Fedora rawhide Ready](https://img.shields.io/badge/Fedora-rawhide-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
@@ -33,6 +32,17 @@ logo:
   alt: logo
   path: https://cdn.statically.io/gh/nett00n/hyprland-copr@main/assets/logo/hyprland-copr-x4.png
 name: Hyprland Copr automation bundle for Fedora Linux
+news: |
+  ### No Fedora 42
+
+  > I have decided not to support Fedora 42 in this repository.
+  > Compilation of Hyprland and some of it's componens needs to increase C++ compiler version.
+  > Also Fedora would not provide security updates for this versions after May.
+  > I don't think it is really good idea to spend time on this support.
+  > I would recommend to update to Fedora 43 in this case.
+  >
+  >   Pet your pets, sincerely yours nett00n
+  >   2026-03-10
 people:
   authors:
   - name: nett00n

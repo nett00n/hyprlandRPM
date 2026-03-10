@@ -69,5 +69,5 @@ Development files for waybar.
 %files devel
 
 %changelog
-* Mon Mar 09 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.15.0-%autorelease
+* Tue Mar 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.15.0-%autorelease
 - Update to 0.15.0

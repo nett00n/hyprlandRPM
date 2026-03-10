@@ -21,6 +21,11 @@
 {% endif %}
 
 {{ repo.description }}
+{% if repo.news %}
+## News
+
+{{ repo.news }}
+{% endif %}
 ## Packages
 {% for group in groups %}
 

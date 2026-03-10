@@ -84,7 +84,7 @@ def get_packages(path: Path = PACKAGES_YAML) -> dict:
 # Alias for compatibility
 load_packages = get_packages
 
-SUPPORTED_FEDORA_VERSIONS = {"42", "43", "44", "rawhide"}
+SUPPORTED_FEDORA_VERSIONS = {"43", "44", "rawhide"}
 OVERRIDE_LIST_FIELDS = {"build_requires", "requires"}
 OVERRIDE_BUILD_SUBKEYS = {"prep", "commands", "install"}
 OVERRIDE_SOURCE_SUBKEYS = {"patches"}
