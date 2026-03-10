@@ -114,33 +114,29 @@ def main() -> None:
         for old_log in [*LOG_DIR.glob(f"*-{pkg}.log"), *LOG_DIR.glob(f"*-{pkg}-*.log")]:
             old_log.unlink()
 
-    # Resume or reset build status based on PROCEED_BUILD
+    # Load or initialize build status; preserve previous results
     proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
 
-    if proceed and BUILD_STATUS_YAML.exists():
+    if BUILD_STATUS_YAML.exists():
         build_status = load_build_status()
-        build_status.setdefault("run", {})["timestamp"] = datetime.now(
-            timezone.utc
-        ).isoformat(timespec="seconds")
-        print_proceed_status(packages, build_status, copr_repo)
+        if proceed:
+            print_proceed_status(packages, build_status, copr_repo)
     else:
-        build_status = {
-            "run": {
-                "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                "fedora_version": fedora_version
-                if fedora_version == "rawhide"
-                else int(fedora_version),
-                "mock_chroot": mock_chroot,
-            },
-            "stages": {
-                "validate": {},
-                "spec": {},
-                "vendor": {},
-                "srpm": {},
-                "mock": {},
-                "copr": {},
-            },
-        }
+        build_status = {"stages": {}}
+
+    # Update run metadata
+    build_status.setdefault("run", {})["timestamp"] = datetime.now(
+        timezone.utc
+    ).isoformat(timespec="seconds")
+    build_status["run"]["fedora_version"] = (
+        fedora_version if fedora_version == "rawhide" else int(fedora_version)
+    )
+    build_status["run"]["mock_chroot"] = mock_chroot
+
+    # Ensure all stage keys exist
+    for stage in STAGES:
+        build_status.setdefault("stages", {}).setdefault(stage, {})
+
     save_build_status(build_status)
 
     stage_env = {
