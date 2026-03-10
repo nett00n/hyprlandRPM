@@ -24,7 +24,7 @@ Tag:               v0.3.0
 Commit:            37bc90eed02b0c8b5a77a0b00867baf3005cfb98
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

@@ -1,0 +1,12 @@
+diff --git a/src/palette/ConfigManager.cpp b/src/palette/ConfigManager.cpp
+index 2d46413..a8eaa9d 100644
+--- a/src/palette/ConfigManager.cpp
++++ b/src/palette/ConfigManager.cpp
+@@ -8,6 +8,7 @@
+ #include <glob.h>
+ #include <filesystem>
+ #include <cstring>
++#include <linux/limits.h>
+ 
+ using namespace Hyprtoolkit;
+ 

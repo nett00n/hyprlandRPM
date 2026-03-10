@@ -6,8 +6,8 @@ copr_url: https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 description: |
   ![Fedora 42 Not Ready](https://img.shields.io/badge/Fedora-42-not--ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=595959)
   ![Fedora 43 Ready](https://img.shields.io/badge/Fedora-43-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
-  ![Fedora 44 Not Ready](https://img.shields.io/badge/Fedora-44-not--ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=595959)
-  ![Fedora rawhide Not Ready](https://img.shields.io/badge/Fedora-rawhide-not--ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=595959)
+  ![Fedora 44 Ready](https://img.shields.io/badge/Fedora-44-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
+  ![Fedora rawhide Ready](https://img.shields.io/badge/Fedora-rawhide-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
 
   This repo provides automations for managing COPR repo `nett00n/hyprland`
 

@@ -23,7 +23,7 @@ Tag:               v0.4.5
 Commit:            fcca0c61f988a9d092cbb33e906775014c61579d
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

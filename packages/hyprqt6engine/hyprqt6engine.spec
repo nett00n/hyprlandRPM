@@ -35,7 +35,7 @@ Tag:               v0.1.0
 Commit:            e8a694d5fc7813cf477f426dce731967e4cf670b
 
 %prep
-%autosetup
+%autosetup -p1
 sed -i '/target_link_libraries.*hyprqtplugin/i find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)' hyprqtplugin/CMakeLists.txt
 
 %build

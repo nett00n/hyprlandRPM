@@ -21,7 +21,7 @@ Tag:               v1.10.0
 Commit:            366b5c84d57c9ce73387c51ca48755d36e3fe3a7
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 ./configure --prefix=%{_prefix} --exec-prefix=%{_exec_prefix} --bindir=%{_bindir} --datadir=%{_datadir} --includedir=%{_includedir} --libdir=%{_libdir} --mandir=%{_mandir} --enable-alsa

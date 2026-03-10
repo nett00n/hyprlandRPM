@@ -40,7 +40,7 @@ Tag:               v0.8.3
 Commit:            64b991cb917e28a51a50987a113ac4bf014ad0b7
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

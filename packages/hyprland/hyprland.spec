@@ -54,7 +54,7 @@ Tag:               v0.54.1
 Commit:            4b07770b9ef1cceb2e6f56d33538aaffb9186b9c
 
 %prep
-%autosetup -n Hyprland-%{version}
+%autosetup -p1 -n Hyprland-%{version}
 sed -i 's|^install(TARGETS start-hyprland)|target_include_directories(start-hyprland PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../glaze-src/include")\ninstall(TARGETS start-hyprland)|' start/CMakeLists.txt
 
 %build

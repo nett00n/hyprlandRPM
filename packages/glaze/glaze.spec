@@ -24,7 +24,7 @@ Tag:               v7.1.0
 Commit:            b71542bb16c9d793545062185d7fd9bedbc0b638
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake -DBUILD_TESTING=OFF

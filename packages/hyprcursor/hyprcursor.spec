@@ -26,7 +26,7 @@ Tag:               v0.1.13
 Commit:            44e91d467bdad8dcf8bbd2ac7cf49972540980a5
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

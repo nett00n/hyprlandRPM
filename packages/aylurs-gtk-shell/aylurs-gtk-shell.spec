@@ -25,7 +25,7 @@ Tag:               v3.1.1
 Commit:            e169694390548dfd38ff40f1ef2163d6c3ffe3ea
 
 %prep
-%autosetup -n ags-%{version}
+%autosetup -p1 -n ags-%{version}
 pushd cli
 tar xf %{SOURCE1}
 popd

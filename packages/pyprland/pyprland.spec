@@ -29,7 +29,7 @@ COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 Package info:
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 python3 -m hatchling build -t wheel

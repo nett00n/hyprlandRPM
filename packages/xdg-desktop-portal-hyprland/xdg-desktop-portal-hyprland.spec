@@ -40,7 +40,7 @@ Tag:               v1.3.11
 Commit:            753bbbdf6a052994da94062e5b753288cef28dfb
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

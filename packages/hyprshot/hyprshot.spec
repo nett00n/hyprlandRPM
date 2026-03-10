@@ -25,7 +25,7 @@ COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 Package info:
 
 %prep
-%autosetup -n Hyprshot-%{version}
+%autosetup -p1 -n Hyprshot-%{version}
 
 %build
 # nothing to compile

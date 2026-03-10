@@ -588,6 +588,15 @@ hyprlauncher:
     - Daemon by default: instant opening of the launcher
     - Entry frequency caching: commonly used entries appear above others
     - Manual entry providing: make a simple selector from your own list
+  fedora:
+    44:
+      source:
+        patches:
+        - fix-build-with-rawhide-gpp.patch
+    rawhide:
+      source:
+        patches:
+        - fix-build-with-rawhide-gpp.patch
   files:
   - '%doc README.md'
   - '%license LICENSE'
@@ -712,6 +721,15 @@ hyprpicker:
   - hyprwayland-scanner
   description: |
     A wlroots-compatible Wayland color picker that does not suck
+  fedora:
+    44:
+      source:
+        patches:
+        - fix-build-with-rawhide-gpp.patch
+    rawhide:
+      source:
+        patches:
+        - fix-build-with-rawhide-gpp.patch
   files:
   - '%doc README.md'
   - '%license LICENSE'
@@ -1009,6 +1027,15 @@ hyprtoolkit:
     files:
     - '%{_includedir}/hyprtoolkit/'
     - '%{_libdir}/pkgconfig/hyprtoolkit.pc'
+  fedora:
+    44:
+      source:
+        patches:
+        - fix-build-with-rawhide-gpp.patch
+    rawhide:
+      source:
+        patches:
+        - fix-build-with-rawhide-gpp.patch
   files:
   - '%license LICENSE'
   - '%{_libdir}/libhyprtoolkit.so*'

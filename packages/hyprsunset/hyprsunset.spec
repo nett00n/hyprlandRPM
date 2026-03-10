@@ -27,7 +27,7 @@ Tag:               v0.3.3
 Commit:            057feb7a724b7fc0f3a406d6db08b59734db006a
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

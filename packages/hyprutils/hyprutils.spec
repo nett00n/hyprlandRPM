@@ -23,7 +23,7 @@ Tag:               v0.11.0
 Commit:            fe686486ac867a1a24f99c753bb40ffed338e4b0
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

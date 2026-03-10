@@ -30,7 +30,7 @@ Tag:               v1.3.0
 Commit:            1c963c51514581c41b9bdae08cdf69171265cdda
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %meson

@@ -30,7 +30,7 @@ Tag:               v0.2.1
 Commit:            c2e906261142f5dd1ee0bfc44abba23e2754c660
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

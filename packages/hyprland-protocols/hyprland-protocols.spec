@@ -26,7 +26,7 @@ Tag:               v0.7.0
 Commit:            bd153e76f751f150a09328dbdeb5e4fab9d23622
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %meson

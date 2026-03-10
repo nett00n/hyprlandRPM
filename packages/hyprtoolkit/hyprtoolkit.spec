@@ -5,6 +5,7 @@ Summary:        A modern C++ Wayland-native GUI toolkit
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprtoolkit
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Patch0:         fix-build-with-rawhide-gpp.patch
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -37,7 +38,7 @@ Tag:               v0.5.3
 Commit:            71515e83eb7ad0ec921c913e1d5772e5fe55daa9
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

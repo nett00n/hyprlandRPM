@@ -26,7 +26,7 @@ Tag:               v0.1.0
 Commit:            9d4437011b4f02e60e98a3e36c7fa14bb053b502
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake -DINSTALL_QMLDIR=%{_libdir}/qt6/qml

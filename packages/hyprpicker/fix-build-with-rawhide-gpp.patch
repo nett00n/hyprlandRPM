@@ -1,0 +1,8 @@
+--- a/src/hyprpicker.hpp
++++ b/src/hyprpicker.hpp
+@@ -1,4 +1,5 @@
+ #pragma once
++#include <mutex>
+
+ #include "defines.hpp"
+ #include "helpers/LayerSurface.hpp"

@@ -28,7 +28,7 @@ Tag:               v0.1.7
 Commit:            5430b73ddf148651bcf35fa39ed4d757c7534028
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

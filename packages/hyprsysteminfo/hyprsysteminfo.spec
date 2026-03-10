@@ -32,7 +32,7 @@ Tag:               v0.1.3
 Commit:            17f041e2d539bd63ec116a77236ea37a17c6b3e6
 
 %prep
-%autosetup
+%autosetup -p1
 sed -i '/find_package(Qt6.*WaylandClient)/a find_package(Qt6 REQUIRED COMPONENTS WaylandClientPrivate)' CMakeLists.txt
 
 %build

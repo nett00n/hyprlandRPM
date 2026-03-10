@@ -46,7 +46,7 @@ COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 Package info:
 
 %prep
-%autosetup -n Waybar-%{version}
+%autosetup -p1 -n Waybar-%{version}
 
 %build
 %meson

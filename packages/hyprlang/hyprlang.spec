@@ -22,7 +22,7 @@ Tag:               v0.6.8
 Commit:            3a1c1b25b059dae2c6bbc46991562ba1158d125c
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

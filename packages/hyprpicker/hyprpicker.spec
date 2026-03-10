@@ -5,6 +5,7 @@ Summary:        A wlroots-compatible Wayland color picker that does not suck
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprpicker
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Patch0:         fix-build-with-rawhide-gpp.patch
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -30,7 +31,7 @@ Tag:               v0.4.6
 Commit:            345eab2d704ee47a6c277cbfb2aeabaa620d9dbc
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake

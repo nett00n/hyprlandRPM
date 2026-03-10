@@ -5,6 +5,7 @@ Summary:        A multipurpose and versatile launcher / picker for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprlauncher
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Patch0:         fix-build-with-rawhide-gpp.patch
 
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
@@ -40,7 +41,7 @@ Tag:               v0.1.5
 Commit:            086cfaa33541a347d040f8448ec4e4aff8f7f9bb
 
 %prep
-%autosetup
+%autosetup -p1
 
 %build
 %cmake
