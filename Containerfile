@@ -1,7 +1,12 @@
 ARG FEDORA_VERSION=43
+
 FROM registry.fedoraproject.org/fedora-toolbox:${FEDORA_VERSION}
 
-RUN sudo dnf install -y \
+ARG UID=1000
+ARG GID=1000
+ARG USERNAME=user
+
+RUN dnf install -y -q \
     copr-cli \
     fedpkg \
     git \
@@ -13,10 +18,16 @@ RUN sudo dnf install -y \
     rpm-build \
     rpmdevtools \
     rpmlint \
-    && sudo dnf clean all
+    && dnf clean all
 
-# Runs on every login shell. On first enter: adds user to mock group and
-# replaces the current shell via exec so the group is active immediately.
-# On subsequent enters: check passes silently.
+# Create non-root user with specified UID/GID
+RUN groupadd -g "$GID" "$USERNAME" && \
+    useradd -m -u "$UID" -g "$GID" -G wheel,mock "$USERNAME" && \
+    echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel-nopasswd
+
+# Runs on every login shell. Ensures user is in mock group.
 COPY docker/mock-group.sh /etc/profile.d/mock-group.sh
-RUN echo '%wheel ALL=(ALL) NOPASSWD: /usr/sbin/usermod' > /etc/sudoers.d/mock-group-nopasswd
+RUN chmod 644 /etc/profile.d/mock-group.sh
+
+# Keep root for volume access, but user exists for interactive shells
+# USER $UID:$GID

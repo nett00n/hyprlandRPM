@@ -73,7 +73,7 @@ Alternatively, step by step:
 
 1. Add repository as a submodule: `git submodule add <url> submodules/<org>/<name>`
 
-1. `make container-all` would create toolbox environment for compilation
+1. Build container image: `make container-build` (or `make container-all` for all Fedora versions)
 
 1. Create virtualenv if not exist: `make setup-venv`
 
@@ -176,18 +176,19 @@ python3 scripts/gen-vendor-tarball.py <name>
 
 ## Code Quality and Linting
 
-The repository uses multiple linters and formatters to maintain code quality. All checks run inside the toolbox container:
+The repository uses multiple linters and formatters to maintain code quality. All checks run inside a container (podman/docker, auto-detected):
 
 ### Setup (one-time)
 
 ```shell
 make setup-venv   # creates .venv and installs requirements-dev.txt (mypy, ruff, yamllint, mdformat)
+make container-build   # build container image for Fedora 43 (or FEDORA_VERSION=X for specific version)
 ```
 
 ### Running checks and formatting
 
 ```shell
-# Run all linters (inside toolbox, installs dev tools on first run)
+# Run all linters (inside container, installs dev tools on first run)
 make lint    # ruff check + mypy + yamllint + mdformat
 
 # Format code
@@ -195,7 +196,7 @@ make ruff-format   # format Python scripts
 make fmt           # complete formatting: ruff + path normalization + YAML sorting
 
 # Pre-commit workflow: run all checks + formatting
-make pre-commit
+make pre-commit QUIET=true   # add QUIET=true for concise output
 ```
 
 **What each checker does:**
@@ -209,10 +210,11 @@ All checks automatically exclude `submodules/` directory.
 
 ## Local Build Workflow
 
-Prerequisites: a toolbox container built with `make container-build`, and a Python venv:
+Prerequisites: a container image built with `make container-build`, and a Python venv:
 
 ```shell
 make setup-venv   # one-time: creates .venv and installs requirements-dev.txt
+make container-build   # one-time: build container image for Fedora 43
 ```
 
 ```shell
@@ -227,7 +229,7 @@ Set `PROCEED_BUILD=true` to resume an interrupted run without rebuilding package
 already succeeded in the current `build-report.yaml`:
 
 ```shell
-toolbox run -c rpm43 env PROCEED_BUILD=true python3 scripts/full-cycle.py
+make pkg-full-cycle PACKAGE=<name> FEDORA_VERSION=43 PROCEED_BUILD=true
 ```
 
 ### Running individual pipeline stages
