@@ -35,6 +35,8 @@ LOCALREPO_MOUNT  := $(LOCALREPO_VOLUME):/local-repo:z
 WORKDIR_MOUNT    := $(PWD):/work:z
 VENV_MOUNT       := $(PWD)/.venv:/work/.venv:z
 MOCK_CONF_MOUNT  := $(PWD)/mock-local-repo.conf:/etc/mock/local-repo.conf:ro,z
+COPR_MOUNT_OPT   := ro,z
+COPR_CONFIG_MOUNT := $(if $(COPR_REPO),-v $(HOME_DIR)/.config/copr:/root/.config/copr:$(COPR_MOUNT_OPT),)
 
 # Setup volumes with correct permissions (UID/GID from host user)
 define setup_volumes
@@ -59,6 +61,7 @@ CONTAINER_RUN := $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) run --rm --privileged \
 	-v $(WORKDIR_MOUNT) \
 	-v $(VENV_MOUNT) \
 	-v $(MOCK_CONF_MOUNT) \
+	$(COPR_CONFIG_MOUNT) \
 	-w /work \
 	$(IMAGE_NAME):$(FEDORA_VERSION)
 
@@ -350,8 +353,8 @@ stage-mock: ## Run mock build stage (PACKAGE=<name>, FEDORA_VERSION, runs in con
 
 stage-copr: ## Run Copr submission stage (PACKAGE=<name>, COPR_REPO required, runs in container)
 	$(setup_volumes)
-	$(CONTAINER_RUN) env \
+	$(call run_with_result,$(CONTAINER_RUN) env \
 		FEDORA_VERSION=$(FEDORA_VERSION) \
 		PACKAGE=$(PACKAGE) \
 		COPR_REPO=$(COPR_REPO) \
-		/work/.venv/bin/python3 scripts/stage-copr.py
+		/work/.venv/bin/python3 scripts/stage-copr.py,Copr submission stage passed,Copr submission stage failed,$(MAKE_LOGS_DIR)/stage-copr)

@@ -92,11 +92,15 @@ def main() -> None:
         log = LOG_DIR / f"{pkg}-10-srpm.log"
         log.unlink(missing_ok=True)
 
-        # Skip if mock stage already succeeded
+        # Skip if mock stage already succeeded AND SRPM file exists
         prior_mock_state = (
             build_status.get("stages", {}).get("mock", {}).get(pkg, {}).get("state")
         )
-        if proceed and verbose_proceed_check("mock", pkg, prior_mock_state):
+        prior_srpm_path = (
+            build_status.get("stages", {}).get("srpm", {}).get(pkg, {}).get("path")
+        )
+        srpm_exists = prior_srpm_path and Path(prior_srpm_path).exists()
+        if proceed and verbose_proceed_check("mock", pkg, prior_mock_state) and srpm_exists:
             status("srpm", pkg, "skip", "mock already succeeded")
             continue  # preserve existing srpm entry untouched
 

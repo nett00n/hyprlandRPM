@@ -115,6 +115,19 @@ def collect_contributors(repo_root: Path) -> list[dict]:
     return contributors
 
 
+def get_latest_blog(repo_root: Path) -> str:
+    """Get the latest blog post from ./blog/ directory."""
+    blog_dir = repo_root / "blog"
+    if not blog_dir.exists():
+        return ""
+
+    blog_files = sorted(blog_dir.glob("*.md"), reverse=True)
+    if not blog_files:
+        return ""
+
+    return blog_files[0].read_text()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -150,6 +163,7 @@ def main() -> None:
     pkg_by_name = {p["name"]: p for p in packages}
     groups = collect_groups(groups_cfg, pkg_by_name)
     contributors = collect_contributors(ROOT)
+    latest_blog = get_latest_blog(ROOT)
 
     env = create_jinja_env()
     template = env.get_template(template_name)
@@ -161,6 +175,7 @@ def main() -> None:
             groups=groups,
             contributors=contributors,
             badge_style=badge_style,
+            latest_blog=latest_blog,
         ),
         end="",
     )

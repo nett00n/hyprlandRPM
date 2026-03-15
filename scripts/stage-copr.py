@@ -43,6 +43,22 @@ def parse_build_id(output: str) -> int | None:
     return None
 
 
+def check_copr_credentials() -> bool:
+    """Verify COPR credentials are valid."""
+    ok, stdout, stderr = run_cmd(["copr-cli", "whoami"])
+    if not ok:
+        print("error: COPR credentials are invalid or missing", file=sys.stderr)
+        print(
+            "  Set up credentials at: https://copr.fedorainfracloud.org/api/",
+            file=sys.stderr,
+        )
+        print("  Save to: ~/.config/copr/copr.conf", file=sys.stderr)
+        if stderr:
+            print(f"  Details: {stderr.strip()}", file=sys.stderr)
+        return False
+    return True
+
+
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     copr_repo = os.environ.get("COPR_REPO", "")
@@ -56,6 +72,10 @@ def main() -> None:
         sys.exit(2)
     if not re.match(r"^[\w-]+/[\w.-]+$", copr_repo):
         print(f"error: Invalid COPR_REPO format: {copr_repo}", file=sys.stderr)
+        sys.exit(2)
+
+    # Check credentials early
+    if not check_copr_credentials():
         sys.exit(2)
 
     all_packages = get_packages()
