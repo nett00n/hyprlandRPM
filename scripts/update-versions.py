@@ -20,21 +20,42 @@ from lib.yaml_utils import pop_build_stages, write_yaml_preserving_comments
 
 
 def pull_submodule(mod: dict) -> None:
-    """Run git pull inside the submodule directory, reporting result to stderr."""
+    """Fetch and checkout default branch, overriding any local state."""
     repo = ROOT / mod["path"]
     if not repo.exists():
         print(f"  warning: {repo} does not exist, skipping pull", file=sys.stderr)
         return
-    result = run_git("pull", cwd=repo)
-    if result.returncode != 0:
-        print(f"  warning: git pull failed for {mod['name']}", file=sys.stderr)
-        if result.stderr:
-            print(f"  {result.stderr.strip()}", file=sys.stderr)
-    else:
-        summary = (
-            result.stdout.strip().splitlines()[-1] if result.stdout.strip() else "ok"
+
+    # Fetch latest from origin
+    fetch_result = run_git("fetch", "origin", cwd=repo)
+    if fetch_result.returncode != 0:
+        print(f"  warning: git fetch failed for {mod['name']}", file=sys.stderr)
+        if fetch_result.stderr:
+            print(f"  {fetch_result.stderr.strip()}", file=sys.stderr)
+        return
+
+    # Get the default branch from origin's HEAD
+    head_result = run_git("symbolic-ref", "refs/remotes/origin/HEAD", cwd=repo)
+    if head_result.returncode != 0:
+        print(
+            f"  warning: could not determine default branch for {mod['name']}",
+            file=sys.stderr,
         )
-        print(f"  pulled {mod['name']}: {summary}", file=sys.stderr)
+        return
+
+    # Extract branch name from "refs/remotes/origin/main" -> "main"
+    default_branch = head_result.stdout.strip().split("/")[-1]
+
+    # Checkout and sync with origin
+    checkout_result = run_git(
+        "switch", "-C", default_branch, f"origin/{default_branch}", cwd=repo
+    )
+    if checkout_result.returncode != 0:
+        print(f"  warning: git switch failed for {mod['name']}", file=sys.stderr)
+        if checkout_result.stderr:
+            print(f"  {checkout_result.stderr.strip()}", file=sys.stderr)
+    else:
+        print(f"  updated {mod['name']} to {default_branch}", file=sys.stderr)
 
 
 def main() -> None:
