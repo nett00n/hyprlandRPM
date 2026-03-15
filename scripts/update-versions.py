@@ -98,7 +98,7 @@ def main() -> None:
         for pkg, (old, new) in sorted(changed.items()):
             print(f"  {pkg}: {old} -> {new}", file=sys.stderr)
 
-        affected = pop_build_stages(changed)
+        affected = pop_build_stages(list(changed.keys()))
         print(
             f"cleared mock/copr build status for: {', '.join(affected)}",
             file=sys.stderr,

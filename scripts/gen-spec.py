@@ -20,16 +20,53 @@ from lib.yaml_utils import apply_os_overrides, get_packages, load_repo_yaml
 
 
 def get_packager() -> str:
+    import os
+    from pathlib import Path
+
+    # 1. Try gitconfig
     try:
-        name = subprocess.check_output(
+        git_name = subprocess.check_output(
             ["git", "config", "user.name"], text=True
         ).strip()
-        email = subprocess.check_output(
+        git_email = subprocess.check_output(
             ["git", "config", "user.email"], text=True
         ).strip()
-        return f"{name} <{email}>"
+        if git_name and git_email:
+            return f"{git_name} <{git_email}>"
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return "Packager <packager@example.com>"
+        pass
+
+    # 2. Try .env file
+    env_file = Path.cwd() / ".env"
+    if env_file.exists():
+        env_name: str = ""
+        env_email: str = ""
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("PACKAGER="):
+                    return line.split("=", 1)[1].strip().strip("\"'")
+                elif line.startswith("PACKAGER_NAME="):
+                    env_name = line.split("=", 1)[1].strip().strip("\"'")
+                elif line.startswith("PACKAGER_EMAIL="):
+                    env_email = line.split("=", 1)[1].strip().strip("\"'")
+        if env_name and env_email:
+            return f"{env_name} <{env_email}>"
+
+    # 3. Try environment variables
+    packager = os.environ.get("PACKAGER")
+    if packager:
+        return packager
+
+    env_var_name = os.environ.get("PACKAGER_NAME", "").strip()
+    env_var_email = os.environ.get("PACKAGER_EMAIL", "").strip()
+    if env_var_name and env_var_email:
+        return f"{env_var_name} <{env_var_email}>"
+
+    # 4. Default fallback
+    return "Packager <packager@example.com>"
 
 
 def fetch_github_release(github_url: str, version: str) -> dict | None:
@@ -187,13 +224,13 @@ def build_context(
         src_subdir = (
             "%{name}-%{commit}" if source.get("commit") else "%{name}-%{version}"
         )
-        flags = ["-DFETCHCONTENT_FULLY_DISCONNECTED=ON"] + [
+        cmake_flags = ["-DFETCHCONTENT_FULLY_DISCONNECTED=ON"] + [
             f"-DFETCHCONTENT_SOURCE_DIR_{d['cmake_var']}="
             f"%{{_builddir}}/{src_subdir}/{d['name']}-src"
             + (f"/{d['source_subdir']}" if d.get("source_subdir") else "")
             for d in bundled_deps
         ]
-        flags_str = " \\\n    ".join(flags)
+        flags_str = " \\\n    ".join(cmake_flags)
         build_cmd = f"%cmake \\\n    {flags_str}\n%cmake_build"
 
     source_subdir = build.get("subdir", "")

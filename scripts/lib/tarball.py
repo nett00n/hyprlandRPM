@@ -20,7 +20,6 @@ def detect_tarball_source_name(
                 ["curl", "-sLf", "--max-time", "30", tar_url],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
-                timeout=60,
             )
             tar_result = subprocess.run(
                 ["tar", "-tz"],

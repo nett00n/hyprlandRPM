@@ -100,7 +100,11 @@ def main() -> None:
             build_status.get("stages", {}).get("srpm", {}).get(pkg, {}).get("path")
         )
         srpm_exists = prior_srpm_path and Path(prior_srpm_path).exists()
-        if proceed and verbose_proceed_check("mock", pkg, prior_mock_state) and srpm_exists:
+        if (
+            proceed
+            and verbose_proceed_check("mock", pkg, prior_mock_state)
+            and srpm_exists
+        ):
             status("srpm", pkg, "skip", "mock already succeeded")
             continue  # preserve existing srpm entry untouched
 
