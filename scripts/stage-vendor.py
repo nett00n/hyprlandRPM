@@ -15,13 +15,14 @@ Must be run with network access (before entering the mock chroot).
 Environment variables:
   PACKAGE         Build only this package (optional, comma-separated)
   FEDORA_VERSION  Fedora version to target (default: 43)
+  SKIP_PACKAGES   Skip these packages (optional, comma-separated)
 """
 
 import os
 import sys
 from pathlib import Path
 
-from lib.paths import LOG_DIR, ROOT
+from lib.paths import BUILD_LOG_DIR, ROOT, get_package_log_dir
 from lib.reporting import status
 from lib.vendor import VendorError, generate, is_go_package, vendor_tarball_path
 from lib.version import nvr
@@ -31,6 +32,7 @@ from lib.yaml_utils import (
     get_packages,
     load_build_status,
     save_build_status,
+    skip_packages,
 )
 
 SOURCES_DIR = Path.home() / "rpmbuild" / "SOURCES"
@@ -39,11 +41,13 @@ SOURCES_DIR = Path.home() / "rpmbuild" / "SOURCES"
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     package_filter = os.environ.get("PACKAGE", "")
+    skip_filter = os.environ.get("SKIP_PACKAGES", "")
 
     all_packages = get_packages()
     packages = filter_packages(all_packages, package_filter)
+    packages = skip_packages(packages, skip_filter)
 
-    LOG_DIR.mkdir(exist_ok=True)
+    BUILD_LOG_DIR.mkdir(parents=True, exist_ok=True)
     SOURCES_DIR.mkdir(parents=True, exist_ok=True)
     build_status = load_build_status()
     spec_stage = build_status.get("stages", {}).get("spec", {})
@@ -62,7 +66,9 @@ def main() -> None:
             }
             continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
-        log = LOG_DIR / f"{pkg}-05-vendor.log"
+        pkg_log_dir = get_package_log_dir(pkg)
+        pkg_log_dir.mkdir(parents=True, exist_ok=True)
+        log = pkg_log_dir / "05-vendor.log"
         log.unlink(missing_ok=True)
 
         # Skip if not a Go package

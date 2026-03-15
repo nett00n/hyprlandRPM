@@ -8,6 +8,9 @@ PACKAGE      ?=
 PKG          ?=
 PACKAGE      := $(or $(PACKAGE),$(PKG))
 
+# Skip packages during dependency gathering (comma-separated list)
+SKIP_PACKAGES ?=
+
 # Quiet mode: QUIET=1 suppresses output and saves to logs
 QUIET        ?=
 MAKE_LOGS_DIR := ./logs/make
@@ -102,7 +105,7 @@ endef
 
 
 .DEFAULT_GOAL := help
-.PHONY: help setup-venv lint fmt pre-commit ruff ruff-format mypy rpmlint yamlfmt yamllint pkg-spec update-versions list-tags scaffold-package add-submodule add-package add-new gen-report readme copr-description normalize-paths sort-lists container-build container-enter container-clean container-volume-clean container-all pkg-sources pkg-srpm pkg-mock pkg-copr pkg-full-cycle pkg-build-pop stage-validate stage-spec stage-srpm stage-mock stage-copr
+.PHONY: help setup-venv lint fmt pre-commit ruff ruff-format mypy rpmlint yamlfmt yamllint pkg-spec update-versions list-tags scaffold-package add-submodule add-package add-new gen-report readme copr-description normalize-paths sort-lists container-build container-enter container-clean container-volume-clean container-all pkg-sources pkg-srpm pkg-mock pkg-copr pkg-full-cycle pkg-build-pop stage-validate stage-spec stage-vendor stage-srpm stage-mock stage-copr
 
 help: ## Show this help
 	@echo "Usage: make [TARGET] [PACKAGE=<name>] [FEDORA_VERSION=<version>]"
@@ -348,6 +351,13 @@ stage-spec: ## Run spec generation stage (PACKAGE=<name>, runs in container)
 		FEDORA_VERSION=$(FEDORA_VERSION) \
 		PACKAGE=$(PACKAGE) \
 		/work/.venv/bin/python3 scripts/stage-spec.py
+
+stage-vendor: ## Run vendor tarball generation stage (Go packages only, PACKAGE=<name>, runs in container)
+	$(setup_volumes)
+	$(CONTAINER_RUN) env \
+		FEDORA_VERSION=$(FEDORA_VERSION) \
+		PACKAGE=$(PACKAGE) \
+		/work/.venv/bin/python3 scripts/stage-vendor.py
 
 stage-srpm: ## Run SRPM build stage (PACKAGE=<name>, runs in container)
 	$(setup_volumes)

@@ -42,6 +42,18 @@ def filter_packages(all_packages: dict, package_env: str) -> dict:
     return resolved
 
 
+def skip_packages(packages: dict, skip_env: str) -> dict:
+    """Parse SKIP_PACKAGES env var, remove matching packages case-insensitively.
+
+    Returns dict with excluded packages removed. No error if packages don't exist.
+    """
+    if not skip_env:
+        return packages
+    names = [n.strip().lower() for n in skip_env.split(",") if n.strip()]
+    skip_set = set(names)
+    return {k: v for k, v in packages.items() if k.lower() not in skip_set}
+
+
 def load_packages_yaml(path: Path = PACKAGES_YAML) -> dict:
     """Load packages.yaml and return the full dict."""
     if not path.exists():

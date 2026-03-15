@@ -14,7 +14,7 @@ Environment variables:
 import os
 import sys
 
-from lib.paths import LOG_DIR, ROOT
+from lib.paths import BUILD_LOG_DIR, ROOT, get_package_log_dir
 from lib.reporting import status
 from lib.version import nvr
 from lib.yaml_utils import (
@@ -23,6 +23,7 @@ from lib.yaml_utils import (
     get_packages,
     load_build_status,
     save_build_status,
+    skip_packages,
 )
 
 PYTHON = sys.executable
@@ -31,11 +32,13 @@ PYTHON = sys.executable
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     package_filter = os.environ.get("PACKAGE", "")
+    skip_filter = os.environ.get("SKIP_PACKAGES", "")
 
     all_packages = get_packages()
     packages = filter_packages(all_packages, package_filter)
+    packages = skip_packages(packages, skip_filter)
 
-    LOG_DIR.mkdir(exist_ok=True)
+    BUILD_LOG_DIR.mkdir(parents=True, exist_ok=True)
     build_status = load_build_status()
     build_status.setdefault("stages", {})["spec"] = {}
 
@@ -48,7 +51,9 @@ def main() -> None:
             build_status["stages"]["spec"][pkg] = {"state": "skipped", "version": None}
             continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
-        log = LOG_DIR / f"{pkg}-00-spec.log"
+        pkg_log_dir = get_package_log_dir(pkg)
+        pkg_log_dir.mkdir(parents=True, exist_ok=True)
+        log = pkg_log_dir / "00-spec.log"
         log.unlink(missing_ok=True)
 
         import subprocess

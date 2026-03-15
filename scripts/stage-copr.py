@@ -11,6 +11,7 @@ Environment variables:
   PACKAGE         Build only this package (optional, comma-separated)
   FEDORA_VERSION  Fedora version to target (default: 43)
   COPR_REPO       Copr repo slug, e.g. nett00n/hyprland (required)
+  SKIP_PACKAGES   Skip these packages (optional, comma-separated)
   PROCEED_BUILD   Skip packages where copr stage already succeeded
 """
 
@@ -19,7 +20,7 @@ import re
 import sys
 from typing import Any
 
-from lib.paths import LOG_DIR, ROOT
+from lib.paths import BUILD_LOG_DIR, ROOT, get_package_log_dir
 from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
@@ -30,6 +31,7 @@ from lib.yaml_utils import (
     load_build_status,
     now_epoch,
     save_build_status,
+    skip_packages,
 )
 
 
@@ -63,6 +65,7 @@ def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     copr_repo = os.environ.get("COPR_REPO", "")
     package_filter = os.environ.get("PACKAGE", "")
+    skip_filter = os.environ.get("SKIP_PACKAGES", "")
 
     if not copr_repo:
         print(
@@ -80,8 +83,9 @@ def main() -> None:
 
     all_packages = get_packages()
     packages = filter_packages(all_packages, package_filter)
+    packages = skip_packages(packages, skip_filter)
 
-    LOG_DIR.mkdir(exist_ok=True)
+    BUILD_LOG_DIR.mkdir(parents=True, exist_ok=True)
     build_status = load_build_status()
     srpm_stage = build_status.get("stages", {}).get("srpm", {})
     mock_stage = build_status.get("stages", {}).get("mock", {})
@@ -107,7 +111,9 @@ def main() -> None:
             continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
         has_devel = "devel" in meta
-        log = LOG_DIR / f"{pkg}-30-copr.log"
+        pkg_log_dir = get_package_log_dir(pkg)
+        pkg_log_dir.mkdir(parents=True, exist_ok=True)
+        log = pkg_log_dir / "30-copr.log"
         log.unlink(missing_ok=True)
 
         # Skip if copr stage already succeeded

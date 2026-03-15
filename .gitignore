@@ -4,6 +4,7 @@ upstream/
 # Python
 .venv/
 __pycache__/
+.*_cache
 
 # rpmbuild tree
 ~/rpmbuild/

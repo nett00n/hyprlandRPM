@@ -9,6 +9,7 @@ Must be run inside the rpm toolbox container (invoked via Makefile).
 Environment variables:
   PACKAGE         Build only this package (optional, comma-separated)
   FEDORA_VERSION  Fedora version to target (default: 43)
+  SKIP_PACKAGES   Skip these packages (optional, comma-separated)
   PROCEED_BUILD   Skip packages where mock stage already succeeded
 """
 
@@ -18,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from lib.paths import LOG_DIR, ROOT
+from lib.paths import BUILD_LOG_DIR, ROOT, get_package_log_dir
 from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
@@ -28,6 +29,7 @@ from lib.yaml_utils import (
     get_packages,
     load_build_status,
     save_build_status,
+    skip_packages,
 )
 
 
@@ -59,11 +61,13 @@ def find_srpm(pkg: str) -> str | None:
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     package_filter = os.environ.get("PACKAGE", "")
+    skip_filter = os.environ.get("SKIP_PACKAGES", "")
 
     all_packages = get_packages()
     packages = filter_packages(all_packages, package_filter)
+    packages = skip_packages(packages, skip_filter)
 
-    LOG_DIR.mkdir(exist_ok=True)
+    BUILD_LOG_DIR.mkdir(parents=True, exist_ok=True)
     build_status = load_build_status()
     spec_stage = build_status.get("stages", {}).get("spec", {})
 
@@ -89,7 +93,9 @@ def main() -> None:
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
         has_devel = "devel" in meta
         spec = ROOT / "packages" / pkg.lower() / f"{pkg.lower()}.spec"
-        log = LOG_DIR / f"{pkg}-10-srpm.log"
+        pkg_log_dir = get_package_log_dir(pkg)
+        pkg_log_dir.mkdir(parents=True, exist_ok=True)
+        log = pkg_log_dir / "10-srpm.log"
         log.unlink(missing_ok=True)
 
         # Skip if mock stage already succeeded AND SRPM file exists

@@ -9,6 +9,7 @@ Must be run inside the rpm toolbox container (invoked via Makefile).
 Environment variables:
   PACKAGE         Validate only this package (optional, comma-separated)
   FEDORA_VERSION  Fedora version to target (default: 43)
+  SKIP_PACKAGES   Skip these packages (optional, comma-separated)
 """
 
 import os
@@ -24,6 +25,7 @@ from lib.yaml_utils import (
     load_build_status,
     load_groups_yaml,
     save_build_status,
+    skip_packages,
 )
 
 REQUIRED_FIELDS = ["version", "license", "summary", "description", "url"]
@@ -164,9 +166,11 @@ def validate_gitmodules(root_path=ROOT) -> tuple[list[str], list[str]]:
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     package_filter = os.environ.get("PACKAGE", "")
+    skip_filter = os.environ.get("SKIP_PACKAGES", "")
 
     all_packages = get_packages()
     packages = filter_packages(all_packages, package_filter)
+    packages = skip_packages(packages, skip_filter)
 
     build_status = load_build_status()
     build_status.setdefault("stages", {})["validate"] = {}

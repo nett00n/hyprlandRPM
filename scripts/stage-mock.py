@@ -11,6 +11,7 @@ Environment variables:
   PACKAGE         Build only this package (optional, comma-separated)
   FEDORA_VERSION  Fedora version to target (default: 43)
   MOCK_CHROOT     Override mock chroot (default: fedora-{FEDORA_VERSION}-x86_64)
+  SKIP_PACKAGES   Skip these packages (optional, comma-separated)
   PROCEED_BUILD   Skip packages where mock stage already succeeded
 """
 
@@ -23,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from lib.deps import infer_deps
-from lib.paths import LOCAL_REPO, LOG_DIR, ROOT
+from lib.paths import BUILD_LOG_DIR, LOCAL_REPO, ROOT, get_package_log_dir
 from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
 from lib.version import nvr
@@ -34,6 +35,7 @@ from lib.yaml_utils import (
     load_build_status,
     now_epoch,
     save_build_status,
+    skip_packages,
 )
 
 
@@ -62,9 +64,11 @@ def update_local_repo(mock_chroot: str) -> None:
 
 def copy_mock_results(mock_chroot: str, pkg: str) -> list[str]:
     result_dir = Path("/var/lib/mock") / mock_chroot / "result"
+    pkg_log_dir = get_package_log_dir(pkg)
+    pkg_log_dir.mkdir(parents=True, exist_ok=True)
     copied: list[str] = []
     for name in ("build.log", "root.log", "state.log"):
-        dst = LOG_DIR / f"{pkg}-21-mock-{name}"
+        dst = pkg_log_dir / f"21-mock-{name}"
         try:
             shutil.copy2(result_dir / name, dst)
             copied.append(str(dst.relative_to(ROOT)))
@@ -84,11 +88,13 @@ def main() -> None:
     if not re.match(r"^[\w.-]+$", mock_chroot):
         raise ValueError(f"Invalid MOCK_CHROOT: {mock_chroot}")
     package_filter = os.environ.get("PACKAGE", "")
+    skip_filter = os.environ.get("SKIP_PACKAGES", "")
 
     all_packages = get_packages()
     packages = filter_packages(all_packages, package_filter)
+    packages = skip_packages(packages, skip_filter)
 
-    LOG_DIR.mkdir(exist_ok=True)
+    BUILD_LOG_DIR.mkdir(parents=True, exist_ok=True)
     build_status = load_build_status()
     srpm_stage = build_status.get("stages", {}).get("srpm", {})
 
@@ -114,7 +120,9 @@ def main() -> None:
             continue
         ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
         has_devel = "devel" in meta
-        log = LOG_DIR / f"{pkg}-20-mock.log"
+        pkg_log_dir = get_package_log_dir(pkg)
+        pkg_log_dir.mkdir(parents=True, exist_ok=True)
+        log = pkg_log_dir / "20-mock.log"
         log.unlink(missing_ok=True)
 
         # Skip if mock stage already succeeded

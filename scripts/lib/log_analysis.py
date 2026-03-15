@@ -401,7 +401,7 @@ def report_srpm_failures(packages: dict, log_dir: Path) -> None:
     """Print actionable errors from SRPM stage logs."""
     first = [True]
     for pkg in packages:
-        log_path = log_dir / f"{pkg}-10-srpm.log"
+        log_path = log_dir / pkg / "10-srpm.log"
         _print_stage_issues("srpm", pkg, log_path, _analyze_srpm_log(log_path), first)
 
 
@@ -410,8 +410,8 @@ def report_mock_failures(packages: dict, log_dir: Path) -> None:
     first = [True]
     for pkg in packages:
         for label, filename, analyzer in [
-            ("mock/builddep", f"{pkg}-20-mock.log", _analyze_mock_log),
-            ("mock/build", f"{pkg}-21-mock-build.log", _analyze_mock_build_log),
+            ("mock/builddep", "20-mock.log", _analyze_mock_log),
+            ("mock/build", "21-mock-build.log", _analyze_mock_build_log),
         ]:
-            log_path = log_dir / filename
+            log_path = log_dir / pkg / filename
             _print_stage_issues(label, pkg, log_path, analyzer(log_path), first)
