@@ -24,6 +24,7 @@ from lib.deps import build_dep_graph, topological_sort, transitive_deps
 from lib.log_analysis import report_mock_failures, report_srpm_failures
 from lib.paths import LOG_DIR, ROOT
 from lib.reporting import print_summary
+from lib.vendor import is_go_package, vendor_tarball_path
 from lib.yaml_utils import (
     BUILD_STATUS_YAML,
     STAGES,
@@ -36,6 +37,19 @@ from lib.yaml_utils import (
 
 PYTHON = sys.executable
 SCRIPTS = ROOT / "scripts"
+SOURCES_DIR = Path.home() / "rpmbuild" / "SOURCES"
+
+
+def needs_vendoring(packages: dict, fedora_version: str) -> bool:
+    """Check if any Go package needs vendoring (vendor tarball missing)."""
+    for pkg, meta in packages.items():
+        if not is_go_package(meta):
+            continue
+        version = str(meta.get("version", ""))
+        tarball = vendor_tarball_path(pkg, version, SOURCES_DIR)
+        if not tarball.exists():
+            return True
+    return False
 
 
 def print_proceed_status(packages: dict, build_status: dict, copr_repo: str) -> None:
@@ -148,7 +162,8 @@ def main() -> None:
 
     run_stage(SCRIPTS / "stage-validate.py", stage_env)
     run_stage(SCRIPTS / "stage-spec.py", stage_env)
-    run_stage(SCRIPTS / "stage-vendor.py", stage_env)
+    if needs_vendoring(packages, fedora_version):
+        run_stage(SCRIPTS / "stage-vendor.py", stage_env)
     srpm_ok = run_stage(SCRIPTS / "stage-srpm.py", stage_env)
     if not srpm_ok:
         report_srpm_failures(packages, LOG_DIR)

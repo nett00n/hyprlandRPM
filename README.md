@@ -23,21 +23,22 @@ Feel free to reuse automation from this repository for your own copr-projects
 
 ## News
 
-# It seems like nothing changed but it is not the case
+### It seems like nothing changed but it is not the case
 
-I am working a lot on management system, that makes this repo special.
-What we got now:
-
-- Using Podman/Docker instead of toolbox.
-  This way it is more isolated, removes conflicts in ~/rpmbuild and
-  this tools are jut more common to use
-- Some security fixes are applied too
-- Report YAML was not whole, i've merged two in one
-- Report is updated gradually
-
+> I am working a lot on management system, that makes this repo special.
+> What we got now:
+>
+> - Using Podman/Docker instead of toolbox.
+>   This way it is more isolated, removes conflicts in ~/rpmbuild and
+>   this tools are jut more common to use
+> - Some security fixes are applied too
+> - Report YAML was not whole, i've merged two in one
+> - Report is updated gradually
+> - Better updater submodule
+>
 > Pet your pets, sincerely yours nett00n
 >
-> 2026-03-__
+> 2026-03-15
 
 ## Packages
 
@@ -117,7 +118,7 @@ What we got now:
 | `hyprcursor` | ![0.1.13](https://img.shields.io/badge/0.1.13-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-success-brightgreen?style=for-the-badge) | [![copr](https://img.shields.io/badge/copr-success-brightgreen?style=for-the-badge)](https://copr.fedorainfracloud.org/coprs/build/10227186/) | A library and toolkit for the Hyprland cursor format |
 | `hyprgraphics` | ![0.5.0](https://img.shields.io/badge/0.5.0-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-success-brightgreen?style=for-the-badge) | [![copr](https://img.shields.io/badge/copr-success-brightgreen?style=for-the-badge)](https://copr.fedorainfracloud.org/coprs/build/10227203/) | Small C++ library for graphics utilities across the Hypr ecosystem |
 | `hypridle` | ![0.1.7](https://img.shields.io/badge/0.1.7-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-success-brightgreen?style=for-the-badge) | [![copr](https://img.shields.io/badge/copr-success-brightgreen?style=for-the-badge)](https://copr.fedorainfracloud.org/coprs/build/10227232/) | An idle management daemon for Hyprland |
-| `hyprland` | ![0.54.1](https://img.shields.io/badge/0.54.1-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-unknown-orange?style=for-the-badge) | ![copr](https://img.shields.io/badge/copr-unknown-orange?style=for-the-badge) | A Modern C++ Wayland Compositor |
+| `hyprland` | ![0.54.2](https://img.shields.io/badge/0.54.2-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-success-brightgreen?style=for-the-badge) | [![copr](https://img.shields.io/badge/copr-success-brightgreen?style=for-the-badge)](https://copr.fedorainfracloud.org/coprs/build/10228257/) | A Modern C++ Wayland Compositor |
 | `hyprland-guiutils` | ![0.2.1](https://img.shields.io/badge/0.2.1-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-success-brightgreen?style=for-the-badge) | [![copr](https://img.shields.io/badge/copr-success-brightgreen?style=for-the-badge)](https://copr.fedorainfracloud.org/coprs/build/10227361/) | Hyprland GUI utilities |
 | `hyprland-plugins` | ![0.53.0](https://img.shields.io/badge/0.53.0-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-failed-red?style=for-the-badge) | ![copr](https://img.shields.io/badge/copr-skipped-lightgrey?style=for-the-badge) | Official plugins for Hyprland |
 | `hyprland-protocols` | ![0.7.0](https://img.shields.io/badge/0.7.0-33CCFF?logo=hyprland&logoColor=black&style=for-the-badge) | ![mock](https://img.shields.io/badge/mock-success-brightgreen?style=for-the-badge) | [![copr](https://img.shields.io/badge/copr-success-brightgreen?style=for-the-badge)](https://copr.fedorainfracloud.org/coprs/build/10227379/) | Wayland protocol extensions for Hyprland |

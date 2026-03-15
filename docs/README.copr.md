@@ -23,21 +23,22 @@ Feel free to reuse automation from this repository for your own copr-projects
 
 ## News
 
-# It seems like nothing changed but it is not the case
+### It seems like nothing changed but it is not the case
 
-I am working a lot on management system, that makes this repo special.
-What we got now:
-
-- Using Podman/Docker instead of toolbox.
-  This way it is more isolated, removes conflicts in ~/rpmbuild and
-  this tools are jut more common to use
-- Some security fixes are applied too
-- Report YAML was not whole, i've merged two in one
-- Report is updated gradually
-
+> I am working a lot on management system, that makes this repo special.
+> What we got now:
+>
+> - Using Podman/Docker instead of toolbox.
+>   This way it is more isolated, removes conflicts in ~/rpmbuild and
+>   this tools are jut more common to use
+> - Some security fixes are applied too
+> - Report YAML was not whole, i've merged two in one
+> - Report is updated gradually
+> - Better updater submodule
+>
 > Pet your pets, sincerely yours nett00n
 >
-> 2026-03-__
+> 2026-03-15
 
 ## Packages
 
@@ -115,7 +116,7 @@ What we got now:
 - ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: 🟢 [ COPR build: 🟢](https://copr.fedorainfracloud.org/coprs/build/10227186/) `hyprcursor`&nbsp;`0.1.13` - A library and toolkit for the Hyprland cursor format
 - ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: 🟢 [ COPR build: 🟢](https://copr.fedorainfracloud.org/coprs/build/10227203/) `hyprgraphics`&nbsp;`0.5.0` - Small C++ library for graphics utilities across the Hypr ecosystem
 - ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: 🟢 [ COPR build: 🟢](https://copr.fedorainfracloud.org/coprs/build/10227232/) `hypridle`&nbsp;`0.1.7` - An idle management daemon for Hyprland
-- ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: ⚪  COPR build: ⚪ `hyprland`&nbsp;`0.54.1` - A Modern C++ Wayland Compositor
+- ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: 🟢 [ COPR build: 🟢](https://copr.fedorainfracloud.org/coprs/build/10228257/) `hyprland`&nbsp;`0.54.2` - A Modern C++ Wayland Compositor
 - ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: 🟢 [ COPR build: 🟢](https://copr.fedorainfracloud.org/coprs/build/10227361/) `hyprland-guiutils`&nbsp;`0.2.1` - Hyprland GUI utilities
 - ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: 🔴  COPR build: ⚫ `hyprland-plugins`&nbsp;`0.53.0` - Official plugins for Hyprland
 - ![hyprland](https://img.shields.io/badge/--A5F3FC?logo=hyprland&logoColor=black&style=for-the-badge) Local build: 🟢 [ COPR build: 🟢](https://copr.fedorainfracloud.org/coprs/build/10227379/) `hyprland-protocols`&nbsp;`0.7.0` - Wayland protocol extensions for Hyprland
