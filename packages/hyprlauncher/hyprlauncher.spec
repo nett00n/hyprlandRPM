@@ -5,18 +5,17 @@ Summary:        A multipurpose and versatile launcher / picker for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprlauncher
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Patch0:         fix-build-with-rawhide-gpp.patch
 
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprlang-devel
+BuildRequires:  hyprtoolkit-devel
+BuildRequires:  hyprutils-devel
+BuildRequires:  hyprwire-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(fontconfig)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprtoolkit)
-BuildRequires:  pkgconfig(hyprutils)
-BuildRequires:  pkgconfig(hyprwire)
 BuildRequires:  pkgconfig(icu-uc)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libqalculate)
@@ -24,8 +23,7 @@ BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(xkbcommon)
 
 %description
-A multipurpose and versatile launcher / picker for Hyprland
-Features:
+A multipurpose and versatile launcher / picker for Hyprland Features:
 
 - Various providers: Desktop, Unicode, Emoji, Math, Font ..
 - Speedy: Fast, multi-threaded fuzzy searching
@@ -56,5 +54,5 @@ Commit:            086cfaa33541a347d040f8448ec4e4aff8f7f9bb
 %{_prefix}/bin/hyprlauncher
 
 %changelog
-* Sun Jan 04 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.5-%autorelease
+* Sun Jan 04 2026 nett00n <copr@nett00n.org> - 0.1.5-%autorelease
 - version: bump to 0.1.5

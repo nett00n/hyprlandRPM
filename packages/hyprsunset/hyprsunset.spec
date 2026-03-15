@@ -8,11 +8,11 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprland-protocols-devel
+BuildRequires:  hyprlang-devel
+BuildRequires:  hyprutils-devel
+BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(hyprland-protocols)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprutils)
-BuildRequires:  pkgconfig(hyprwayland-scanner)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
 
@@ -43,5 +43,5 @@ Commit:            057feb7a724b7fc0f3a406d6db08b59734db006a
 %{_prefix}/lib/systemd/user/hyprsunset.service
 
 %changelog
-* Fri Oct 03 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.3.3-%autorelease
+* Fri Oct 03 2025 nett00n <copr@nett00n.org> - 0.3.3-%autorelease
 - version: bump to 0.3.3

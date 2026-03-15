@@ -10,10 +10,10 @@ BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprtoolkit-devel
+BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
-BuildRequires:  pkgconfig(hyprtoolkit)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  pkgconfig(pixman-1)
@@ -45,5 +45,5 @@ Commit:            2ce8f3d174f2ae1c50c7dcc182d809a5ab33cad2
 %{_prefix}/share/applications/hyprpwcenter.desktop
 
 %changelog
-* Tue Feb 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.2-%autorelease
+* Tue Feb 10 2026 nett00n <copr@nett00n.org> - 0.1.2-%autorelease
 - version: bump to 0.1.2

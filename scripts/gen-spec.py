@@ -11,11 +11,12 @@ import json
 import re
 import subprocess
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 from lib.gitmodules import get_changelog_info, parse_gitmodules
 from lib.jinja_utils import create_jinja_env
-from lib.paths import GITMODULES, ROOT
+from lib.paths import GITMODULES, GITHUB_RELEASE_CACHE, ROOT
 from lib.yaml_utils import apply_os_overrides, get_packages, load_repo_yaml
 
 
@@ -23,18 +24,15 @@ def get_packager() -> str:
     import os
     from pathlib import Path
 
-    # 1. Try gitconfig
-    try:
-        git_name = subprocess.check_output(
-            ["git", "config", "user.name"], text=True
-        ).strip()
-        git_email = subprocess.check_output(
-            ["git", "config", "user.email"], text=True
-        ).strip()
-        if git_name and git_email:
-            return f"{git_name} <{git_email}>"
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
+    # 1. Try environment variables (highest priority)
+    packager = os.environ.get("PACKAGER")
+    if packager:
+        return packager
+
+    env_var_name = os.environ.get("PACKAGER_NAME", "").strip()
+    env_var_email = os.environ.get("PACKAGER_EMAIL", "").strip()
+    if env_var_name and env_var_email:
+        return f"{env_var_name} <{env_var_email}>"
 
     # 2. Try .env file
     env_file = Path.cwd() / ".env"
@@ -55,18 +53,60 @@ def get_packager() -> str:
         if env_name and env_email:
             return f"{env_name} <{env_email}>"
 
-    # 3. Try environment variables
-    packager = os.environ.get("PACKAGER")
-    if packager:
-        return packager
-
-    env_var_name = os.environ.get("PACKAGER_NAME", "").strip()
-    env_var_email = os.environ.get("PACKAGER_EMAIL", "").strip()
-    if env_var_name and env_var_email:
-        return f"{env_var_name} <{env_var_email}>"
+    # 3. Try gitconfig (lowest priority)
+    try:
+        git_name = subprocess.check_output(
+            ["git", "config", "user.name"], text=True
+        ).strip()
+        git_email = subprocess.check_output(
+            ["git", "config", "user.email"], text=True
+        ).strip()
+        if git_name and git_email:
+            return f"{git_name} <{git_email}>"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
 
     # 4. Default fallback
     return "Packager <packager@example.com>"
+
+
+CACHE_TTL = 7 * 24 * 3600  # 7 days
+
+
+def _cache_key(github_url: str, version: str) -> str:
+    m = re.match(r"https://github\.com/([^/]+/[^/]+)", github_url)
+    return f"{m.group(1)}@{version}" if m else f"{github_url}@{version}"
+
+
+def load_release_cache(url: str, version: str) -> dict | None:
+    if not GITHUB_RELEASE_CACHE.exists():
+        return None
+    try:
+        data = json.loads(GITHUB_RELEASE_CACHE.read_text())
+        entry = data.get(_cache_key(url, version))
+        if entry and time.time() - entry["timestamp"] < CACHE_TTL:
+            return entry["data"]
+    except (json.JSONDecodeError, KeyError, OSError):
+        pass
+    return None
+
+
+def save_release_cache(url: str, version: str, release: dict) -> None:
+    GITHUB_RELEASE_CACHE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        data = (
+            json.loads(GITHUB_RELEASE_CACHE.read_text())
+            if GITHUB_RELEASE_CACHE.exists()
+            else {}
+        )
+    except (json.JSONDecodeError, OSError):
+        data = {}
+    data[_cache_key(url, version)] = {"data": release, "timestamp": int(time.time())}
+    GITHUB_RELEASE_CACHE.write_text(json.dumps(data, indent=2))
+
+
+GITHUB_RETRIES = 3
+GITHUB_RETRY_PAUSE = 10  # seconds
 
 
 def fetch_github_release(github_url: str, version: str) -> dict | None:
@@ -78,12 +118,41 @@ def fetch_github_release(github_url: str, version: str) -> dict | None:
     req = urllib.request.Request(
         api_url, headers={"Accept": "application/vnd.github+json"}
     )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())
-    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
-        print(f"warning: failed to fetch {api_url}: {e}", file=sys.stderr)
-        return None
+    for attempt in range(1, GITHUB_RETRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            # Don't retry on permanent client errors (4xx) except 429 (rate limit)
+            if 400 <= e.code < 500 and e.code != 429:
+                print(
+                    f"warning: failed to fetch {api_url}: HTTP {e.code}",
+                    file=sys.stderr,
+                )
+                return None
+            # Retry on transient errors: 429, 5xx, network errors
+            if attempt < GITHUB_RETRIES:
+                print(
+                    f"warning: github fetch attempt {attempt} failed (HTTP {e.code}), retrying in {GITHUB_RETRY_PAUSE}s",
+                    file=sys.stderr,
+                )
+                time.sleep(GITHUB_RETRY_PAUSE)
+            else:
+                print(
+                    f"warning: failed to fetch {api_url}: HTTP {e.code}",
+                    file=sys.stderr,
+                )
+        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+            # Retry on network/timeout errors
+            if attempt < GITHUB_RETRIES:
+                print(
+                    f"warning: github fetch attempt {attempt} failed ({e}), retrying in {GITHUB_RETRY_PAUSE}s",
+                    file=sys.stderr,
+                )
+                time.sleep(GITHUB_RETRY_PAUSE)
+            else:
+                print(f"warning: failed to fetch {api_url}: {e}", file=sys.stderr)
+    return None
 
 
 def build_changelog(
@@ -188,7 +257,11 @@ def build_context(
     else:
         release_info = None
     if release_info is None:
+        release_info = load_release_cache(pkg_url, version)
+    if release_info is None:
         release_info = fetch_github_release(pkg_url, version)
+        if release_info is not None:
+            save_release_cache(pkg_url, version, release_info)
     changelog = build_changelog(
         release_info, version, release, packager, source_url, copr_url
     )

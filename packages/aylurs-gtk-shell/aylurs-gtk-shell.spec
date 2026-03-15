@@ -44,5 +44,5 @@ popd
 %{_prefix}/share/ags/
 
 %changelog
-* Fri Nov 28 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 3.1.1-%autorelease
+* Fri Nov 28 2025 nett00n <copr@nett00n.org> - 3.1.1-%autorelease
 - nix: update hash

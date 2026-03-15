@@ -8,13 +8,13 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprutils-devel
 BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(gbm)
 BuildRequires:  pkgconfig(gl)
 BuildRequires:  pkgconfig(glesv2)
 BuildRequires:  pkgconfig(hwdata)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdisplay-info)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libinput)
@@ -64,5 +64,5 @@ Development files for aquamarine.
 %{_libdir}/pkgconfig/aquamarine.pc
 
 %changelog
-* Sun Nov 23 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.10.0-%autorelease
+* Sun Nov 23 2025 nett00n <copr@nett00n.org> - 0.10.0-%autorelease
 - version: bump to 0.10.0

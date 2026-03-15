@@ -58,5 +58,5 @@ Development files for sndio.
 %{_prefix}/lib64/pkgconfig/sndio.pc
 
 %changelog
-* Thu Aug 01 2024 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.10.0-%autorelease
+* Thu Aug 01 2024 nett00n <copr@nett00n.org> - 1.10.0-%autorelease
 - Bump version to 1.10.0

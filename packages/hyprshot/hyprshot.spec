@@ -39,5 +39,5 @@ install -Dpm0755 hyprshot -t %{buildroot}/%{_bindir}
 %{_bindir}/hyprshot
 
 %changelog
-* Tue Mar 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 1.3.0-%autorelease
+* Sun Mar 15 2026 nett00n <copr@nett00n.org> - 1.3.0-%autorelease
 - Update to 1.3.0

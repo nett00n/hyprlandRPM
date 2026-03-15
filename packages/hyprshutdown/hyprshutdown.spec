@@ -11,10 +11,10 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  glaze-devel
 BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprtoolkit-devel
+BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
-BuildRequires:  pkgconfig(hyprtoolkit)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(pixman-1)
 
@@ -44,7 +44,7 @@ Commit:            9f18be9c4e1a484c65b22dd53280815dc79a5a56
 %{_prefix}/bin/hyprshutdown
 
 %changelog
-* Tue Jan 27 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
+* Tue Jan 27 2026 nett00n <copr@nett00n.org> - 0.1.0-%autorelease
 - core: close socket FD on error paths and improve validation (#18)
 - fix: close socket FD on error paths and improve validation
 - HyprlandIPC.cpp:

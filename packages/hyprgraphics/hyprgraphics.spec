@@ -9,11 +9,11 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 BuildRequires:  cmake
 BuildRequires:  file-devel
 BuildRequires:  gcc-c++
+BuildRequires:  hyprutils-devel
 BuildRequires:  librsvg2-devel
 BuildRequires:  ninja-build
 BuildRequires:  pango-devel
 BuildRequires:  pkgconfig(cairo)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(libpng)
 BuildRequires:  pkgconfig(libwebp)
@@ -56,5 +56,5 @@ Development files for hyprgraphics.
 %{_libdir}/pkgconfig/hyprgraphics.pc
 
 %changelog
-* Sun Dec 28 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.5.0-%autorelease
+* Sun Dec 28 2025 nett00n <copr@nett00n.org> - 0.5.0-%autorelease
 - version: bump to 0.5.0

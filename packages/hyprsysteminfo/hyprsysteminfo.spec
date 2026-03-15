@@ -8,10 +8,9 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprtoolkit-devel
 BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(hyprtoolkit)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libpci)
 BuildRequires:  pkgconfig(pixman-1)
@@ -49,5 +48,5 @@ sed -i '/find_package(Qt6.*WaylandClient)/a find_package(Qt6 REQUIRED COMPONENTS
 %{_prefix}/share/applications/hyprsysteminfo.desktop
 
 %changelog
-* Fri Jan 10 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.3-%autorelease
+* Fri Jan 10 2025 nett00n <copr@nett00n.org> - 0.1.3-%autorelease
 - version: bump to 0.1.3

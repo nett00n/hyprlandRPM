@@ -1,29 +1,28 @@
 Name:           hyprland
-Version:        0.54.1
+Version:        0.54.2
 Release:        %autorelease%{?dist}
 Summary:        A Modern C++ Wayland Compositor
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/Hyprland
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
+BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  glaze-devel
+BuildRequires:  hyprcursor-devel
+BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprland-protocols-devel
+BuildRequires:  hyprlang-devel
 BuildRequires:  hyprutils-devel
 BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  hyprwire-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(aquamarine)
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(gbm)
 BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(gl)
 BuildRequires:  pkgconfig(glesv2)
-BuildRequires:  pkgconfig(hyprcursor)
-BuildRequires:  pkgconfig(hyprgraphics)
-BuildRequires:  pkgconfig(hyprland-protocols)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libinput)
 BuildRequires:  pkgconfig(muparser)
@@ -50,8 +49,8 @@ Maintainer info:
 Source repository: https://github.com/nett00n/hyprland-copr
 COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 Package info:
-Tag:               v0.54.1
-Commit:            4b07770b9ef1cceb2e6f56d33538aaffb9186b9c
+Tag:               v0.54.2
+Commit:            59f9f2688ac508a0584d1462151195a6c4992f99
 
 %prep
 %autosetup -p1 -n Hyprland-%{version}
@@ -96,5 +95,5 @@ Development files for hyprland.
 %{_prefix}/share/pkgconfig/hyprland.pc
 
 %changelog
-* Tue Mar 03 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.54.1-%autorelease
-- [gha] Nix: update inputs
+* Tue Mar 10 2026 nett00n <copr@nett00n.org> - 0.54.2-%autorelease
+- version: bump to 0.54.2

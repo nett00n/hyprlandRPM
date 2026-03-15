@@ -8,9 +8,9 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprlang-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
-BuildRequires:  pkgconfig(hyprlang)
 BuildRequires:  pkgconfig(librsvg-2.0)
 BuildRequires:  pkgconfig(libzip)
 BuildRequires:  pkgconfig(tomlplusplus)
@@ -54,5 +54,5 @@ Development files for hyprcursor.
 %{_libdir}/pkgconfig/hyprcursor.pc
 
 %changelog
-* Thu Jul 31 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.13-%autorelease
+* Thu Jul 31 2025 nett00n <copr@nett00n.org> - 0.1.13-%autorelease
 - version: bump to 0.1.13

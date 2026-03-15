@@ -8,8 +8,8 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(pugixml)
 
@@ -52,5 +52,5 @@ Development files for hyprwire.
 %{_libdir}/pkgconfig/hyprwire.pc
 
 %changelog
-* Wed Feb 04 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.3.0-%autorelease
+* Wed Feb 04 2026 nett00n <copr@nett00n.org> - 0.3.0-%autorelease
 - version: bump to 0.3.0

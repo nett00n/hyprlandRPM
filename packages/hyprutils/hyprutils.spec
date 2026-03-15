@@ -48,5 +48,5 @@ Development files for hyprutils.
 %{_libdir}/pkgconfig/hyprutils.pc
 
 %changelog
-* Fri Dec 05 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.11.0-%autorelease
+* Fri Dec 05 2025 nett00n <copr@nett00n.org> - 0.11.0-%autorelease
 - version: bump to 0.11.0

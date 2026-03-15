@@ -16,9 +16,9 @@ BuildRequires:  cmake(Qt6Gui)
 BuildRequires:  cmake(Qt6GuiPrivate)
 BuildRequires:  cmake(Qt6Widgets)
 BuildRequires:  gcc-c++
+BuildRequires:  hyprlang-devel
+BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  qt6-qtbase-devel
 BuildRequires:  qt6-qtbase-private-devel
 BuildRequires:  qt6-qtwayland-devel
@@ -53,5 +53,5 @@ sed -i '/target_link_libraries.*hyprqtplugin/i find_package(Qt6 REQUIRED COMPONE
 %{_libdir}/qt6/plugins/styles/libhypr-style.so
 
 %changelog
-* Tue Aug 26 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.0-%autorelease
+* Tue Aug 26 2025 nett00n <copr@nett00n.org> - 0.1.0-%autorelease
 - all: initial commit

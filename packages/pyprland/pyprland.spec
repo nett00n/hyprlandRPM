@@ -46,5 +46,5 @@ python3 -m pip install --no-deps --no-build-isolation --root %{buildroot} --pref
 %{python3_sitelib}/pyprland-%{version}.dist-info
 
 %changelog
-* Tue Mar 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 3.1.1-%autorelease
+* Sun Mar 15 2026 nett00n <copr@nett00n.org> - 3.1.1-%autorelease
 - Update to 3.1.1

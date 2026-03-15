@@ -8,14 +8,14 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprlang-devel
+BuildRequires:  hyprutils-devel
 BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(egl)
 BuildRequires:  pkgconfig(gbm)
-BuildRequires:  pkgconfig(hyprgraphics)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(pam)
 BuildRequires:  pkgconfig(pangocairo)
@@ -53,5 +53,5 @@ Commit:            c48279d1e0f0a4399b5a2d56c16f2ec677ba18f8
 %{_sysconfdir}/pam.d/hyprlock
 
 %changelog
-* Thu Oct 02 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.9.2-%autorelease
+* Thu Oct 02 2025 nett00n <copr@nett00n.org> - 0.9.2-%autorelease
 - version: bump to 0.9.2

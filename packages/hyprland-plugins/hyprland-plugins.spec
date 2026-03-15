@@ -53,7 +53,7 @@ Commit:            d7b67e8f4ba8ebeee4ce899348fcee6291512169
 %license LICENSE
 
 %changelog
-* Mon Dec 29 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.53.0-%autorelease
+* Mon Dec 29 2025 nett00n <copr@nett00n.org> - 0.53.0-%autorelease
 - v0.53.0
 - -----BEGIN SSH SIGNATURE-----
 - U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAg6r0Z7DWuB90jK6uIn817QHwUTW

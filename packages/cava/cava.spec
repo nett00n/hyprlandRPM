@@ -54,5 +54,5 @@ Development files for cava.
 %files devel
 
 %changelog
-* Tue Mar 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.10.7-%autorelease
+* Sun Mar 15 2026 nett00n <copr@nett00n.org> - 0.10.7-%autorelease
 - Update to 0.10.7

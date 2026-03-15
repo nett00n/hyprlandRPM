@@ -102,7 +102,7 @@ endef
 
 
 .DEFAULT_GOAL := help
-.PHONY: help setup-venv lint fmt pre-commit ruff ruff-format mypy yamllint pkg-spec update-versions list-tags scaffold-package add-submodule add-package add-new gen-report readme copr-description normalize-paths sort-lists container-build container-enter container-clean container-volume-clean container-all pkg-sources pkg-srpm pkg-mock pkg-copr pkg-full-cycle pkg-build-pop stage-validate stage-spec stage-srpm stage-mock stage-copr
+.PHONY: help setup-venv lint fmt pre-commit ruff ruff-format mypy rpmlint yamlfmt yamllint pkg-spec update-versions list-tags scaffold-package add-submodule add-package add-new gen-report readme copr-description normalize-paths sort-lists container-build container-enter container-clean container-volume-clean container-all pkg-sources pkg-srpm pkg-mock pkg-copr pkg-full-cycle pkg-build-pop stage-validate stage-spec stage-srpm stage-mock stage-copr
 
 help: ## Show this help
 	@echo "Usage: make [TARGET] [PACKAGE=<name>] [FEDORA_VERSION=<version>]"
@@ -123,20 +123,23 @@ setup-venv: ## Create .venv and install Python dependencies
 	python3 -m venv .venv
 	.venv/bin/pip install -q -r requirements.txt
 
-lint: ## Run all linters inside container (ruff, mypy, yamllint)
+lint: ## Run all linters inside container (ruff, mypy, rpmlint, yamllint)
 	$(setup_volumes)
 	$(CONTAINER_PYTHON) -m pip install -q -r requirements-dev.txt
 	@if [ -z "$(QUIET)" ]; then echo $(HIGHLIGHT_PREFIX) "Ruff (Python linter)"; fi
 	$(call run_with_result,$(CONTAINER_PYTHON) -m ruff check scripts/,Ruff check passed,Ruff check failed,$(MAKE_LOGS_DIR)/lint/ruff)
 	@if [ -z "$(QUIET)" ]; then echo $(HIGHLIGHT_PREFIX) "Mypy (Type checker)"; fi
 	$(call run_with_result,$(CONTAINER_PYTHON) -m mypy scripts/ --ignore-missing-imports --exclude submodules,Mypy check passed,Mypy check failed,$(MAKE_LOGS_DIR)/lint/mypy)
+	@if [ -z "$(QUIET)" ]; then echo $(HIGHLIGHT_PREFIX) "Rpmlint (RPM spec linter)"; fi
+	$(call run_with_result,$(CONTAINER_RUN) rpmlint packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/lint/rpmlint)
 	@if [ -z "$(QUIET)" ]; then echo $(HIGHLIGHT_PREFIX) "Yamllint (YAML validator)"; fi
 	$(call run_with_result,$(CONTAINER_PYTHON) -m yamllint *.yaml,Yamllint check passed,Yamllint check failed,$(MAKE_LOGS_DIR)/lint/yamllint)
 
-fmt: ## Format and normalize: ruff format, paths, and YAML lists
+fmt: ## Format and normalize: ruff format, YAML format, paths, and YAML lists
 	$(setup_volumes)
 	$(CONTAINER_PYTHON) -m pip install -q -r requirements-dev.txt
 	$(call run_with_result,$(CONTAINER_PYTHON) -m ruff format scripts/,Ruff format applied,Ruff format failed,$(MAKE_LOGS_DIR)/fmt/ruff)
+	$(call run_with_result,$(PYTHON) scripts/format-yaml.py '*.yaml',YAML format applied,YAML format failed,$(MAKE_LOGS_DIR)/fmt/yamlfmt)
 	$(call run_with_result,$(PYTHON) scripts/rpm-dir-prefixes-convert.py,RPM dir prefixes normalized,RPM dir prefixes failed,$(MAKE_LOGS_DIR)/fmt/rpm-dir)
 	$(call run_with_result,$(PYTHON) scripts/sort-yaml-lists.py,YAML lists sorted,YAML lists sorting failed,$(MAKE_LOGS_DIR)/fmt/sort-yaml)
 
@@ -146,6 +149,8 @@ pre-commit: ## Run all checks and formatting (lint + fmt)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m ruff check scripts/,Ruff check passed,Ruff check failed,$(MAKE_LOGS_DIR)/pre-commit/ruff)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m ruff format scripts/,Ruff format applied,Ruff format failed,$(MAKE_LOGS_DIR)/pre-commit/ruff-format)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m mypy scripts/ --ignore-missing-imports --exclude submodules,Mypy check passed,Mypy check failed,$(MAKE_LOGS_DIR)/pre-commit/mypy)
+	$(call run_with_result,$(CONTAINER_RUN) rpmlint packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/pre-commit/rpmlint)
+	$(call run_with_result,$(PYTHON) scripts/format-yaml.py '*.yaml',YAML format applied,YAML format failed,$(MAKE_LOGS_DIR)/pre-commit/yamlfmt)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m yamllint *.yaml,Yamllint check passed,Yamllint check failed,$(MAKE_LOGS_DIR)/pre-commit/yamllint)
 	$(call run_with_result,$(PYTHON) scripts/rpm-dir-prefixes-convert.py,RPM dir prefixes normalized,RPM dir prefixes failed,$(MAKE_LOGS_DIR)/pre-commit/rpm-dir)
 	$(call run_with_result,$(PYTHON) scripts/sort-yaml-lists.py,YAML lists sorted,YAML lists sorting failed,$(MAKE_LOGS_DIR)/pre-commit/sort-yaml)
@@ -162,9 +167,17 @@ mypy: ## Run mypy type checker on scripts
 	$(setup_volumes)
 	$(CONTAINER_PYTHON) -m mypy scripts/ --ignore-missing-imports --exclude submodules
 
+yamlfmt: ## Format YAML files with consistent style
+	$(PYTHON) scripts/format-yaml.py '*.yaml'
+
 yamllint: ## Run yamllint on YAML files
 	$(setup_volumes)
 	$(CONTAINER_PYTHON) -m yamllint *.yaml
+
+rpmlint: ## Run rpmlint on all generated spec files
+	$(setup_volumes)
+	$(CONTAINER_PYTHON) -m pip install -q rpmlint
+	$(CONTAINER_RUN) rpmlint packages/*/[a-z]*.spec
 
 pkg-spec: ## Generate spec file(s) from packages.yaml (PACKAGE=<name> for one package)
 	$(PYTHON) scripts/gen-spec.py $(PACKAGE)

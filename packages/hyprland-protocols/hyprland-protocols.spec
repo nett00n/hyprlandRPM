@@ -51,5 +51,5 @@ Development files for hyprland-protocols.
 %{_datadir}/pkgconfig/%{name}.pc
 
 %changelog
-* Sat Oct 04 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.7.0-%autorelease
+* Sat Oct 04 2025 nett00n <copr@nett00n.org> - 0.7.0-%autorelease
 - version: bump to 0.7.0

@@ -5,14 +5,13 @@ Summary:        A wlroots-compatible Wayland color picker that does not suck
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprpicker
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Patch0:         fix-build-with-rawhide-gpp.patch
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprutils-devel
+BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
-BuildRequires:  pkgconfig(hyprutils)
-BuildRequires:  pkgconfig(hyprwayland-scanner)
 BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(pango)
 BuildRequires:  pkgconfig(pangocairo)
@@ -47,5 +46,5 @@ Commit:            345eab2d704ee47a6c277cbfb2aeabaa620d9dbc
 %{_prefix}/share/man/man1/hyprpicker.1.gz
 
 %changelog
-* Tue Feb 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.4.6-%autorelease
+* Tue Feb 10 2026 nett00n <copr@nett00n.org> - 0.4.6-%autorelease
 - version: bump to 0.4.6

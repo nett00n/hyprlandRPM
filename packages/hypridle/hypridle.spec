@@ -8,11 +8,11 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprland-protocols-devel
+BuildRequires:  hyprlang-devel
+BuildRequires:  hyprutils-devel
 BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(hyprland-protocols)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(sdbus-c++)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
@@ -45,5 +45,5 @@ Commit:            5430b73ddf148651bcf35fa39ed4d757c7534028
 %{_userunitdir}/hypridle.service
 
 %changelog
-* Wed Aug 27 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.7-%autorelease
+* Wed Aug 27 2025 nett00n <copr@nett00n.org> - 0.1.7-%autorelease
 - version: bump to 0.1.7

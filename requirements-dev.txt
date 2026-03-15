@@ -1,5 +1,6 @@
 -r requirements.txt
 mypy>=1.19.1
 ruff>=0.15.4
+rpmlint>=2.6.0
 yamllint>=1.26.0
 types-PyYAML>=6.0.12.20250915

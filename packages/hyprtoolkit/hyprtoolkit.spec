@@ -5,19 +5,18 @@ Summary:        A modern C++ Wayland-native GUI toolkit
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprtoolkit
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Patch0:         fix-build-with-rawhide-gpp.patch
 
+BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprlang-devel
+BuildRequires:  hyprutils-devel
 BuildRequires:  hyprwayland-scanner-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(aquamarine)
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(egl)
 BuildRequires:  pkgconfig(gbm)
-BuildRequires:  pkgconfig(hyprgraphics)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(iniparser)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(pango)
@@ -63,5 +62,5 @@ Development files for hyprtoolkit.
 %{_libdir}/pkgconfig/hyprtoolkit.pc
 
 %changelog
-* Thu Jan 22 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.5.3-%autorelease
+* Thu Jan 22 2026 nett00n <copr@nett00n.org> - 0.5.3-%autorelease
 - version: bump to 0.5.3

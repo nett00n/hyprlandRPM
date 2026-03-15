@@ -8,8 +8,8 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(hyprutils)
 
 %description
 hyprlang is the official implementation library for the hypr configuration language
@@ -47,5 +47,5 @@ Development files for hyprlang.
 %{_libdir}/pkgconfig/hyprlang.pc
 
 %changelog
-* Mon Jan 05 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.6.8-%autorelease
+* Mon Jan 05 2026 nett00n <copr@nett00n.org> - 0.6.8-%autorelease
 - version: bump to 0.6.8

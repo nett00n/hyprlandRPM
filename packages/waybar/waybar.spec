@@ -6,7 +6,6 @@ License:        MIT
 URL:            https://github.com/Alexays/Waybar
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
-BuildRequires:  cava
 BuildRequires:  cava-devel
 BuildRequires:  gcc-c++
 BuildRequires:  gpsd-devel
@@ -69,5 +68,5 @@ Development files for waybar.
 %files devel
 
 %changelog
-* Tue Mar 10 2026 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.15.0-%autorelease
+* Sun Mar 15 2026 nett00n <copr@nett00n.org> - 0.15.0-%autorelease
 - Update to 0.15.0

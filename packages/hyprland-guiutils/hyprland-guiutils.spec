@@ -10,11 +10,11 @@ BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprlang-devel
+BuildRequires:  hyprtoolkit-devel
+BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
-BuildRequires:  pkgconfig(hyprlang)
-BuildRequires:  pkgconfig(hyprtoolkit)
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(xkbcommon)
@@ -45,5 +45,5 @@ Commit:            c2e906261142f5dd1ee0bfc44abba23e2754c660
 %{_prefix}/bin/hyprland-*
 
 %changelog
-* Mon Dec 29 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.2.1-%autorelease
+* Mon Dec 29 2025 nett00n <copr@nett00n.org> - 0.2.1-%autorelease
 - version: bump to 0.2.1

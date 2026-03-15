@@ -25,6 +25,8 @@ rules:
   float-values: disable
   hyphens: enable
   indentation:
+    spaces: 2
+    indent-sequences: false
     level: warning
   key-duplicates: enable
   key-ordering: disable

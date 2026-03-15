@@ -8,8 +8,8 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
+BuildRequires:  hyprutils-devel
 BuildRequires:  ninja-build
-BuildRequires:  pkgconfig(hyprutils)
 BuildRequires:  pkgconfig(polkit-agent-1)
 BuildRequires:  pkgconfig(polkit-qt6-1)
 BuildRequires:  qt6-qtdeclarative-devel
@@ -43,5 +43,5 @@ Commit:            7e4054410f6d6331b239fea1c659ad6a917fbf6a
 %{_prefix}/share/dbus-1/services/org.hyprland.hyprpolkitagent.service
 
 %changelog
-* Thu Jul 31 2025 Vladimir nett00n Budylnikov <git@nett00n.org> - 0.1.3-%autorelease
+* Thu Jul 31 2025 nett00n <copr@nett00n.org> - 0.1.3-%autorelease
 - version: bump to 0.1.3
