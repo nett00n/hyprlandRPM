@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from lib.deps import infer_deps
+from lib.deps import build_dep_graph, infer_deps, topological_sort
 from lib.paths import LOCAL_REPO, ROOT, get_package_log_dir, mock_chroot
 from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
@@ -93,9 +93,14 @@ def main() -> None:
 
     failed: dict[str, bool] = {}
 
+    # Sort packages by dependency order (dependencies first)
+    dep_graph = build_dep_graph(packages)
+    build_order = topological_sort(dep_graph)
+
     failed_overall = False
     print("\n=== mock ===")
-    for pkg, meta in packages.items():
+    for pkg in build_order:
+        meta = packages[pkg]
         meta = apply_os_overrides(meta, fedora_version)
         if meta.get("_skip"):
             print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")

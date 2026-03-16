@@ -1,3 +1,12 @@
+# Load .env file if it exists (allows declaring defaults without overriding env exports)
+-include .env
+# Strip quotes from .env variables (shell syntax vs make syntax)
+FEDORA_VERSION  := $(subst ",,$(FEDORA_VERSION))
+COPR_REPO       := $(subst ",,$(COPR_REPO))
+PACKAGE         := $(subst ",,$(PACKAGE))
+SKIP_PACKAGES   := $(subst ",,$(SKIP_PACKAGES))
+QUIET           := $(subst ",,$(QUIET))
+# Fallback defaults if not set after stripping
 FEDORA_VERSION  ?= 43
 SUPPORTED        := 42 43 44 rawhide
 IMAGE_NAME       := rpm-toolbox
