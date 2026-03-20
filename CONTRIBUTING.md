@@ -183,9 +183,84 @@ python3 scripts/gen-vendor-tarball.py <name>
 - **rpm_macros.py** — RPM macro path normalization (e.g., `/usr/bin/foo` → `%{_bindir}/foo`)
 - **vendor.py** — Go vendor tarball generation
 - **deps.py** — dependency graph inference from `depends_on` and `build_requires`
-- **gitmodules.py** — `.gitmodules` parsing and changelog extraction
+- **gitmodules.py** — `.gitmodules` parsing, submodule commit/tag info extraction, and changelog generation
 - **jinja_utils.py** — Jinja2 environment setup
 - **log_analysis.py** — parsing mock/srpm logs for failure reporting
+
+## Package Version Auto-Updates
+
+The `update-versions.py` script manages version updates for submodule-based packages. The `auto_update` field in `packages.yaml` controls the update strategy per package.
+
+### Basic auto_update Configuration
+
+```yaml
+package-name:
+  auto_update:
+    release_type: latest-commit  # or: latest-version, pinned-version, pinned-commit, pinned-tag
+    branch: dev                   # optional: override default branch
+  url: https://github.com/org/repo
+  version: "0.53.0"
+```
+
+### Release Types
+
+| Type | Behavior | Extra Fields | Version Format |
+|------|----------|--------------|---|
+| `latest-version` | Latest semver tag only, no commit fallback | `branch` | `1.2.3` |
+| `latest-commit` | Latest HEAD commit on branch | `branch` | `1.2.3^20240101gitabc1234` |
+| `pinned-version` | Skip updates entirely (manual control) | `version` | - |
+| `pinned-commit` | Skip updates entirely (manual control) | `commit` | - |
+| `pinned-tag` | Track specific named non-semver tag | `tag` | `0.53.0^20240101gitabc1234` |
+| *(absent)* | Default: try semver, fall back to commit | `branch` | `1.2.3` or `0^20240101gitabc1234` |
+
+### Version Format for Commit-Based Types
+
+For `latest-commit` and `pinned-tag`, versions use the nearest reachable semver tag as a prefix:
+- `0.53.0^20240101gitabc1234` — commit is after `v0.53.0` tag
+- `0^20240101gitabc1234` — no semver tag reachable
+
+When `source.commit` exists (for archive-based sources), it is automatically populated with the full hash and date.
+
+### Examples
+
+**Hyprland plugins on dev branch (latest commits only):**
+```yaml
+hyprland-plugins:
+  auto_update:
+    release_type: latest-commit
+    branch: dev
+  url: https://github.com/hyprwm/hyprland-plugins
+  version: "0.53.0^20260223gitb85a56b"
+```
+
+**Pinned release (no auto-updates):**
+```yaml
+some-stable-lib:
+  auto_update:
+    release_type: pinned-version
+    version: "1.0.0"
+  url: https://github.com/org/some-stable-lib
+```
+
+**Track nightly builds:**
+```yaml
+nightly-pkg:
+  auto_update:
+    release_type: pinned-tag
+    tag: nightly
+  url: https://github.com/org/nightly-pkg
+  version: "0^20260101gitnightly123"
+```
+
+### Running the Update Script
+
+```shell
+# Pull latest submodules and update versions based on auto_update config
+python3 scripts/update-versions.py
+
+# Commit changes if updates were made
+git add packages.yaml && git commit -m "Update package versions"
+```
 
 ## Code Quality and Linting
 

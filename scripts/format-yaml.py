@@ -14,6 +14,17 @@ import yaml
 from lib.paths import ROOT
 
 
+# Configure YAML dumper to use | (literal) style for multiline strings
+def _represent_str(dumper, data):
+    """Use literal style (|) for strings with newlines."""
+    if "\n" in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+
+yaml.add_representer(str, _represent_str)
+
+
 def load_yamllint_config() -> dict:
     """Load and parse .yamllint configuration file.
 

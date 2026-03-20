@@ -21,7 +21,7 @@ from lib.detection import (
 from lib.tarball import detect_tarball_source_name
 from lib.gitmodules import (
     fetch_tags,
-    get_submodule_commit,
+    get_submodule_commit_with_base,
     parse_gitmodules,
     resolve_module,
 )
@@ -67,10 +67,11 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
             '"%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz"'
         )
     else:
-        commit_info = get_submodule_commit(repo)
+        commit_info = get_submodule_commit_with_base(repo)
         if commit_info:
-            full_hash, short_hash, date_str = commit_info
-            version = f"0^{date_str}git{short_hash}"
+            full_hash, short_hash, date_str, base_semver = commit_info
+            prefix = base_semver if base_semver else "0"
+            version = f"{prefix}^{date_str}git{short_hash}"
             commit = {"full": full_hash, "date": date_str}
             source_url = '"%{url}/archive/%{commit}.tar.gz"'
         else:

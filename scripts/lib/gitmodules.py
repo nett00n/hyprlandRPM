@@ -216,3 +216,118 @@ def get_submodule_commit(repo: Path) -> tuple[str, str, str] | None:
         return full_hash, full_hash[:7], date_str
     except (subprocess.CalledProcessError, OSError, ValueError):
         return None
+
+
+def get_submodule_commit_with_base(
+    repo: Path,
+) -> tuple[str, str, str, str | None] | None:
+    """Return (full_hash, short_hash, date_YYYYMMDD, base_semver | None) for HEAD.
+
+    base_semver is the nearest reachable semver tag (v-prefix stripped), or None.
+    """
+    commit_info = get_submodule_commit(repo)
+    if not commit_info:
+        return None
+
+    full_hash, short_hash, date_str = commit_info
+
+    # Find nearest semver tag
+    base_semver: str | None = None
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "describe",
+                "--tags",
+                "--match",
+                "v*.*.*",
+                "--abbrev=0",
+                "HEAD",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            tag = result.stdout.strip()
+            base_semver = tag.lstrip("v")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        pass
+
+    return full_hash, short_hash, date_str, base_semver
+
+
+def get_tag_commit(repo: Path, tag: str) -> tuple[str, str, str, str | None] | None:
+    """Return (full_hash, short_hash, date_YYYYMMDD, base_semver | None) for a tag.
+
+    Resolves the tag to its commit and extracts commit info and nearest semver base.
+    """
+    try:
+        # Resolve tag to full commit hash
+        rev_result = subprocess.run(
+            ["git", "-C", str(repo), "rev-list", "-n1", f"refs/tags/{tag}"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if rev_result.returncode != 0 or not rev_result.stdout.strip():
+            return None
+
+        full_hash = rev_result.stdout.strip()
+
+        # Get date of the commit
+        date_result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "log",
+                "-1",
+                "--format=%cd",
+                "--date=format:%Y%m%d",
+                full_hash,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if date_result.returncode != 0 or not date_result.stdout.strip():
+            return None
+
+        date_str = date_result.stdout.strip()
+
+        # Find nearest semver tag from this commit
+        base_semver: str | None = None
+        try:
+            describe_result = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(repo),
+                    "describe",
+                    "--tags",
+                    "--match",
+                    "v*.*.*",
+                    "--abbrev=0",
+                    full_hash,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if describe_result.returncode == 0 and describe_result.stdout.strip():
+                base_tag = describe_result.stdout.strip()
+                base_semver = base_tag.lstrip("v")
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+            pass
+
+        return full_hash, full_hash[:7], date_str, base_semver
+    except (
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+        OSError,
+        ValueError,
+    ):
+        return None

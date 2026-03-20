@@ -267,12 +267,14 @@ def init_stage(  # type: ignore
 def write_yaml_preserving_comments(
     path: Path,
     url_to_latest: dict[str, str],
-    url_to_commit_info: dict[str, tuple[str, str, str]] | None = None,
+    url_to_commit_info: dict[str, tuple[str, str, str, str | None]] | None = None,
 ) -> dict[str, tuple[str, str]]:
     """Update version/commit fields in packages.yaml using yaml load/dump.
 
     Comments will not be preserved (accepted trade-off for simpler code).
     Returns {pkg_name: (old_version, new_version)} for changed packages.
+
+    url_to_commit_info values are 4-tuples: (full_hash, short_hash, date_YYYYMMDD, base_semver | None)
     """
     if url_to_commit_info is None:
         url_to_commit_info = {}
@@ -289,15 +291,26 @@ def write_yaml_preserving_comments(
             pkg_data["version"] = new_ver
             changed[pkg_name] = (current_ver, new_ver)
         elif pkg_url in url_to_commit_info:
+            full_hash, short_hash, date_str, base_semver = url_to_commit_info[pkg_url]
+            prefix = base_semver if base_semver else "0"
+            new_commit_ver = f"{prefix}^{date_str}git{short_hash}"
+
+            # Check if this is a latest-commit or pinned-tag release_type
+            auto_update = pkg_data.get("auto_update", {})
+            release_type = auto_update.get("release_type", "")
+            should_create_commit = release_type in ("latest-commit", "pinned-tag")
+
             source = pkg_data.get("source", {})
-            if source.get("commit"):
-                full_hash, short_hash, date_str = url_to_commit_info[pkg_url]
-                new_commit_ver = f"0^{date_str}git{short_hash}"
+            if source.get("commit") or should_create_commit:
+                if not source.get("commit"):
+                    source["commit"] = {}
                 if new_commit_ver != current_ver:
                     pkg_data["version"] = new_commit_ver
                     source["commit"]["full"] = full_hash
                     source["commit"]["date"] = date_str
                     changed[pkg_name] = (current_ver, new_commit_ver)
+                    if "source" not in pkg_data:
+                        pkg_data["source"] = source
 
     if changed:
         path.write_text(dump_yaml_pretty(data))

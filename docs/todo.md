@@ -1,6 +1,5 @@
 # Features
 
-- Options for update script: latest release, latest tag, pinned tag, pinned commit, latest commit
 - Add ARM64 local build support
 - Implement incremental build caching to speed up repeated builds
 - Add cross-version build matrix visualization

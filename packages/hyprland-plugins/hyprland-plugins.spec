@@ -1,10 +1,13 @@
+%global commit b85a56b9531013c79f2f3846fd6ee2ff014b8960
+%global shortcommit %(c=%{commit}; echo ${c:0:7})
+%global commitdate 20260223
 Name:           hyprland-plugins
-Version:        0.53.0
+Version:        0.53.0^20260223gitb85a56b
 Release:        %autorelease%{?dist}
 Summary:        Official plugins for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprland-plugins
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        %{url}/archive/%{commit}/%{name}-%{shortcommit}.tar.gz
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
@@ -35,11 +38,10 @@ Maintainer info:
 Source repository: https://github.com/nett00n/hyprland-copr
 COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 Package info:
-Tag:               v0.53.0
-Commit:            d7b67e8f4ba8ebeee4ce899348fcee6291512169
+Commit:            b85a56b9531013c79f2f3846fd6ee2ff014b8960
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{name}-%{commit}
 
 %build
 %cmake
@@ -53,11 +55,5 @@ Commit:            d7b67e8f4ba8ebeee4ce899348fcee6291512169
 %license LICENSE
 
 %changelog
-* Mon Dec 29 2025 nett00n <copr@nett00n.org> - 0.53.0-%autorelease
-- v0.53.0
-- -----BEGIN SSH SIGNATURE-----
-- U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAg6r0Z7DWuB90jK6uIn817QHwUTW
-- zw79TZqMStVAtQO70AAAADZ2l0AAAAAAAAAAZzaGE1MTIAAABTAAAAC3NzaC1lZDI1NTE5
-- AAAAQJVIuIyMXKeSIiyc31FuBqj2UZHYZkqhexbIaeKqCuswKVLDEZXjnf8qgF9Zu+n56T
-- /ukNE1X5Mg3rmUM3eEpwo=
-- -----END SSH SIGNATURE-----
+* Mon Feb 23 2026 nett00n <copr@nett00n.org> - 0.53.0^20260223gitb85a56b-%autorelease
+- all: chase hyprland
