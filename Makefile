@@ -224,7 +224,7 @@ add-new: ## Add submodule from URL and scaffold packages.yaml entry in one step 
 gen-report: ## Render build-report.yaml to stdout (--format github|copr)
 	$(PYTHON) scripts/gen-report.py $(if $(FORMAT),--format $(FORMAT),)
 
-readme: ## Generate both README.md and docs/README.copr.md
+readme: ## Generate README.md, docs/README.copr.md, and docs/README.full-report.md
 	@if [ -n "$(QUIET)" ]; then \
 		mkdir -p "$(MAKE_LOGS_DIR)/readme"; \
 		$(PYTHON) scripts/gen-report.py --format github > ./README.md \
@@ -235,9 +235,14 @@ readme: ## Generate both README.md and docs/README.copr.md
 			2>"$(MAKE_LOGS_DIR)/readme/copr.log" \
 			&& echo $(HIGHLIGHT_PREFIX) "✓ COPR README generated" \
 			|| (echo $(HIGHLIGHT_PREFIX) "✗ COPR README failed"; exit 1); \
+		$(PYTHON) scripts/gen-report.py --format full-report > ./docs/README.full-report.md \
+			2>"$(MAKE_LOGS_DIR)/readme/full-report.log" \
+			&& echo $(HIGHLIGHT_PREFIX) "✓ Full Report generated" \
+			|| (echo $(HIGHLIGHT_PREFIX) "✗ Full Report failed"; exit 1); \
 	else \
 		$(PYTHON) scripts/gen-report.py --format github > ./README.md && echo $(HIGHLIGHT_PREFIX) "✓ GitHub README generated" || (echo $(HIGHLIGHT_PREFIX) "✗ GitHub README failed"; exit 1); \
 		$(PYTHON) scripts/gen-report.py --format copr > ./docs/README.copr.md && echo $(HIGHLIGHT_PREFIX) "✓ COPR README generated" || (echo $(HIGHLIGHT_PREFIX) "✗ COPR README failed"; exit 1); \
+		$(PYTHON) scripts/gen-report.py --format full-report > ./docs/README.full-report.md && echo $(HIGHLIGHT_PREFIX) "✓ Full Report generated" || (echo $(HIGHLIGHT_PREFIX) "✗ Full Report failed"; exit 1); \
 	fi
 
 # Update the COPR project description and instructions from markdown files.

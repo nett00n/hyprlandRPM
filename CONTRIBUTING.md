@@ -6,8 +6,11 @@
 packages.yaml                      # single source of truth — metadata for all packages
 packages/<name>/<name>.spec        # generated spec files (committed, editable)
 templates/spec.j2                  # Jinja2 spec template
-templates/readme-github.md.j2      # Jinja2 template for GitHub README (table format)
-templates/readme-copr.md.j2        # Jinja2 template for COPR README (list format)
+templates/readme-github.md.j2      # Jinja2 template for GitHub README
+templates/readme-copr.md.j2        # Jinja2 template for COPR README
+templates/readme-full-report.md.j2 # Jinja2 template for detailed build report
+templates/_*.j2                    # Jinja2 snippet: simple, no includes
+templates/__*.j2                   # Jinja2 snippet: composite, includes other snippets
 templates/packages-entry.yaml.j2   # Jinja2 template for new packages.yaml entries
 scripts/full-cycle.py              # runs the complete pipeline end-to-end
 scripts/gen-spec.py                # renders specs from packages.yaml + templates/spec.j2
@@ -24,6 +27,15 @@ scripts/lib/                       # shared library modules for all pipeline scr
 requirements-dev.txt               # Python deps (jinja2, pyyaml, mypy, ruff, yamllint, mdformat)
 submodules/<org>/<name>/           # upstream sources as git submodules
 ```
+
+### Template Snippet Naming Convention
+
+Jinja2 snippets use a naming convention to indicate dependencies:
+
+- **Single dash (`_*.j2`)** — Leaf snippets with no includes. Examples: `_logo.j2`, `_description.j2`, `_badge.j2`
+- **Double dash (`__*.j2`)** — Composite snippets that include other snippets. Examples: `__header.j2`, `__footer.j2`
+
+This makes it easy to understand the composition graph and avoid circular dependencies.
 
 ## Package Groups
 

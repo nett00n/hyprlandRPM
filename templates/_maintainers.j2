@@ -1,0 +1,3 @@
+{% for person in repo.people.maintainers -%}
+- [{{ person.name }}]({{ person.url }})
+{% endfor %}

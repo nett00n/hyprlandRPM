@@ -128,9 +128,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--format",
-        choices=["github", "copr"],
+        choices=["github", "copr", "full-report"],
         default="github",
-        help="Output format: github (table) or copr (list)",
+        help="Output format: github (table), copr (list), or full-report (detailed)",
     )
     args = parser.parse_args()
     template_name = f"readme-{args.format}.md.j2"

@@ -1329,10 +1329,9 @@ Waybar:
     no_debug_package: false
   source:
     archives:
-    - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
+    - '%{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz'
     name: Waybar
-  summary: |
-    Highly customizable Wayland bar for Sway and Wlroots based compositors
+  summary: Highly customizable Wayland bar for Sway and Wlroots based compositors
   url: https://github.com/Alexays/Waybar
   version: 0.15.0
 xdg-desktop-portal-hyprland:
