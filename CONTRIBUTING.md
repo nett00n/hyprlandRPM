@@ -24,7 +24,7 @@ scripts/stage-srpm.py              # pipeline stage: build SRPMs
 scripts/stage-mock.py              # pipeline stage: local mock build
 scripts/stage-copr.py              # pipeline stage: submit to Copr
 scripts/lib/                       # shared library modules for all pipeline scripts
-requirements-dev.txt               # Python deps (jinja2, pyyaml, mypy, ruff, yamllint, mdformat)
+requirements-dev.txt               # Python deps (jinja2, pyyaml, mypy, ruff, yamllint, flake8, rpmlint)
 submodules/<org>/<name>/           # upstream sources as git submodules
 ```
 
@@ -144,7 +144,19 @@ Alternatively, step by step:
 
 1. Check build logs in `logs/`
 
-1. If the build failed, fix and retry
+1. If the build failed, analyze logs for actionable errors:
+
+   ```shell
+   make pkg-log-analysis PKG=<name>
+   ```
+
+   This parses mock/srpm logs and reports:
+   - Missing dependencies and suggested packages
+   - Incompatible plugins (internal header errors)
+   - Missing source files (broken submodules)
+   - Other compile errors with line references
+
+1. Fix issues in `packages.yaml` (add `build_requires`, exclude incompatible plugins, etc.) and retry
 
 1. If anything new happened, make a report in `docs/errs/` using `_template.md`
 
@@ -188,16 +200,21 @@ python3 scripts/gen-vendor-tarball.py <name>
 
 ### Shared Libraries (`scripts/lib/`)
 
-- **paths.py** — canonical path constants (`SOURCES_DIR`, `BUILD_STATUS_YAML`, etc.) and helpers (`mock_chroot()`)
-- **yaml_utils.py** — loading/saving packages.yaml, filtering, build status tracking, `init_stage()` boilerplate helper
-- **subprocess_utils.py** — subprocess wrappers (`run_cmd`, `run_git`)
-- **reporting.py** — build status printing and badge generation
-- **rpm_macros.py** — RPM macro path normalization (e.g., `/usr/bin/foo` → `%{_bindir}/foo`)
-- **vendor.py** — Go vendor tarball generation
+- **cache.py** — input hash computation for caching and build invalidation
 - **deps.py** — dependency graph inference from `depends_on` and `build_requires`
+- **detection.py** — license and Meson dependency detection from build files
 - **gitmodules.py** — `.gitmodules` parsing, submodule commit/tag info extraction, and changelog generation
 - **jinja_utils.py** — Jinja2 environment setup
 - **log_analysis.py** — parsing mock/srpm logs for failure reporting
+- **migration.py** — schema migration from old to new YAML format
+- **paths.py** — canonical path constants (`SOURCES_DIR`, `BUILD_STATUS_YAML`, etc.) and helpers (`mock_chroot()`)
+- **reporting.py** — build status printing and badge generation
+- **rpm_macros.py** — RPM macro path normalization (e.g., `/usr/bin/foo` → `%{_bindir}/foo`)
+- **subprocess_utils.py** — subprocess wrappers (`run_cmd`, `run_git`)
+- **tarball.py** — tarball source name detection via streaming curl|tar
+- **vendor.py** — Go vendor tarball generation
+- **version.py** — semantic version parsing and selection
+- **yaml_utils.py** — loading/saving packages.yaml, filtering, build status tracking, `init_stage()` boilerplate helper
 
 ## Package Version Auto-Updates
 
@@ -281,7 +298,7 @@ The repository uses multiple linters and formatters to maintain code quality. Al
 ### Setup (one-time)
 
 ```shell
-make setup-venv   # creates .venv and installs requirements-dev.txt (mypy, ruff, yamllint, mdformat)
+make setup-venv   # creates .venv and installs requirements-dev.txt (mypy, ruff, yamllint, flake8, rpmlint)
 make container-build   # build container image for Fedora 43 (or FEDORA_VERSION=X for specific version)
 ```
 
@@ -289,7 +306,7 @@ make container-build   # build container image for Fedora 43 (or FEDORA_VERSION=
 
 ```shell
 # Run all linters (inside container, installs dev tools on first run)
-make lint    # ruff check + mypy + yamllint + mdformat
+make lint    # ruff check + flake8 + mypy + rpmlint + yamllint
 
 # Format code
 make ruff-format   # format Python scripts
@@ -302,9 +319,10 @@ make pre-commit QUIET=true   # add QUIET=true for concise output
 **What each checker does:**
 
 - **ruff** — fast Python linter and formatter
+- **flake8** — style checker for Python
 - **mypy** — static type checker for Python
+- **rpmlint** — RPM spec linter
 - **yamllint** — validates YAML files (packages.yaml, etc.)
-- **mdformat** — checks and formats Markdown files (README.md, docs/)
 
 All checks automatically exclude `submodules/` directory.
 
@@ -325,12 +343,49 @@ make pkg-spec
 make pkg-mock PACKAGE=<name> FEDORA_VERSION=43
 ```
 
-Set `PROCEED_BUILD=true` to resume an interrupted run without rebuilding packages that
-already succeeded in the current `build-report.yaml`:
+### Full Cycle Pipeline Options
+
+The `pkg-full-cycle` target supports several flags:
 
 ```shell
-make pkg-full-cycle PACKAGE=<name> FEDORA_VERSION=43 PROCEED_BUILD=true
+# Default: build spec → vendor → srpm → mock → copr (if COPR_REPO set)
+make pkg-full-cycle PACKAGE=<name> FEDORA_VERSION=43
+
+# Resume from interrupted run (skip already-succeeded stages)
+make pkg-full-cycle PACKAGE=<name> PROCEED_BUILD=true
+
+# Skip mock stage (stop after srpm, useful for quick validation)
+make pkg-full-cycle PACKAGE=<name> SKIP_MOCK=true
+
+# Skip copr submission (test locally without pushing)
+make pkg-full-cycle PACKAGE=<name> SKIP_COPR=true
+
+# Combine options
+make pkg-full-cycle PACKAGE=<name> SKIP_MOCK=true FEDORA_VERSION=42
 ```
+
+### Build Cache and Force Re-run
+
+By default, `pkg-full-cycle` skips stages whose inputs haven't changed (hash-based caching).
+To force a stage to re-run, edit `build-report.yaml` and set `force_run: true`:
+
+```yaml
+stages:
+  spec:
+    hyprland:
+      state: success
+      force_run: true    # operator sets to force re-execution
+      version: "0.45.2-1.fc43"
+      # ... rest of entry
+```
+
+**Rules:**
+- Setting `force_run: true` on any stage forces that stage and all downstream stages to re-run
+  (intra-package cascade: spec → vendor → srpm → mock → copr)
+- If any package in `depends_on` was rebuilt in the current run, all stages of the dependent
+  package are forced (inter-package dependency cascade)
+- After a stage executes (success or fail), the `force_run` field is automatically removed
+  (operator must re-set to force again; one-shot behavior)
 
 ### Running individual pipeline stages
 
