@@ -146,7 +146,7 @@ lint: ## Run all linters inside container (ruff, flake8, mypy, rpmlint, yamllint
 	@if [ -z "$(QUIET)" ]; then echo $(HIGHLIGHT_PREFIX) "Mypy (Type checker)"; fi
 	$(call run_with_result,$(CONTAINER_PYTHON) -m mypy scripts/ --ignore-missing-imports --exclude submodules,Mypy check passed,Mypy check failed,$(MAKE_LOGS_DIR)/lint/mypy)
 	@if [ -z "$(QUIET)" ]; then echo $(HIGHLIGHT_PREFIX) "Rpmlint (RPM spec linter)"; fi
-	$(call run_with_result,$(CONTAINER_RUN) rpmlint packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/lint/rpmlint)
+	$(call run_with_result,$(CONTAINER_RUN) rpmlint -r /work/.rpmlintrc --ignore-unused-rpmlintrc packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/lint/rpmlint)
 	@if [ -z "$(QUIET)" ]; then echo $(HIGHLIGHT_PREFIX) "Yamllint (YAML validator)"; fi
 	$(call run_with_result,$(CONTAINER_PYTHON) -m yamllint *.yaml,Yamllint check passed,Yamllint check failed,$(MAKE_LOGS_DIR)/lint/yamllint)
 
@@ -165,7 +165,7 @@ pre-commit: ## Run all checks and formatting (lint + fmt)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m ruff format scripts/,Ruff format applied,Ruff format failed,$(MAKE_LOGS_DIR)/pre-commit/ruff-format)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m flake8 scripts/,Flake8 check passed,Flake8 check failed,$(MAKE_LOGS_DIR)/pre-commit/flake)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m mypy scripts/ --ignore-missing-imports --exclude submodules,Mypy check passed,Mypy check failed,$(MAKE_LOGS_DIR)/pre-commit/mypy)
-	$(call run_with_result,$(CONTAINER_RUN) rpmlint packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/pre-commit/rpmlint)
+	$(call run_with_result,$(CONTAINER_RUN) rpmlint -r /work/.rpmlintrc --ignore-unused-rpmlintrc packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/pre-commit/rpmlint)
 	$(call run_with_result,$(PYTHON) scripts/format-yaml.py '*.yaml',YAML format applied,YAML format failed,$(MAKE_LOGS_DIR)/pre-commit/yamlfmt)
 	$(call run_with_result,$(CONTAINER_PYTHON) -m yamllint *.yaml,Yamllint check passed,Yamllint check failed,$(MAKE_LOGS_DIR)/pre-commit/yamllint)
 	$(call run_with_result,$(PYTHON) scripts/rpm-dir-prefixes-convert.py,RPM dir prefixes normalized,RPM dir prefixes failed,$(MAKE_LOGS_DIR)/pre-commit/rpm-dir)
@@ -198,7 +198,7 @@ yamllint: ## Run yamllint on YAML files
 rpmlint: ## Run rpmlint on all generated spec files
 	$(setup_volumes)
 	$(CONTAINER_PYTHON) -m pip install -q rpmlint
-	$(call run_with_result,$(CONTAINER_RUN) rpmlint packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/rpmlint)
+	$(call run_with_result,$(CONTAINER_RUN) rpmlint -r /work/.rpmlintrc --ignore-unused-rpmlintrc packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed,$(MAKE_LOGS_DIR)/rpmlint)
 
 pkg-spec: ## Generate spec file(s) from packages.yaml (PACKAGE=<name> for one package)
 	$(PYTHON) scripts/gen-spec.py $(PACKAGE)

@@ -1,0 +1,32 @@
+# Ignore missing man pages (common for small tools or GUI apps)
+addFilter("no-manual-page-for-binary")
+
+# Ignore license warnings if upstream uses a non-standard string
+addFilter("invalid-license")
+
+# Ignore rpath issues (sometimes unavoidable in bundled builds)
+addFilter("binary-or-shlib-defines-rpath")
+
+# Ignore devel-file-in-non-devel-package for single-package projects
+addFilter("devel-file-in-non-devel-package")
+
+# Suppress warnings about hidden files (e.g. .gitignore in docs)
+addFilter("hidden-file-or-dir")
+
+# Allow non-executable scripts in certain paths
+addFilter("non-executable-script")
+
+# Allow macros in %changelog (common for dynamic versioning from git tags)
+addFilter("macro-in-%changelog")
+
+# Allow packages without %check section (many upstream projects don't have tests)
+addFilter("no-%check-section")
+
+# Example: ignore a warning only for specific files (regex match)
+# addFilter(".* W: non-conffile-in-etc /etc/myapp/config.yaml")
+
+# Disable network-related checks (useful in restricted build envs)
+setOption("NetworkEnabled", False)
+
+# Note: --ignore-unused-rpmlintrc is configured in Makefile (rpmlint CLI option, not setOption)
+# This ignores warnings about filters that don't apply to every package
