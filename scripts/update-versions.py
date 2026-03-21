@@ -23,7 +23,6 @@ from lib.subprocess_utils import run_git
 from lib.version import latest_semver
 from lib.yaml_utils import (
     get_packages,
-    pop_build_stages,
     write_yaml_preserving_comments,
 )
 
@@ -191,12 +190,6 @@ def main() -> None:
         print("updated packages.yaml:", file=sys.stderr)
         for pkg, (old, new) in sorted(changed.items()):
             print(f"  {pkg}: {old} -> {new}", file=sys.stderr)
-
-        affected = pop_build_stages(list(changed.keys()))
-        print(
-            f"cleared mock/copr build status for: {', '.join(affected)}",
-            file=sys.stderr,
-        )
     else:
         print("packages.yaml: all versions already up to date", file=sys.stderr)
 

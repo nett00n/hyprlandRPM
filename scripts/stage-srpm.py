@@ -52,115 +52,128 @@ def find_srpm(pkg: str) -> str | None:
     return str(matches[0]) if matches else None
 
 
+def run_for_package(
+    pkg: str,
+    meta: dict,
+    build_status: dict,
+    fedora_version: str,
+    proceed: bool,
+) -> bool:
+    """Run SRPM build for a single package. Return True on success/skip, False on failure.
+
+    Updates build_status["stages"]["srpm"][pkg] in-place.
+    Does not call save_build_status().
+    """
+    meta = apply_os_overrides(meta, fedora_version)
+    if meta.get("_skip"):
+        print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+        build_status["stages"]["srpm"][pkg] = {
+            "state": "skipped",
+            "version": None,
+            "path": None,
+            "log": None,
+            "force_run": False,
+        }
+        return True
+
+    ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
+    has_devel = "devel" in meta
+    spec = ROOT / "packages" / pkg.lower() / f"{pkg.lower()}.spec"
+    pkg_log_dir = get_package_log_dir(pkg)
+    pkg_log_dir.mkdir(parents=True, exist_ok=True)
+    log = pkg_log_dir / "10-srpm.log"
+    log.unlink(missing_ok=True)
+
+    # Skip if mock stage already succeeded AND SRPM file exists
+    prior_mock_state = (
+        build_status.get("stages", {}).get("mock", {}).get(pkg, {}).get("state")
+    )
+    prior_srpm_path = (
+        build_status.get("stages", {}).get("srpm", {}).get(pkg, {}).get("path")
+    )
+    srpm_exists = prior_srpm_path and Path(prior_srpm_path).exists()
+    if proceed and verbose_proceed_check("mock", pkg, prior_mock_state) and srpm_exists:
+        status("srpm", pkg, "skip", "mock already succeeded")
+        return True  # preserve existing srpm entry untouched
+
+    # Skip if spec stage failed
+    spec_stage = build_status.get("stages", {}).get("spec", {})
+    spec_state = spec_stage.get(pkg, {}).get("state", "")
+    if spec_state == "failed" or (spec_stage and pkg not in spec_stage):
+        status("srpm", pkg, "skip", "spec failed")
+        entry: dict[str, Any] = {
+            "state": "skipped",
+            "version": ver,
+            "path": None,
+            "log": None,
+            "force_run": False,
+        }
+        if has_devel:
+            entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
+        build_status["stages"]["srpm"][pkg] = entry
+        return True
+
+    ok, _, _ = run_cmd(["spectool", "-g", "-R", str(spec)], log)
+    if not ok:
+        status("srpm", pkg, "fail")
+        entry = {
+            "state": "failed",
+            "version": ver,
+            "path": None,
+            "log": str(log.relative_to(ROOT)),
+            "force_run": False,
+        }
+        if has_devel:
+            entry["subpackages"] = {"devel": {"state": "failed", "version": ver}}
+        build_status["stages"]["srpm"][pkg] = entry
+        return False
+
+    copy_local_patches(pkg, meta)
+    print(f"  [RUN]  srpm: {pkg}", flush=True)
+    ok, _, _ = run_cmd(["rpmbuild", "-bs", str(spec)], log)
+    if not ok:
+        status("srpm", pkg, "fail")
+        entry = {
+            "state": "failed",
+            "version": ver,
+            "path": None,
+            "log": str(log.relative_to(ROOT)),
+            "force_run": False,
+        }
+        if has_devel:
+            entry["subpackages"] = {"devel": {"state": "failed", "version": ver}}
+        build_status["stages"]["srpm"][pkg] = entry
+        return False
+
+    path = find_srpm(pkg)
+    status("srpm", pkg, "ok")
+    entry = {
+        "state": "success",
+        "version": ver,
+        "path": path,
+        "log": str(log.relative_to(ROOT)),
+        "force_run": False,
+    }
+    if has_devel:
+        entry["subpackages"] = {"devel": {"state": "success", "version": ver}}
+    build_status["stages"]["srpm"][pkg] = entry
+    return True
+
+
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
 
     packages, build_status = init_stage("srpm")
-    spec_stage = build_status.get("stages", {}).get("spec", {})
 
     proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
-    stages = build_status.get("stages", {})
-    if not proceed:
-        stages["srpm"] = {}
-    else:
-        stages.setdefault("srpm", {})
 
     failed = False
     print("\n=== srpm ===")
     for pkg, meta in packages.items():
-        meta = apply_os_overrides(meta, fedora_version)
-        if meta.get("_skip"):
-            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
-            build_status["stages"]["srpm"][pkg] = {
-                "state": "skipped",
-                "version": None,
-                "path": None,
-                "log": None,
-            }
-            continue
-        ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
-        has_devel = "devel" in meta
-        spec = ROOT / "packages" / pkg.lower() / f"{pkg.lower()}.spec"
-        pkg_log_dir = get_package_log_dir(pkg)
-        pkg_log_dir.mkdir(parents=True, exist_ok=True)
-        log = pkg_log_dir / "10-srpm.log"
-        log.unlink(missing_ok=True)
-
-        # Skip if mock stage already succeeded AND SRPM file exists
-        prior_mock_state = (
-            build_status.get("stages", {}).get("mock", {}).get(pkg, {}).get("state")
-        )
-        prior_srpm_path = (
-            build_status.get("stages", {}).get("srpm", {}).get(pkg, {}).get("path")
-        )
-        srpm_exists = prior_srpm_path and Path(prior_srpm_path).exists()
-        if (
-            proceed
-            and verbose_proceed_check("mock", pkg, prior_mock_state)
-            and srpm_exists
-        ):
-            status("srpm", pkg, "skip", "mock already succeeded")
-            continue  # preserve existing srpm entry untouched
-
-        # Skip if spec stage failed
-        spec_state = spec_stage.get(pkg, {}).get("state", "")
-        if spec_state == "failed" or (spec_stage and pkg not in spec_stage):
-            status("srpm", pkg, "skip", "spec failed")
-            entry: dict[str, Any] = {
-                "state": "skipped",
-                "version": ver,
-                "path": None,
-                "log": None,
-            }
-            if has_devel:
-                entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
-            build_status["stages"]["srpm"][pkg] = entry
-            continue
-
-        ok, _, _ = run_cmd(["spectool", "-g", "-R", str(spec)], log)
-        if not ok:
+        if not run_for_package(pkg, meta, build_status, fedora_version, proceed):
             failed = True
-            status("srpm", pkg, "fail")
-            entry = {
-                "state": "failed",
-                "version": ver,
-                "path": None,
-                "log": str(log.relative_to(ROOT)),
-            }
-            if has_devel:
-                entry["subpackages"] = {"devel": {"state": "failed", "version": ver}}
-            build_status["stages"]["srpm"][pkg] = entry
-            continue
 
-        copy_local_patches(pkg, meta)
-        ok, _, _ = run_cmd(["rpmbuild", "-bs", str(spec)], log)
-        if not ok:
-            failed = True
-            status("srpm", pkg, "fail")
-            entry = {
-                "state": "failed",
-                "version": ver,
-                "path": None,
-                "log": str(log.relative_to(ROOT)),
-            }
-            if has_devel:
-                entry["subpackages"] = {"devel": {"state": "failed", "version": ver}}
-            build_status["stages"]["srpm"][pkg] = entry
-            continue
-
-        path = find_srpm(pkg)
-        status("srpm", pkg, "ok")
-        entry = {
-            "state": "success",
-            "version": ver,
-            "path": path,
-            "log": str(log.relative_to(ROOT)),
-        }
-        if has_devel:
-            entry["subpackages"] = {"devel": {"state": "success", "version": ver}}
-        build_status["stages"]["srpm"][pkg] = entry
-        save_build_status(build_status)
-
+    save_build_status(build_status)
     if failed:
         sys.exit(1)
 

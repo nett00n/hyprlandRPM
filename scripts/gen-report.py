@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -16,11 +17,54 @@ from lib.yaml_utils import get_packages, load_groups_yaml, load_repo_yaml
 COPR_BUILD_URL = "https://copr.fedorainfracloud.org/coprs/build/{}/"
 
 
+def _format_duration(
+    started_at: int | None, completed_at: int | None, fallback_at: int | None = None
+) -> str:
+    """Format duration between started_at and completed_at as human-readable string.
+
+    If completed_at is missing but fallback_at is provided, uses fallback_at instead.
+    This allows tracking execution time for failed steps using an alternative timestamp.
+    """
+    # Use completed_at if available, otherwise try fallback_at
+    end_time = completed_at or fallback_at
+    if not started_at or not end_time:
+        return ""
+
+    duration_secs = end_time - started_at
+    if duration_secs < 0:
+        return ""  # Invalid if end time is before start time
+    if duration_secs < 60:
+        return f"{duration_secs}s"
+    minutes = duration_secs // 60
+    seconds = duration_secs % 60
+    if minutes < 60:
+        return f"{minutes}m {seconds}s" if seconds else f"{minutes}m"
+    hours = minutes // 60
+    minutes = minutes % 60
+    return f"{hours}h {minutes}m" if minutes else f"{hours}h"
+
+
+def _format_date(started_at: int | None) -> str:
+    """Format started_at timestamp as human-readable date string."""
+    if not started_at:
+        return ""
+    dt = datetime.fromtimestamp(started_at, tz=timezone.utc)
+    return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
 def collect_packages(
     stages: dict,
     pkg_meta: dict,
     pkg_badge: dict,
+    run_completed_at: int | None = None,
 ) -> list[dict]:
+    """Collect packages from build status stages.
+
+    Extracts relevant fields for markdown report generation.
+    Note: hashes are cached metadata and not included in markdown output.
+    Duration calculated from started_at and completed_at timestamps.
+    For failed/incomplete steps, uses run_completed_at as fallback timestamp.
+    """
     names: list[str] = []
     seen: set[str] = set()
     for stage_data in stages.values():
@@ -56,6 +100,44 @@ def collect_packages(
                 "mock_state": mock.get("state"),
                 "copr_state": copr.get("state"),
                 "copr_url": copr_url,
+                "stages": {
+                    "spec": {
+                        "state": spec.get("state"),
+                        "date": _format_date(spec.get("started_at")),
+                        "duration": _format_duration(
+                            spec.get("started_at"),
+                            spec.get("completed_at"),
+                            run_completed_at,
+                        ),
+                    },
+                    "srpm": {
+                        "state": srpm.get("state"),
+                        "date": _format_date(srpm.get("started_at")),
+                        "duration": _format_duration(
+                            srpm.get("started_at"),
+                            srpm.get("completed_at"),
+                            run_completed_at,
+                        ),
+                    },
+                    "mock": {
+                        "state": mock.get("state"),
+                        "date": _format_date(mock.get("started_at")),
+                        "duration": _format_duration(
+                            mock.get("started_at"),
+                            mock.get("completed_at"),
+                            run_completed_at,
+                        ),
+                    },
+                    "copr": {
+                        "state": copr.get("state"),
+                        "date": _format_date(copr.get("started_at")),
+                        "duration": _format_duration(
+                            copr.get("started_at"),
+                            copr.get("completed_at"),
+                            run_completed_at,
+                        ),
+                    },
+                },
             }
         )
     return packages
@@ -155,7 +237,7 @@ def main() -> None:
                 if isinstance(name, str):
                     pkg_badge[name] = group_cfg_badge
 
-    packages = collect_packages(stages, pkg_meta, pkg_badge)
+    packages = collect_packages(stages, pkg_meta, pkg_badge, run.get("completed_at"))
     pkg_by_name = {p["name"]: p for p in packages}
     groups = collect_groups(groups_cfg, pkg_by_name)
     contributors = collect_contributors(ROOT)

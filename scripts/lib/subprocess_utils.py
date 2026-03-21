@@ -10,7 +10,9 @@ def run_cmd(cmd: list[str], log_path: Path | None = None) -> tuple[bool, str, st
 
     Returns (ok, stdout, stderr).
     """
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL
+    )
     if log_path:
         with open(log_path, "a") as fh:
             fh.write(f"$ {shlex.join(cmd)}\n")
@@ -29,4 +31,5 @@ def run_git(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
         cwd=cwd,
         capture_output=True,
         text=True,
+        stdin=subprocess.DEVNULL,
     )

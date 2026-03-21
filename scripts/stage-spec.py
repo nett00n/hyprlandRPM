@@ -27,6 +27,63 @@ from lib.yaml_utils import (
 PYTHON = sys.executable
 
 
+def run_for_package(
+    pkg: str,
+    meta: dict,
+    build_status: dict,
+    fedora_version: str,
+) -> bool:
+    """Run spec generation for a single package. Return True on success/skip, False on failure.
+
+    Updates build_status["stages"]["spec"][pkg] in-place.
+    Does not call save_build_status().
+    """
+    meta = apply_os_overrides(meta, fedora_version)
+    if meta.get("_skip"):
+        print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+        build_status["stages"]["spec"][pkg] = {
+            "state": "skipped",
+            "version": None,
+            "force_run": False,
+        }
+        return True
+
+    ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
+    pkg_log_dir = get_package_log_dir(pkg)
+    pkg_log_dir.mkdir(parents=True, exist_ok=True)
+    log = pkg_log_dir / "00-spec.log"
+    log.unlink(missing_ok=True)
+
+    print(f"  [RUN]  spec: {pkg}", flush=True)
+    result = subprocess.run(
+        [PYTHON, str(ROOT / "scripts" / "gen-spec.py"), pkg],
+        capture_output=True,
+        text=True,
+    )
+    with open(log, "w") as fh:
+        if result.stdout:
+            fh.write(result.stdout)
+        if result.stderr:
+            fh.write(result.stderr)
+        fh.write(f"[exit: {result.returncode}]\n")
+
+    ok = result.returncode == 0
+    state = "success" if ok else "failed"
+    status("spec", pkg, "ok" if ok else "fail")
+
+    entry: dict = {
+        "state": state,
+        "version": ver,
+        "log": str(log.relative_to(ROOT)),
+        "force_run": False,
+    }
+    if "devel" in meta:
+        entry["subpackages"] = {"devel": {"state": state, "version": ver}}
+    build_status["stages"]["spec"][pkg] = entry
+
+    return ok
+
+
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
 
@@ -35,43 +92,8 @@ def main() -> None:
     failed = False
     print("\n=== spec ===")
     for pkg, meta in packages.items():
-        meta = apply_os_overrides(meta, fedora_version)
-        if meta.get("_skip"):
-            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
-            build_status["stages"]["spec"][pkg] = {"state": "skipped", "version": None}
-            continue
-        ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
-        pkg_log_dir = get_package_log_dir(pkg)
-        pkg_log_dir.mkdir(parents=True, exist_ok=True)
-        log = pkg_log_dir / "00-spec.log"
-        log.unlink(missing_ok=True)
-
-        result = subprocess.run(
-            [PYTHON, str(ROOT / "scripts" / "gen-spec.py"), pkg],
-            capture_output=True,
-            text=True,
-        )
-        with open(log, "w") as fh:
-            if result.stdout:
-                fh.write(result.stdout)
-            if result.stderr:
-                fh.write(result.stderr)
-            fh.write(f"[exit: {result.returncode}]\n")
-
-        ok = result.returncode == 0
-        state = "success" if ok else "failed"
-        if not ok:
+        if not run_for_package(pkg, meta, build_status, fedora_version):
             failed = True
-        status("spec", pkg, "ok" if ok else "fail")
-
-        entry: dict = {
-            "state": state,
-            "version": ver,
-            "log": str(log.relative_to(ROOT)),
-        }
-        if "devel" in meta:
-            entry["subpackages"] = {"devel": {"state": state, "version": ver}}
-        build_status["stages"]["spec"][pkg] = entry
 
     save_build_status(build_status)
     if failed:

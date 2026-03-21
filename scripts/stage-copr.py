@@ -58,6 +58,96 @@ def check_copr_credentials() -> bool:
     return True
 
 
+def run_for_package(
+    pkg: str,
+    meta: dict,
+    build_status: dict,
+    fedora_version: str,
+    copr_repo: str,
+    proceed: bool,
+) -> bool:
+    """Submit SRPM to Copr for a single package. Return True on success/skip, False on failure.
+
+    Updates build_status["stages"]["copr"][pkg] in-place.
+    Does not call save_build_status().
+    """
+    meta = apply_os_overrides(meta, fedora_version)
+    if meta.get("_skip"):
+        print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+        build_status["stages"]["copr"][pkg] = {
+            "state": "skipped",
+            "version": None,
+            "build_id": None,
+            "log": None,
+            "force_run": False,
+        }
+        return True
+
+    ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
+    has_devel = "devel" in meta
+    pkg_log_dir = get_package_log_dir(pkg)
+    pkg_log_dir.mkdir(parents=True, exist_ok=True)
+    log = pkg_log_dir / "30-copr.log"
+    log.unlink(missing_ok=True)
+
+    # Skip if copr stage already succeeded
+    prior_copr_state = (
+        build_status.get("stages", {}).get("copr", {}).get(pkg, {}).get("state")
+    )
+    if proceed and verbose_proceed_check("copr", pkg, prior_copr_state):
+        status("copr", pkg, "skip", "already succeeded")
+        return True
+
+    srpm_stage = build_status.get("stages", {}).get("srpm", {})
+    mock_stage = build_status.get("stages", {}).get("mock", {})
+    srpm_state = srpm_stage.get(pkg, {}).get("state", "")
+    srpm_path = srpm_stage.get(pkg, {}).get("path")
+    mock_state = mock_stage.get(pkg, {}).get("state", "")
+
+    if (
+        srpm_state in ("failed", "skipped")
+        or not srpm_path
+        or mock_state in ("failed", "skipped")
+    ):
+        blocker = (
+            f"mock {mock_state}"
+            if mock_state in ("failed", "skipped")
+            else f"srpm {srpm_state}"
+        )
+        status("copr", pkg, "skip", blocker)
+        entry: dict[str, Any] = {
+            "state": "skipped",
+            "version": ver,
+            "build_id": None,
+            "log": None,
+            "force_run": False,
+        }
+        if has_devel:
+            entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
+        build_status["stages"]["copr"][pkg] = entry
+        return True
+
+    print(f"  [RUN]  copr: {pkg}", flush=True)
+    ok, stdout, _ = run_cmd(["copr-cli", "build", copr_repo, srpm_path], log)
+    state = "success" if ok else "failed"
+    build_id = parse_build_id(stdout) if ok else None
+    status("copr", pkg, "ok" if ok else "fail")
+
+    entry = {
+        "state": state,
+        "version": ver,
+        "build_id": build_id,
+        "log": str(log.relative_to(ROOT)),
+        "force_run": False,
+        **({"completed_at": now_epoch()} if ok else {}),
+    }
+    if has_devel:
+        entry["subpackages"] = {"devel": {"state": state, "version": ver}}
+    build_status["stages"]["copr"][pkg] = entry
+
+    return ok
+
+
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     copr_repo = os.environ.get("COPR_REPO", "")
@@ -77,87 +167,16 @@ def main() -> None:
         sys.exit(2)
 
     packages, build_status = init_stage("copr")
-    srpm_stage = build_status.get("stages", {}).get("srpm", {})
-    mock_stage = build_status.get("stages", {}).get("mock", {})
 
     proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
-    stages = build_status.get("stages", {})
-    if not proceed:
-        stages["copr"] = {}
-    else:
-        stages.setdefault("copr", {})
 
     failed = False
     print("\n=== copr ===")
     for pkg, meta in packages.items():
-        meta = apply_os_overrides(meta, fedora_version)
-        if meta.get("_skip"):
-            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
-            build_status["stages"]["copr"][pkg] = {
-                "state": "skipped",
-                "version": None,
-                "build_id": None,
-                "log": None,
-            }
-            continue
-        ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
-        has_devel = "devel" in meta
-        pkg_log_dir = get_package_log_dir(pkg)
-        pkg_log_dir.mkdir(parents=True, exist_ok=True)
-        log = pkg_log_dir / "30-copr.log"
-        log.unlink(missing_ok=True)
-
-        # Skip if copr stage already succeeded
-        prior_copr_state = (
-            build_status.get("stages", {}).get("copr", {}).get(pkg, {}).get("state")
-        )
-        if proceed and verbose_proceed_check("copr", pkg, prior_copr_state):
-            status("copr", pkg, "skip", "already succeeded")
-            continue
-
-        srpm_state = srpm_stage.get(pkg, {}).get("state", "")
-        srpm_path = srpm_stage.get(pkg, {}).get("path")
-        mock_state = mock_stage.get(pkg, {}).get("state", "")
-
-        if (
-            srpm_state in ("failed", "skipped")
-            or not srpm_path
-            or mock_state in ("failed", "skipped")
+        if not run_for_package(
+            pkg, meta, build_status, fedora_version, copr_repo, proceed
         ):
-            blocker = (
-                f"mock {mock_state}"
-                if mock_state in ("failed", "skipped")
-                else f"srpm {srpm_state}"
-            )
-            status("copr", pkg, "skip", blocker)
-            entry: dict[str, Any] = {
-                "state": "skipped",
-                "version": ver,
-                "build_id": None,
-                "log": None,
-            }
-            if has_devel:
-                entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
-            build_status["stages"]["copr"][pkg] = entry
-            continue
-
-        ok, stdout, _ = run_cmd(["copr-cli", "build", copr_repo, srpm_path], log)
-        state = "success" if ok else "failed"
-        if not ok:
             failed = True
-        build_id = parse_build_id(stdout) if ok else None
-        status("copr", pkg, "ok" if ok else "fail")
-
-        entry = {
-            "state": state,
-            "version": ver,
-            "build_id": build_id,
-            "log": str(log.relative_to(ROOT)),
-            **({"completed_at": now_epoch()} if ok else {}),
-        }
-        if has_devel:
-            entry["subpackages"] = {"devel": {"state": state, "version": ver}}
-        build_status["stages"]["copr"][pkg] = entry
         save_build_status(build_status)
 
     if failed:

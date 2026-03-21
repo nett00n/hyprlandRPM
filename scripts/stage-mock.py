@@ -55,7 +55,9 @@ def update_local_repo(mock_chroot: str) -> None:
             copied = True
     if copied or not (LOCAL_REPO / "repodata").exists():
         subprocess.run(
-            ["createrepo_c", "--update", str(LOCAL_REPO)], capture_output=True
+            ["createrepo_c", "--update", str(LOCAL_REPO)],
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
         )
 
 
@@ -74,6 +76,103 @@ def copy_mock_results(mock_chroot: str, pkg: str) -> list[str]:
     return copied
 
 
+def run_for_package(
+    pkg: str,
+    meta: dict,
+    build_status: dict,
+    fedora_version: str,
+    mock_chroot_name: str,
+    proceed: bool,
+    failed: dict,
+    all_packages: dict,
+) -> bool:
+    """Run mock build for a single package. Return True on success/skip, False on failure.
+
+    Updates build_status["stages"]["mock"][pkg] in-place.
+    Updates failed[pkg] to indicate if this package failed.
+    Does not call save_build_status().
+    """
+    meta = apply_os_overrides(meta, fedora_version)
+    if meta.get("_skip"):
+        print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
+        build_status["stages"]["mock"][pkg] = {
+            "state": "skipped",
+            "version": None,
+            "log": None,
+            "force_run": False,
+        }
+        return True
+
+    ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
+    has_devel = "devel" in meta
+    pkg_log_dir = get_package_log_dir(pkg)
+    pkg_log_dir.mkdir(parents=True, exist_ok=True)
+    log = pkg_log_dir / "20-mock.log"
+    log.unlink(missing_ok=True)
+
+    # Skip if mock stage already succeeded
+    mock_state = (
+        build_status.get("stages", {}).get("mock", {}).get(pkg, {}).get("state")
+    )
+    if proceed and verbose_proceed_check("mock", pkg, mock_state):
+        status("mock", pkg, "skip", "already succeeded")
+        return True  # preserve existing entry (has completed_at from prior run)
+
+    blocker = failed_local_dep(pkg, meta, all_packages, failed)
+    srpm_stage = build_status.get("stages", {}).get("srpm", {})
+    srpm_state = srpm_stage.get(pkg, {}).get("state", "")
+    srpm_path = srpm_stage.get(pkg, {}).get("path")
+
+    if srpm_state in ("failed", "skipped") or blocker or not srpm_path:
+        detail = (
+            f"local dep failed: {blocker}"
+            if blocker and srpm_state not in ("failed", "skipped")
+            else f"srpm {srpm_state}"
+        )
+        failed[pkg] = True
+        status("mock", pkg, "skip", detail)
+        entry: dict[str, Any] = {
+            "state": "skipped",
+            "version": ver,
+            "log": None,
+            "force_run": False,
+        }
+        if has_devel:
+            entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
+        build_status["stages"]["mock"][pkg] = entry
+        return True
+
+    cmd = ["mock", "-r", mock_chroot_name, "--rebuild", srpm_path]
+    if (LOCAL_REPO / "repodata").exists():
+        cmd.insert(3, "--addrepo")
+        cmd.insert(4, f"file://{LOCAL_REPO}")
+    print(f"  [RUN]  mock: {pkg}", flush=True)
+    ok, _, _ = run_cmd(cmd, log)
+    mock_logs = copy_mock_results(mock_chroot_name, pkg)
+    state = "success" if ok else "failed"
+    if not ok:
+        failed[pkg] = True
+    else:
+        failed[pkg] = False
+        update_local_repo(mock_chroot_name)
+    status("mock", pkg, "ok" if ok else "fail")
+
+    entry = {
+        "state": state,
+        "version": ver,
+        "log": str(log.relative_to(ROOT)),
+        "force_run": False,
+        **({"completed_at": now_epoch()} if ok else {}),
+    }
+    if mock_logs:
+        entry["mock_logs"] = mock_logs
+    if has_devel:
+        entry["subpackages"] = {"devel": {"state": state, "version": ver}}
+    build_status["stages"]["mock"][pkg] = entry
+
+    return ok
+
+
 def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     mock_chroot_override = os.environ.get("MOCK_CHROOT", "")
@@ -82,14 +181,8 @@ def main() -> None:
         raise ValueError(f"Invalid MOCK_CHROOT: {mock_chroot_name}")
 
     packages, build_status = init_stage("mock")
-    srpm_stage = build_status.get("stages", {}).get("srpm", {})
 
     proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
-    stages = build_status.get("stages", {})
-    if not proceed:
-        stages["mock"] = {}
-    else:
-        stages.setdefault("mock", {})
 
     failed: dict[str, bool] = {}
 
@@ -101,74 +194,17 @@ def main() -> None:
     print("\n=== mock ===")
     for pkg in build_order:
         meta = packages[pkg]
-        meta = apply_os_overrides(meta, fedora_version)
-        if meta.get("_skip"):
-            print(f"  [skip] {pkg} (fedora:{fedora_version} skip)")
-            build_status["stages"]["mock"][pkg] = {
-                "state": "skipped",
-                "version": None,
-                "log": None,
-            }
-            continue
-        ver = nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
-        has_devel = "devel" in meta
-        pkg_log_dir = get_package_log_dir(pkg)
-        pkg_log_dir.mkdir(parents=True, exist_ok=True)
-        log = pkg_log_dir / "20-mock.log"
-        log.unlink(missing_ok=True)
-
-        # Skip if mock stage already succeeded
-        mock_state = (
-            build_status.get("stages", {}).get("mock", {}).get(pkg, {}).get("state")
-        )
-        if proceed and verbose_proceed_check("mock", pkg, mock_state):
-            status("mock", pkg, "skip", "already succeeded")
-            continue  # preserve existing entry (has completed_at from prior run)
-
-        blocker = failed_local_dep(pkg, meta, packages, failed)
-        srpm_state = srpm_stage.get(pkg, {}).get("state", "")
-        srpm_path = srpm_stage.get(pkg, {}).get("path")
-
-        if srpm_state in ("failed", "skipped") or blocker or not srpm_path:
-            detail = (
-                f"local dep failed: {blocker}"
-                if blocker and srpm_state not in ("failed", "skipped")
-                else f"srpm {srpm_state}"
-            )
-            failed[pkg] = True
-            status("mock", pkg, "skip", detail)
-            entry: dict[str, Any] = {"state": "skipped", "version": ver, "log": None}
-            if has_devel:
-                entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}
-            build_status["stages"]["mock"][pkg] = entry
-            continue
-
-        cmd = ["mock", "-r", mock_chroot_name, "--rebuild", srpm_path]
-        if (LOCAL_REPO / "repodata").exists():
-            cmd.insert(3, "--addrepo")
-            cmd.insert(4, f"file://{LOCAL_REPO}")
-        ok, _, _ = run_cmd(cmd, log)
-        mock_logs = copy_mock_results(mock_chroot_name, pkg)
-        state = "success" if ok else "failed"
-        if not ok:
-            failed[pkg] = True
+        if not run_for_package(
+            pkg,
+            meta,
+            build_status,
+            fedora_version,
+            mock_chroot_name,
+            proceed,
+            failed,
+            packages,
+        ):
             failed_overall = True
-        else:
-            failed[pkg] = False
-            update_local_repo(mock_chroot_name)
-        status("mock", pkg, "ok" if ok else "fail")
-
-        entry = {
-            "state": state,
-            "version": ver,
-            "log": str(log.relative_to(ROOT)),
-            **({"completed_at": now_epoch()} if ok else {}),
-        }
-        if mock_logs:
-            entry["mock_logs"] = mock_logs
-        if has_devel:
-            entry["subpackages"] = {"devel": {"state": state, "version": ver}}
-        build_status["stages"]["mock"][pkg] = entry
         save_build_status(build_status)
 
     if failed_overall:

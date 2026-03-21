@@ -207,17 +207,20 @@ def pop_build_stages(
     pkgs: list[str] | set[str],
     stages: tuple[str, ...] = ("mock", "copr"),
 ) -> list[str]:
-    """Remove entries for pkgs from given stages in build-report.yaml.
+    """Set force_run: true flag for pkgs in given stages in build-report.yaml.
 
-    Returns sorted list of package names that were actually removed.
+    Returns sorted list of package names that were affected.
     """
     build_status = load_build_status()
     status_stages = build_status.get("stages", {})
     affected: set[str] = set()
     for stage in stages:
-        stage_data = status_stages.get(stage, {})
+        if stage not in status_stages:
+            status_stages[stage] = {}
+        stage_data = status_stages[stage]
         for pkg in pkgs:
-            if stage_data.pop(pkg, None) is not None:
+            if pkg in stage_data:
+                stage_data[pkg]["force_run"] = True
                 affected.add(pkg)
     save_build_status(build_status)
     return sorted(affected)
@@ -250,6 +253,7 @@ def init_stage(  # type: ignore
     """
     package_env = os.environ.get("PACKAGE", "")
     skip_env = os.environ.get("SKIP_PACKAGES", "")
+    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
 
     all_packages = get_packages()
     packages = filter_packages(all_packages, package_env)
@@ -257,7 +261,11 @@ def init_stage(  # type: ignore
 
     BUILD_LOG_DIR.mkdir(parents=True, exist_ok=True)
     build_status = load_build_status()
-    build_status.setdefault("stages", {})[stage_name] = {}
+    # Only clear stage if NOT resuming (PROCEED_BUILD=false)
+    if not proceed:
+        build_status.setdefault("stages", {})[stage_name] = {}
+    else:
+        build_status.setdefault("stages", {}).setdefault(stage_name, {})
 
     if include_all:
         return all_packages, packages, build_status
