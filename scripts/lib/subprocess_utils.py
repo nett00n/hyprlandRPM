@@ -10,9 +10,12 @@ def run_cmd(cmd: list[str], log_path: Path | None = None) -> tuple[bool, str, st
 
     Returns (ok, stdout, stderr).
     """
-    result = subprocess.run(
-        cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL
-    )
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL
+        )
+    except FileNotFoundError:
+        return False, "", f"command not found: {cmd[0]}"
     if log_path:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with open(log_path, "a") as fh:

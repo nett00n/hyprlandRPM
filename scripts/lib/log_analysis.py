@@ -88,6 +88,12 @@ _EMPTY_DEBUGFILES_RE = re.compile(
     r"^error: Empty %files file /builddir/build/BUILD/[^/]+/[^/]+/debugsourcefiles\.list"
 )
 
+# error: Directory not found: /builddir/build/BUILD/.../BUILDROOT/...
+# error: File not found: /builddir/build/BUILD/.../BUILDROOT/...
+_FILES_NOT_FOUND_RE = re.compile(
+    r"^error: (?:Directory|File) not found: /builddir/build/BUILD/[^/]+/BUILDROOT(/\S+)"
+)
+
 
 def _dnf_whatprovides(query: str) -> list[str]:
     try:
@@ -365,6 +371,19 @@ def _analyze_mock_build_log(log_path: Path) -> list[tuple[int, str, str, str, st
                     line.strip(),
                     "empty debugsourcefiles.list — package produces no binaries/shared libraries (likely header-only or static library), add to packages.yaml:\n        rpm:\n          no_debug_package: true",
                     "",
+                    "none",
+                )
+            )
+            continue
+        m = _FILES_NOT_FOUND_RE.match(line)
+        if m:
+            filepath = m.group(1)
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f'file declared in packages.yaml but not found after build: "{filepath}" — build system does not produce this file, remove from files: in packages.yaml',
+                    filepath,
                     "none",
                 )
             )
