@@ -333,7 +333,7 @@ def build_context(
         "license": pkg["license"],
         "buildarch": rpm.get("buildarch"),
         "commit": source.get("commit"),
-        "source_name": source.get("name"),
+        "source_name": pkg.get("source_name") or source.get("name"),
         "url": pkg["url"],
         "sources": source.get("archives", []),
         "patches": source.get("patches", []),
