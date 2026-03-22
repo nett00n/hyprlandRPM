@@ -10,11 +10,57 @@ import yaml
 
 from lib.jinja_utils import create_jinja_env
 from lib.paths import BUILD_STATUS_YAML, GROUPS_YAML, PACKAGES_YAML, REPO_YAML, ROOT
-from lib.subprocess_utils import run_git
+from lib.subprocess_utils import run_cmd, run_git
 from lib.version import clean_version
-from lib.yaml_utils import get_packages, load_groups_yaml, load_repo_yaml
+from lib.yaml_utils import (
+    get_packages,
+    load_groups_yaml,
+    load_repo_yaml,
+    save_build_status,
+)
 
 COPR_BUILD_URL = "https://copr.fedorainfracloud.org/coprs/build/{}/"
+TERMINAL_STATES = {"success", "failed"}
+
+
+def _poll_copr_status(stages: dict, packages_list: list[str]) -> bool:
+    """Poll COPR status for packages with non-terminal states using copr-cli.
+
+    Returns True if any status was updated, False otherwise.
+    """
+    updated = False
+    copr_stage = stages.get("copr") or {}
+
+    for pkg in packages_list:
+        entry = copr_stage.get(pkg, {})
+        build_id = entry.get("build_id")
+        state = entry.get("state")
+
+        # Only poll if we have a build_id and the state is not terminal
+        if not build_id or state in TERMINAL_STATES:
+            continue
+
+        # Query copr-cli status
+        ok, stdout, _ = run_cmd(["copr-cli", "status", str(build_id)])
+        if not ok:
+            continue
+
+        # Parse output to get state (status command outputs "Succeeded" or "Failed" etc)
+        new_state = None
+        for line in stdout.splitlines():
+            if "Succeeded" in line:
+                new_state = "success"
+                break
+            elif "Failed" in line:
+                new_state = "failed"
+                break
+
+        # Update if status changed
+        if new_state and new_state != state:
+            entry["state"] = new_state
+            updated = True
+
+    return updated
 
 
 def _format_duration(
@@ -215,7 +261,11 @@ def main() -> None:
         help="Output format: github (table), copr (list), or full-report (detailed)",
     )
     args = parser.parse_args()
-    template_name = f"readme-{args.format}.md.j2"
+    template_name = (
+        f"readme-{args.format}.md.j2"
+        if args.format != "full-report"
+        else "full-report.md.j2"
+    )
 
     if not BUILD_STATUS_YAML.exists():
         print(f"error: {BUILD_STATUS_YAML} not found", file=sys.stderr)
@@ -224,6 +274,14 @@ def main() -> None:
     data = yaml.safe_load(BUILD_STATUS_YAML.read_text())
     run = data.get("run", {})
     stages = data.get("stages", {})
+
+    # Poll COPR status for packages with non-terminal states
+    copr_stage = stages.get("copr") or {}
+    packages_list = list(copr_stage.keys())
+    if _poll_copr_status(stages, packages_list):
+        # Status was updated, save it back
+        data["stages"] = stages
+        save_build_status(data)
 
     pkg_meta = get_packages() if PACKAGES_YAML.exists() else {}
     repo = load_repo_yaml() if REPO_YAML.exists() else {}

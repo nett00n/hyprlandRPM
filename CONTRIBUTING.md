@@ -8,7 +8,7 @@ packages/<name>/<name>.spec        # generated spec files (committed, editable)
 templates/spec.j2                  # Jinja2 spec template
 templates/readme-github.md.j2      # Jinja2 template for GitHub README
 templates/readme-copr.md.j2        # Jinja2 template for COPR README
-templates/readme-full-report.md.j2 # Jinja2 template for detailed build report
+templates/full-report.md.j2 # Jinja2 template for detailed build report
 templates/_*.j2                    # Jinja2 snippet: simple, no includes
 templates/__*.j2                   # Jinja2 snippet: composite, includes other snippets
 templates/packages-entry.yaml.j2   # Jinja2 template for new packages.yaml entries
@@ -360,9 +360,23 @@ make pkg-full-cycle PACKAGE=<name> SKIP_MOCK=true
 # Skip copr submission (test locally without pushing)
 make pkg-full-cycle PACKAGE=<name> SKIP_COPR=true
 
+# Wait for COPR builds to complete (default: async with --nowait)
+make pkg-full-cycle PACKAGE=<name> COPR_REPO=nett00n/hyprland SYNCHRONOUS_COPR_BUILD=true
+
 # Combine options
 make pkg-full-cycle PACKAGE=<name> SKIP_MOCK=true FEDORA_VERSION=42
 ```
+
+#### COPR Build Behavior
+
+By default, COPR builds are submitted asynchronously using the `--nowait` flag. This allows `pkg-full-cycle`
+to complete immediately after submission without blocking for build completion.
+
+- **Async mode (default):** Submits builds and records the build IDs, pipeline completes immediately
+- **Synchronous mode:** Set `SYNCHRONOUS_COPR_BUILD=true` to wait for builds to complete before exiting
+
+When generating the build report with `make gen-report`, the system automatically polls COPR for the status
+of in-progress builds and updates `build-report.yaml` with the latest state.
 
 ### Build Cache and Force Re-run
 

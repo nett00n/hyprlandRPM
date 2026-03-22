@@ -8,11 +8,12 @@ Records build IDs in build-report.yaml.
 Must be run inside the rpm toolbox container (invoked via Makefile).
 
 Environment variables:
-  PACKAGE         Build only this package (optional, comma-separated)
-  FEDORA_VERSION  Fedora version to target (default: 43)
-  COPR_REPO       Copr repo slug, e.g. nett00n/hyprland (required)
-  SKIP_PACKAGES   Skip these packages (optional, comma-separated)
-  PROCEED_BUILD   Skip packages where copr stage already succeeded
+  PACKAGE              Build only this package (optional, comma-separated)
+  FEDORA_VERSION       Fedora version to target (default: 43)
+  COPR_REPO            Copr repo slug, e.g. nett00n/hyprland (required)
+  SKIP_PACKAGES        Skip these packages (optional, comma-separated)
+  PROCEED_BUILD        Skip packages where copr stage already succeeded
+  SYNCHRONOUS_COPR_BUILD  If 'true', wait for build completion (default: async with --nowait)
 """
 
 import os
@@ -65,11 +66,14 @@ def run_for_package(
     fedora_version: str,
     copr_repo: str,
     proceed: bool,
+    synchronous: bool = False,
 ) -> bool:
     """Submit SRPM to Copr for a single package. Return True on success/skip, False on failure.
 
     Updates build_status["stages"]["copr"][pkg] in-place.
     Does not call save_build_status().
+
+    If synchronous=False (default), uses --nowait flag for async submission.
     """
     meta = apply_os_overrides(meta, fedora_version)
     if meta.get("_skip"):
@@ -128,8 +132,19 @@ def run_for_package(
         return True
 
     print(f"  [RUN]  copr: {pkg}", flush=True)
-    ok, stdout, _ = run_cmd(["copr-cli", "build", copr_repo, srpm_path], log)
-    state = "success" if ok else "failed"
+    cmd = ["copr-cli", "build"]
+    if not synchronous:
+        cmd.append("--nowait")
+    cmd.extend([copr_repo, srpm_path])
+    ok, stdout, _ = run_cmd(cmd, log)
+
+    # In async mode: successful submission → "unknown" state (build is pending)
+    # In sync mode: successful submission → "success", failed submission → "failed"
+    if ok:
+        state = "unknown" if not synchronous else "success"
+    else:
+        state = "failed"
+
     build_id = parse_build_id(stdout) if ok else None
     status("copr", pkg, "ok" if ok else "fail")
 
@@ -139,7 +154,7 @@ def run_for_package(
         "build_id": build_id,
         "log": str(log.relative_to(ROOT)),
         "force_run": False,
-        **({"completed_at": now_epoch()} if ok else {}),
+        **({"completed_at": now_epoch()} if (ok and synchronous) else {}),
     }
     if has_devel:
         entry["subpackages"] = {"devel": {"state": state, "version": ver}}
@@ -169,12 +184,13 @@ def main() -> None:
     packages, build_status = init_stage("copr")
 
     proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
+    synchronous = os.environ.get("SYNCHRONOUS_COPR_BUILD", "").lower() == "true"
 
     failed = False
     print("\n=== copr ===")
     for pkg, meta in packages.items():
         if not run_for_package(
-            pkg, meta, build_status, fedora_version, copr_repo, proceed
+            pkg, meta, build_status, fedora_version, copr_repo, proceed, synchronous
         ):
             failed = True
         save_build_status(build_status)

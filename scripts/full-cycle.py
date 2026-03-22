@@ -7,14 +7,15 @@ prints a summary table and writes build-report.yaml.
 Must be run inside the rpm toolbox container (invoked via Makefile).
 
 Environment variables:
-  FEDORA_VERSION  Fedora version to target (default: 43)
-  MOCK_CHROOT     Override mock chroot (default: fedora-{FEDORA_VERSION}-x86_64)
-  COPR_REPO       Copr repo slug, e.g. nett00n/hyprland (optional)
-  PACKAGE         Build only this package (optional, comma-separated)
-  SKIP_PACKAGES   Skip these packages (optional, comma-separated)
-  PROCEED_BUILD   If 'true', skip stages already succeeded; preserve build-report.yaml
-  SKIP_MOCK       If 'true', skip mock build stage
-  SKIP_COPR       If 'true', skip copr submission stage
+  FEDORA_VERSION             Fedora version to target (default: 43)
+  MOCK_CHROOT                Override mock chroot (default: fedora-{FEDORA_VERSION}-x86_64)
+  COPR_REPO                  Copr repo slug, e.g. nett00n/hyprland (optional)
+  PACKAGE                    Build only this package (optional, comma-separated)
+  SKIP_PACKAGES              Skip these packages (optional, comma-separated)
+  PROCEED_BUILD              If 'true', skip stages already succeeded; preserve build-report.yaml
+  SKIP_MOCK                  If 'true', skip mock build stage
+  SKIP_COPR                  If 'true', skip copr submission stage
+  SYNCHRONOUS_COPR_BUILD     If 'true', wait for COPR builds; default is async (--nowait)
 """
 
 import importlib
@@ -136,10 +137,10 @@ def print_proceed_status(packages: dict, build_status: dict, copr_repo: str) -> 
     print()
 
 
-def load_config() -> tuple[str, str, str, str, str, bool, bool]:
+def load_config() -> tuple[str, str, str, str, str, bool, bool, bool]:
     """Load environment variables.
 
-    Returns (fedora_version, mock_chroot_name, copr_repo, package_filter, skip_filter, skip_mock, skip_copr).
+    Returns (fedora_version, mock_chroot_name, copr_repo, package_filter, skip_filter, skip_mock, skip_copr, synchronous_copr).
     """
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     if fedora_version not in SUPPORTED_FEDORA_VERSIONS:
@@ -154,6 +155,7 @@ def load_config() -> tuple[str, str, str, str, str, bool, bool]:
     skip_filter = os.environ.get("SKIP_PACKAGES", "")
     skip_mock = os.environ.get("SKIP_MOCK", "").lower() == "true"
     skip_copr = os.environ.get("SKIP_COPR", "").lower() == "true"
+    synchronous_copr = os.environ.get("SYNCHRONOUS_COPR_BUILD", "").lower() == "true"
     return (
         fedora_version,
         mock_chroot_name,
@@ -162,6 +164,7 @@ def load_config() -> tuple[str, str, str, str, str, bool, bool]:
         skip_filter,
         skip_mock,
         skip_copr,
+        synchronous_copr,
     )
 
 
@@ -235,6 +238,7 @@ def run_build_pipeline(
     proceed: bool,
     skip_mock: bool = False,
     skip_copr: bool = False,
+    synchronous_copr: bool = False,
 ) -> None:
     """Run per-package pipeline orchestration: validate→spec→vendor→srpm→mock→copr.
 
@@ -242,6 +246,7 @@ def run_build_pipeline(
     Per-package skip-on-failure enables faster feedback and independent tracking.
     Tracks rebuilt packages to cascade forced stages to dependents.
     Respects skip_mock and skip_copr flags to skip those stages entirely.
+    If synchronous_copr is False (default), COPR builds use --nowait for async submission.
     """
     all_packages = get_packages()
 
@@ -379,7 +384,13 @@ def run_build_pipeline(
                 rebuilt_packages.add(pkg)
                 started_at = int(time.time())
                 _stage["stage-copr"].run_for_package(
-                    pkg, meta, build_status, fedora_version, copr_repo, proceed
+                    pkg,
+                    meta,
+                    build_status,
+                    fedora_version,
+                    copr_repo,
+                    proceed,
+                    synchronous_copr,
                 )
                 _inject_stage_meta("copr", pkg, build_status, started_at, new_hashes)
 
@@ -481,6 +492,7 @@ def main() -> None:
         skip_filter,
         skip_mock,
         skip_copr,
+        synchronous_copr,
     ) = load_config()
 
     # Backup existing report before any processing
@@ -514,6 +526,7 @@ def main() -> None:
         proceed,
         skip_mock,
         skip_copr,
+        synchronous_copr,
     )
     finalize_report(packages, build_status, copr_repo)
 
