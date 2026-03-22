@@ -83,6 +83,11 @@ _CD_NOT_FOUND_RE = re.compile(
     r"^/var/tmp/rpm-tmp\.\w+: line \d+: cd: ([^:]+): No such file or directory"
 )
 
+# error: Empty %files file /builddir/build/BUILD/.../debugsourcefiles.list
+_EMPTY_DEBUGFILES_RE = re.compile(
+    r"^error: Empty %files file /builddir/build/BUILD/[^/]+/[^/]+/debugsourcefiles\.list"
+)
+
 
 def _dnf_whatprovides(query: str) -> list[str]:
     try:
@@ -351,6 +356,19 @@ def _analyze_mock_build_log(log_path: Path) -> list[tuple[int, str, str, str, st
                     "none",
                 )
             )
+            continue
+        m = _EMPTY_DEBUGFILES_RE.match(line)
+        if m:
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    "empty debugsourcefiles.list — package produces no binaries/shared libraries (likely header-only or static library), add to packages.yaml:\n        rpm:\n          no_debug_package: true",
+                    "",
+                    "none",
+                )
+            )
+            continue
 
     # Pass 2: multi-line "Installed (but unpackaged) file(s) found:" block
     in_block = False
