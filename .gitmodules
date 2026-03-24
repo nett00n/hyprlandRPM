@@ -106,3 +106,9 @@
 [submodule "submodules/karlstav/cava"]
 	path = submodules/karlstav/cava
 	url = https://github.com/karlstav/cava.git
+[submodule "submodules/sentriz/cliphist"]
+	path = submodules/sentriz/cliphist
+	url = https://github.com/sentriz/cliphist.git
+[submodule "submodules/MalpenZibo/ashell"]
+	path = submodules/MalpenZibo/ashell
+	url = https://github.com/MalpenZibo/ashell.git

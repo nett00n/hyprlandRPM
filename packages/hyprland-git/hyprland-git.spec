@@ -1,8 +1,8 @@
-%global commit bf31f642b08a8d8ca796a1b713285f2580805c2f
+%global commit 63c56bad6fcc55f99d1437da7cd1b0b68fd9cc88
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
-%global commitdate 20260321
+%global commitdate 20260323
 Name:           hyprland-git
-Version:        0.54.0^20260321gitbf31f64
+Version:        0.54.0^20260323git63c56ba
 Release:        %autorelease%{?dist}
 Summary:        A Modern C++ Wayland Compositor [Built from latest commit, unstable]
 License:        BSD-3-Clause
@@ -56,7 +56,7 @@ Maintainer info:
 Source repository: https://github.com/nett00n/hyprland-copr
 COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 Package info:
-Commit:            bf31f642b08a8d8ca796a1b713285f2580805c2f
+Commit:            63c56bad6fcc55f99d1437da7cd1b0b68fd9cc88
 
 %prep
 %autosetup -p1 -n Hyprland-%{commit}
@@ -101,5 +101,5 @@ Development files for hyprland-git.
 %{_prefix}/share/pkgconfig/hyprland.pc
 
 %changelog
-* Sun Mar 22 2026 nett00n <copr@nett00n.org> - 0.54.0^20260321gitbf31f64-%autorelease
-- internal: rewrite deviceNameToInternalString using a single range pipeline (#13806)
+* Mon Mar 23 2026 nett00n <copr@nett00n.org> - 0.54.0^20260323git63c56ba-%autorelease
+- protocols: reimplement unstable/xdg-foreign-v2 (#13716)

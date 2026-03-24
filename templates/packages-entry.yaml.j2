@@ -29,7 +29,11 @@
   files:
     - "%license LICENSE"
     - "%doc README.md"
+{% if build_system == "golang" %}
+    - "%{_bindir}/{{ key }}"
+{% else %}
     # FIXME: add installed files
+{% endif %}
   # devel: generates a -devel subpackage for headers, pkgconfig files, cmake modules, etc.
   devel:
     files:
@@ -54,21 +58,40 @@
     bundled_deps:
       []
   build:
-    # system: cmake | meson | autotools | make | configure | python
+    # system: cmake | meson | autotools | make | configure | python | golang
     system: {{ build_system }}
+{% if go_subdir %}
+    # go_subdir: subdirectory containing go.mod when the Go module is not at the tarball root
+    go_subdir: {{ go_subdir }}
+{% else %}
     # go_subdir: subdirectory containing go.mod when the Go module is not at the tarball root
     # go_subdir: cli
+{% endif %}
     # configure_flags: extra flags passed to ./configure (only used with system: configure)
     # configure_flags: []
     # prep: extra shell commands injected into %prep after %autosetup
     prep:
       []
     # commands: override the default build commands derived from system
+{% if build_commands %}
+    commands:
+{% for cmd in build_commands %}
+      - {{ cmd }}
+{% endfor %}
+{% else %}
     commands:
       []
+{% endif %}
     # install: override the default install commands derived from system
+{% if install_commands %}
+    install:
+{% for cmd in install_commands %}
+      - {{ cmd }}
+{% endfor %}
+{% else %}
     install:
       []
+{% endif %}
     # no_lto: disable LTO (Link-Time Optimization) for packages that don't support it
     no_lto: false
   rpm:

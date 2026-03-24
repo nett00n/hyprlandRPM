@@ -58,18 +58,17 @@ Feel free to reuse automation from this repository for your own copr-projects
 ## Packages
 
 
-### Useful apps
+### Hyprland new user starter-pack
 
-- `pyprland` — Scratchpads & many goodies for Hyprland
+- `hypridle` — An idle management daemon for Hyprland
+- `hyprland` — A Modern C++ Wayland Compositor
+- `hyprland-guiutils` — Hyprland GUI utilities
+- `hyprlock` — A gpu-accelerated screen lock for Hyprland
+- `hyprpaper` — A blazing fast Wayland wallpaper utility
+- `hyprshot` — Utility to easily take screenshots in Hyprland using your mouse
+- `swaync` — A simple GTK based notification daemon for any Wayland compositor
 - `waybar` — Highly customizable Wayland bar for Sway and Wlroots based compositors
-
-### Other dependencies
-
-- `aylurs-gtk-shell` — Scaffolding CLI for Astal+Gnim
-- `cava` — Cross-platform Audio Visualizer
-- `glaze` — Extremely fast, in memory, JSON and reflection library for modern C++.
-- `gtk4-layer-shell` — A library to create panels and other desktop components for Wayland using the Layer Shell protocol and GTK4
-- `sndio` — Portable version of OpenBSD's lightweight audio & MIDI sub-system
+- `wofi` — Wofi is a launcher/menu program for wlroots based wayland compositors such as sway
 
 ### Hyprland main packages
 
@@ -110,21 +109,34 @@ Feel free to reuse automation from this repository for your own copr-projects
 - `hyprwayland-scanner` — A Wayland scanner replacement for Hypr projects
 - `hyprwire` — A fast and consistent wire protocol for IPC
 
-### Hyprland new user starter-pack
+### Useful apps
 
-- `hypridle` — An idle management daemon for Hyprland
-- `hyprland` — A Modern C++ Wayland Compositor
-- `hyprland-guiutils` — Hyprland GUI utilities
-- `hyprlock` — A gpu-accelerated screen lock for Hyprland
-- `hyprpaper` — A blazing fast Wayland wallpaper utility
-- `hyprshot` — Utility to easily take screenshots in Hyprland using your mouse
-- `swaync` — A simple GTK based notification daemon for any Wayland compositor
+- `bemenu` — Dynamic menu library and client program inspired by dmenu
+- `cliphist` — Wayland clipboard manager with support for multimedia
+- `cliphist-git` — Wayland clipboard manager with support for multimedia [Built from latest commit, unstable]
+- `clipman` — A simple clipboard manager for Wayland
+- `copyq` — CopyQ is an advanced clipboard manager with powerful editing and scripting features.
+- `fuzzel` — App launcher and fuzzy finder for Wayland, inspired by rofi and dmenu
+- `gammastep` — Adjust the color temperature of your screen according to your surroundings. This may help your eyes hurt less if you are working in front of the screen at night.
+- `network-manager-applet` — Tray applet and an advanced network connection editor
+- `nnn` — n³ The unorthodox terminal file manager
+- `pyprland` — Scratchpads & many goodies for Hyprland
+- `ranger` — A VIM-inspired filemanager for the console
+- `swaybg` — Great utility if all you want is one simple static wallpaper
 - `waybar` — Highly customizable Wayland bar for Sway and Wlroots based compositors
-- `wofi` — Wofi is a launcher/menu program for wlroots based wayland compositors such as sway
+- `waybar-git` — Highly customizable Wayland bar for Sway and Wlroots based compositors [Built from latest commit, unstable]
+
+### Other dependencies
+
+- `aylurs-gtk-shell` — Scaffolding CLI for Astal+Gnim
+- `cava` — Cross-platform Audio Visualizer
+- `glaze` — Extremely fast, in memory, JSON and reflection library for modern C++.
+- `gtk4-layer-shell` — A library to create panels and other desktop components for Wayland using the Layer Shell protocol and GTK4
+- `sndio` — Portable version of OpenBSD's lightweight audio & MIDI sub-system
 
 ## Build Status 📊
 
-- **[View detailed build report](./docs/full-report.md)** — Fedora 44 · 2026-03-22
+- **[View detailed build report](./docs/full-report.md)** — Fedora 44 · 2026-03-24
 - **[Monitor builds on COPR](https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/monitor/)**
 
 <!-- BEGIN: Footer -->

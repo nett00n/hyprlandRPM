@@ -24,9 +24,11 @@ BuildRequires:  pkgconfig(xkbcommon)
 
 %description
 hyprland-plugins-git
+
 This package is build from latest commit and can be broken
 
 This repo houses official plugins for Hyprland.
+
 Plugin list
 
 - borders-plus-plus -> adds one or two additional borders to windows

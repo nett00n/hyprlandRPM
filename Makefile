@@ -376,9 +376,10 @@ FORCE_MOCK ?=
 PROCEED_BUILD ?=
 SKIP_MOCK ?=
 SKIP_COPR ?=
+DRY_RUN ?=
 SYNCHRONOUS_COPR_BUILD ?=
 
-pkg-full-cycle: ## Run full cycle with YAML report: spec → srpm → mock → copr (FEDORA_VERSION, PACKAGE, COPR_REPO, FORCE_MOCK, PROCEED_BUILD, SKIP_MOCK, SKIP_COPR, SYNCHRONOUS_COPR_BUILD)
+pkg-full-cycle: ## Run full cycle with YAML report: spec → srpm → mock → copr (FEDORA_VERSION, PACKAGE, COPR_REPO, FORCE_MOCK, PROCEED_BUILD, SKIP_MOCK, SKIP_COPR, DRY_RUN, SYNCHRONOUS_COPR_BUILD)
 	$(setup_volumes)
 	$(call run_with_result,$(CONTAINER_RUN) env \
 		FEDORA_VERSION=$(FEDORA_VERSION) \
@@ -389,6 +390,7 @@ pkg-full-cycle: ## Run full cycle with YAML report: spec → srpm → mock → c
 		PROCEED_BUILD=$(PROCEED_BUILD) \
 		SKIP_MOCK=$(SKIP_MOCK) \
 		SKIP_COPR=$(SKIP_COPR) \
+		DRY_RUN=$(DRY_RUN) \
 		SYNCHRONOUS_COPR_BUILD=$(SYNCHRONOUS_COPR_BUILD) \
 		/work/.venv/bin/python3 scripts/full-cycle.py,Full cycle completed,Full cycle failed,$(MAKE_LOGS_DIR)/pkg-full-cycle)
 

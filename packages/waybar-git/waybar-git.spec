@@ -1,7 +1,7 @@
-Name:           waybar
+Name:           waybar-git
 Version:        0.15.0
 Release:        %autorelease%{?dist}
-Summary:        Highly customizable Wayland bar for Sway and Wlroots based compositors
+Summary:        Highly customizable Wayland bar for Sway and Wlroots based compositors [Built from latest commit, unstable]
 License:        MIT
 URL:            https://github.com/Alexays/Waybar
 Source0:        %{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
@@ -38,6 +38,9 @@ BuildRequires:  upower-devel
 BuildRequires:  wireplumber-devel
 
 %description
+waybar-git
+This package is build from latest commit and can be broken
+
 Highly customizable Wayland bar for Sway and Wlroots based compositors
 
 Note: cava integration is disabled temporary. I am stuck with trying to fix it
@@ -66,11 +69,11 @@ Package info:
 %{_userunitdir}/waybar.service
 
 %package devel
-Summary:        Development files for Highly customizable Wayland bar for Sway and Wlroots based compositors
+Summary:        Development files for Highly customizable Wayland bar for Sway and Wlroots based compositors [Built from latest commit, unstable]
 Requires:       %{name} = %{version}-%{release}
 
 %description devel
-Development files for waybar.
+Development files for waybar-git.
 
 %files devel
 
