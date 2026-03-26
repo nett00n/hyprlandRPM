@@ -474,7 +474,7 @@ Hyprland-git:
   release: '%autorelease'
   source:
     archives:
-    - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
+    - '%{url}/archive/%{commit}.tar.gz#/%{name}-%{version}.tar.gz'
     commit:
       date: '20260326'
       full: eb141a6cd068f1319cb7caa1d3ad40f4957f65b1

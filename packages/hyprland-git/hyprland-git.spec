@@ -7,7 +7,7 @@ Release:        %autorelease%{?dist}
 Summary:        A Modern C++ Wayland Compositor [Built from latest commit, unstable]
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/Hyprland
-Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0:        %{url}/archive/%{commit}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake

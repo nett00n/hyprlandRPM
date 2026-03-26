@@ -5,7 +5,6 @@ Summary:        A ready to go Wayland status bar for Hyprland and Niri
 License:        MIT
 URL:            https://github.com/MalpenZibo/ashell
 Source0:        %{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
-Source1:        %{name}-%{version}-vendor.tar.gz
 
 BuildRequires:  cargo
 BuildRequires:  make
@@ -22,8 +21,6 @@ Package info:
 
 %prep
 %autosetup -p1
-tar xf %{SOURCE1}
-test -f .cargo/config.toml && echo "✓ .cargo/config.toml exists" && cat .cargo/config.toml || echo "✗ .cargo/config.toml NOT FOUND"
 
 %build
 CARGO_OFFLINE=1 make %{?_smp_mflags}
