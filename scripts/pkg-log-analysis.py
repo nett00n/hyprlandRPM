@@ -2,27 +2,26 @@
 """Analyze build logs for a package and report actionable errors."""
 
 import sys
-from pathlib import Path
 
-# Add parent directory to path for imports (E402 ok: path setup before imports)
-sys.path.insert(0, str(Path(__file__).parent.parent))  # noqa: E402
-
-from scripts.lib.log_analysis import (  # noqa: E402
+from lib.log_analysis import (
     _analyze_srpm_log,
     _analyze_mock_log,
     _analyze_mock_build_log,
     _suggest_providers,
 )
+from lib.paths import ROOT
 
 HIGHLIGHT_PREFIX = "█▓▒░"
 
 
 def analyze_package(pkg: str) -> int:
-    """Analyze logs for a package. Returns 0 if issues found, 1 if no logs."""
-    log_dir = Path("logs/build") / pkg
+    """Analyze logs for a package. Returns 0 if no issues, 1 if issues found, 2 if no logs."""
+    log_dir = ROOT / "logs/build" / pkg
     if not log_dir.exists():
-        print(f"{HIGHLIGHT_PREFIX} ✗ Log directory not found: {log_dir}")
-        return 1
+        print(
+            f"{HIGHLIGHT_PREFIX} ✗ Log directory not found: {log_dir}", file=sys.stderr
+        )
+        return 2
 
     issues_found = False
 
@@ -75,7 +74,7 @@ def analyze_package(pkg: str) -> int:
         print(f"{HIGHLIGHT_PREFIX} ✓ No issues found in {pkg} logs")
         return 0
 
-    return 0
+    return 1
 
 
 if __name__ == "__main__":

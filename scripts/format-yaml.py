@@ -22,7 +22,14 @@ def _represent_str(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
-yaml.add_representer(str, _represent_str)
+def _make_literal_dumper() -> type[yaml.Dumper]:
+    """Create a PyYAML Dumper subclass with multiline string support."""
+
+    class LiteralDumper(yaml.Dumper):
+        """Dumper that renders multiline strings as block style."""
+
+    LiteralDumper.add_representer(str, _represent_str)
+    return LiteralDumper
 
 
 def load_yamllint_config() -> dict:
@@ -154,6 +161,7 @@ def format_yaml_file(filepath: str, formatting_rules: dict) -> bool:
 
         formatted = yaml.dump(
             data,
+            Dumper=_make_literal_dumper(),
             default_flow_style=False,  # Block style, not flow
             sort_keys=False,  # Preserve order
             allow_unicode=True,  # UTF-8

@@ -334,6 +334,7 @@ def build_context(
         "buildarch": rpm.get("buildarch"),
         "commit": source.get("commit"),
         "source_name": pkg.get("source_name") or source.get("name"),
+        "source_dir": pkg.get("source_dir"),
         "url": pkg["url"],
         "sources": source.get("archives", []),
         "patches": source.get("patches", []),

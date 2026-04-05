@@ -100,6 +100,8 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
         build_requires += ["cmake", "ninja-build", "gcc-c++"]
     elif build_system == "meson":
         build_requires += ["meson", "ninja-build", "gcc-c++"]
+    elif build_system == "cargo":
+        build_requires += ["cargo", "rustc"]
     for dep in pkg_deps:
         build_requires.append(f"pkgconfig({dep})")
 
@@ -155,6 +157,9 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
         build_system=build_system,
         build_requires=build_requires,
         depends_on=depends_on,
+        go_subdir="",
+        build_commands=[],
+        install_commands=[],
     )
 
     if PACKAGES_YAML.exists():

@@ -16,6 +16,7 @@ Environment variables:
   SKIP_MOCK                  If 'true', skip mock build stage
   SKIP_COPR                  If 'true', skip copr submission stage
   SYNCHRONOUS_COPR_BUILD     If 'true', wait for COPR builds; default is async (--nowait)
+  LOG_LEVEL                  Logging level: DEBUG, INFO (default), WARNING, ERROR
 """
 
 import importlib
@@ -25,13 +26,10 @@ import sys
 import time
 from datetime import datetime, timezone
 
-from lib.cache import compute_input_hashes, hashes_match
+from lib.cache import compute_input_hashes
 from lib.deps import build_dep_graph, topological_sort, transitive_deps
-from lib.log_analysis import (
-    _analyze_mock_build_log,
-    _analyze_mock_log,
-    _suggest_providers,
-)
+from lib.log_analysis import report_mock_failures
+from lib.pipeline import compute_forced_stages, inject_stage_meta, is_cached
 from lib.paths import BUILD_LOG_DIR, ROOT, get_package_log_dir, mock_chroot
 from lib.reporting import print_summary
 from lib.yaml_utils import (
@@ -53,6 +51,7 @@ _stage = {
     name: importlib.import_module(name)
     for name in [
         "stage-validate",
+        "stage-show-plan",
         "stage-spec",
         "stage-vendor",
         "stage-srpm",
@@ -60,69 +59,6 @@ _stage = {
         "stage-copr",
     ]
 }
-
-# Stage order for cascading force_run
-STAGE_ORDER = ["spec", "vendor", "srpm", "mock", "copr"]
-
-
-def _compute_forced_stages(
-    pkg: str, meta: dict, build_status: dict, rebuilt_packages: set[str]
-) -> set[str]:
-    """Return set of stages that must run due to force_run or dependency cascade.
-
-    Rules:
-    1. If any dependency was rebuilt this run, force all stages
-    2. If any stage has force_run=true, that stage and all downstream stages are forced
-    """
-    forced: set[str] = set()
-    cascade = False
-
-    # If any dependency was rebuilt this run, force all stages
-    if any(dep in rebuilt_packages for dep in meta.get("depends_on", [])):
-        return set(STAGE_ORDER)
-
-    # Check each stage for force_run flag; once found, cascade to remaining stages
-    for stage in STAGE_ORDER:
-        entry = build_status.get("stages", {}).get(stage, {}).get(pkg, {})
-        if cascade or entry.get("force_run", False):
-            forced.add(stage)
-            cascade = True
-    return forced
-
-
-def _is_cached(
-    stage: str, pkg: str, build_status: dict, new_hashes: dict, forced_stages: set[str]
-) -> bool:
-    """Return True if stage was already successful, hashes match, and not in forced_stages."""
-    if stage in forced_stages:
-        return False
-    entry = build_status.get("stages", {}).get(stage, {}).get(pkg, {})
-    return entry.get("state") == "success" and hashes_match(entry, new_hashes)
-
-
-def _inject_stage_meta(
-    stage: str,
-    pkg: str,
-    build_status: dict,
-    started_at: int,
-    new_hashes: dict,
-    update_hashes: bool = True,
-) -> None:
-    """Inject started_at and hashes (on success) into stage entry.
-
-    Also removes force_run flag after stage execution (one-shot).
-
-    If update_hashes=False, preserves stored hashes (for proceed-skip cases).
-    """
-    entry = build_status.get("stages", {}).get(stage, {}).get(pkg)
-    if entry is None:
-        return
-    entry["started_at"] = started_at
-    entry.pop(
-        "force_run", None
-    )  # cleared after every run; operator must re-set to force again
-    if update_hashes and entry.get("state") == "success":
-        entry["hashes"] = new_hashes
 
 
 def print_proceed_status(packages: dict, build_status: dict, copr_repo: str) -> None:
@@ -257,6 +193,11 @@ def run_build_pipeline(
     """
     all_packages = get_packages()
 
+    # Show plan first, before any processing
+    _stage["stage-show-plan"].show_plan(copr_repo=copr_repo)
+    print("  waiting 5 seconds before proceeding...", flush=True)
+    time.sleep(5)
+
     # Global checks: run once before the per-package loop
     _stage["stage-validate"].run_global_checks(all_packages, build_status)
     save_build_status(build_status)
@@ -275,9 +216,7 @@ def run_build_pipeline(
         new_hashes = compute_input_hashes(pkg, meta, all_packages)
 
         # Compute forced stages (from force_run or dependency cascade)
-        forced_stages = _compute_forced_stages(
-            pkg, meta, build_status, rebuilt_packages
-        )
+        forced_stages = compute_forced_stages(pkg, meta, build_status, rebuilt_packages)
 
         # Validate (non-fatal, no caching)
         if not _stage["stage-validate"].run_for_package(
@@ -289,7 +228,7 @@ def run_build_pipeline(
         save_build_status(build_status)
 
         # Spec
-        if _is_cached("spec", pkg, build_status, new_hashes, forced_stages):
+        if is_cached("spec", pkg, build_status, new_hashes, forced_stages):
             print("    spec: cached")
         else:
             rebuilt_packages.add(pkg)
@@ -299,9 +238,9 @@ def run_build_pipeline(
             )
             is_proceed_skip = proceed and prior_state == "success"
             if not _stage["stage-spec"].run_for_package(
-                pkg, meta, build_status, fedora_version
+                pkg, meta, all_packages, build_status, fedora_version
             ):
-                _inject_stage_meta(
+                inject_stage_meta(
                     "spec",
                     pkg,
                     build_status,
@@ -316,7 +255,7 @@ def run_build_pipeline(
                 ):
                     continue
             else:
-                _inject_stage_meta(
+                inject_stage_meta(
                     "spec",
                     pkg,
                     build_status,
@@ -328,7 +267,7 @@ def run_build_pipeline(
         save_build_status(build_status)
 
         # Vendor
-        if _is_cached("vendor", pkg, build_status, new_hashes, forced_stages):
+        if is_cached("vendor", pkg, build_status, new_hashes, forced_stages):
             print("    vendor: cached")
         else:
             rebuilt_packages.add(pkg)
@@ -344,7 +283,7 @@ def run_build_pipeline(
                 pkg, meta, build_status, fedora_version
             )
             if result is False:
-                _inject_stage_meta(
+                inject_stage_meta(
                     "vendor",
                     pkg,
                     build_status,
@@ -357,7 +296,7 @@ def run_build_pipeline(
                 if not any(s in forced_stages for s in ["srpm", "mock", "copr"]):
                     continue
             else:
-                _inject_stage_meta(
+                inject_stage_meta(
                     "vendor",
                     pkg,
                     build_status,
@@ -369,7 +308,7 @@ def run_build_pipeline(
         save_build_status(build_status)
 
         # SRPM
-        if _is_cached("srpm", pkg, build_status, new_hashes, forced_stages):
+        if is_cached("srpm", pkg, build_status, new_hashes, forced_stages):
             print("    srpm: cached")
         else:
             rebuilt_packages.add(pkg)
@@ -381,7 +320,7 @@ def run_build_pipeline(
             if not _stage["stage-srpm"].run_for_package(
                 pkg, meta, build_status, fedora_version, proceed
             ):
-                _inject_stage_meta(
+                inject_stage_meta(
                     "srpm",
                     pkg,
                     build_status,
@@ -394,7 +333,7 @@ def run_build_pipeline(
                 if not any(s in forced_stages for s in ["mock", "copr"]):
                     continue
             else:
-                _inject_stage_meta(
+                inject_stage_meta(
                     "srpm",
                     pkg,
                     build_status,
@@ -409,7 +348,7 @@ def run_build_pipeline(
         if skip_mock:
             print("    mock: skipped (SKIP_MOCK=true)")
         else:
-            if _is_cached("mock", pkg, build_status, new_hashes, forced_stages):
+            if is_cached("mock", pkg, build_status, new_hashes, forced_stages):
                 print("    mock: cached")
             else:
                 rebuilt_packages.add(pkg)
@@ -431,7 +370,7 @@ def run_build_pipeline(
                     mock_failed,
                     packages,
                 ):
-                    _inject_stage_meta(
+                    inject_stage_meta(
                         "mock",
                         pkg,
                         build_status,
@@ -444,7 +383,7 @@ def run_build_pipeline(
                     if "copr" not in forced_stages:
                         continue
                 else:
-                    _inject_stage_meta(
+                    inject_stage_meta(
                         "mock",
                         pkg,
                         build_status,
@@ -459,7 +398,7 @@ def run_build_pipeline(
         if skip_copr:
             print("    copr: skipped (SKIP_COPR=true)")
         elif copr_repo:
-            if _is_cached("copr", pkg, build_status, new_hashes, forced_stages):
+            if is_cached("copr", pkg, build_status, new_hashes, forced_stages):
                 print("    copr: cached")
             else:
                 rebuilt_packages.add(pkg)
@@ -471,7 +410,7 @@ def run_build_pipeline(
                     .get("state")
                 )
                 is_proceed_skip = proceed and prior_state == "success"
-                _stage["stage-copr"].run_for_package(
+                success = _stage["stage-copr"].run_for_package(
                     pkg,
                     meta,
                     build_status,
@@ -480,65 +419,26 @@ def run_build_pipeline(
                     proceed,
                     synchronous_copr,
                 )
-                _inject_stage_meta(
+                inject_stage_meta(
                     "copr",
                     pkg,
                     build_status,
                     started_at,
                     new_hashes,
-                    update_hashes=not is_proceed_skip,
+                    update_hashes=not is_proceed_skip and success,
                 )
 
             save_build_status(build_status)
 
 
-def analyze_mock_failures(packages: dict) -> None:
-    """Analyze logs for packages with mock build failures and print actionable errors."""
-    log_dir = ROOT / "logs" / "build"
-    has_failures = False
+def finalize_report(
+    packages: dict, build_status: dict, copr_repo: str, synchronous_copr: bool = False
+) -> None:
+    """Load final status, print summary, write report, and exit if any failed.
 
-    for pkg in packages:
-        pkg_log_dir = log_dir / pkg
-        if not pkg_log_dir.exists():
-            continue
-
-        # Check mock builddep failures
-        mock_log = pkg_log_dir / "20-mock.log"
-        if mock_log.exists():
-            issues = _analyze_mock_log(mock_log)
-            if issues:
-                if not has_failures:
-                    print("\n=== Mock Build Issues Analysis ===")
-                    has_failures = True
-                print(f"\n  [{pkg}] builddep:")
-                for lineno, raw_line, msg, dep, method in issues:
-                    print(f"    - {msg}")
-                    print(f"      {mock_log.relative_to(ROOT)}:{lineno}: {raw_line}")
-                    providers = _suggest_providers(dep, method)
-                    if providers:
-                        yaml_list = "\n        ".join(f'- "{p}"' for p in providers)
-                        print(f"      suggested packages:\n        {yaml_list}")
-
-        # Check mock build failures
-        build_log = pkg_log_dir / "21-mock-build.log"
-        if build_log.exists():
-            issues = _analyze_mock_build_log(build_log)
-            if issues:
-                if not has_failures:
-                    print("\n=== Mock Build Issues Analysis ===")
-                    has_failures = True
-                print(f"\n  [{pkg}] build:")
-                for lineno, raw_line, msg, dep, method in issues:
-                    print(f"    - {msg}")
-                    print(f"      {build_log.relative_to(ROOT)}:{lineno}: {raw_line}")
-                    providers = _suggest_providers(dep, method)
-                    if providers:
-                        yaml_list = "\n        ".join(f'- "{p}"' for p in providers)
-                        print(f"      suggested packages:\n        {yaml_list}")
-
-
-def finalize_report(packages: dict, build_status: dict, copr_repo: str) -> None:
-    """Load final status, print summary, write report, and exit if any failed."""
+    When SYNCHRONOUS_COPR_BUILD=false, 'unknown' states in copr stage are valid (builds pending).
+    Only fail if there are actual 'failed' states in non-copr stages or in copr when synchronous.
+    """
     final_status = load_build_status()
     final_status["run"] = build_status["run"]
     print_summary(packages, final_status, copr_repo)
@@ -549,7 +449,9 @@ def finalize_report(packages: dict, build_status: dict, copr_repo: str) -> None:
 
     any_failed = any(
         info.get("state") == "failed"
-        for stage_data in final_status.get("stages", {}).values()
+        for stage_name, stage_data in final_status.get("stages", {}).items()
+        if stage_name not in ("validate", "copr")
+        or (stage_name == "copr" and synchronous_copr)
         for info in (stage_data or {}).values()
     )
 
@@ -560,7 +462,7 @@ def finalize_report(packages: dict, build_status: dict, copr_repo: str) -> None:
         if info.get("state") == "failed"
     ]
     if mock_failures:
-        analyze_mock_failures(packages)
+        report_mock_failures(packages, BUILD_LOG_DIR)
 
     if any_failed:
         sys.exit(1)
@@ -623,7 +525,7 @@ def main() -> None:
         skip_copr,
         synchronous_copr,
     )
-    finalize_report(packages, build_status, copr_repo)
+    finalize_report(packages, build_status, copr_repo, synchronous_copr)
 
 
 if __name__ == "__main__":

@@ -13,8 +13,10 @@ Environment variables:
   MOCK_CHROOT     Override mock chroot (default: fedora-{FEDORA_VERSION}-x86_64)
   SKIP_PACKAGES   Skip these packages (optional, comma-separated)
   PROCEED_BUILD   Skip packages where mock stage already succeeded
+  LOG_LEVEL       Logging level: DEBUG, INFO (default), WARNING, ERROR
 """
 
+import logging
 import os
 import re
 import shutil
@@ -23,6 +25,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from lib.config import setup_logging
 from lib.deps import build_dep_graph, infer_deps, topological_sort
 from lib.paths import LOCAL_REPO, ROOT, get_package_log_dir, mock_chroot
 from lib.reporting import status, verbose_proceed_check
@@ -54,11 +57,17 @@ def update_local_repo(mock_chroot: str) -> None:
             shutil.copy2(rpm, LOCAL_REPO)
             copied = True
     if copied or not (LOCAL_REPO / "repodata").exists():
-        subprocess.run(
+        result = subprocess.run(
             ["createrepo_c", "--update", str(LOCAL_REPO)],
             capture_output=True,
             stdin=subprocess.DEVNULL,
         )
+        if result.returncode != 0:
+            logging.error(
+                "createrepo_c failed: %s",
+                result.stderr.decode() if result.stderr else "",
+            )
+            raise RuntimeError(f"createrepo_c failed with code {result.returncode}")
 
 
 def copy_mock_results(mock_chroot: str, pkg: str) -> list[str]:
@@ -213,7 +222,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
+        setup_logging()
         main()
     except KeyboardInterrupt:
-        print("\nUser Interrupted.", file=sys.stderr)
+        logging.warning("User Interrupted.")
         sys.exit(130)

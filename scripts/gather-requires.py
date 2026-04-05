@@ -41,7 +41,10 @@ def rpm(*args: str) -> list[str]:
         ["rpm", *args],
         capture_output=True,
         text=True,
+        timeout=30,
     )
+    if result.returncode != 0:
+        raise RuntimeError(f"rpm command failed: {result.stderr}")
     return result.stdout.splitlines()
 
 

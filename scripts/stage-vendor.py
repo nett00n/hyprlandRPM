@@ -16,11 +16,14 @@ Environment variables:
   PACKAGE         Build only this package (optional, comma-separated)
   FEDORA_VERSION  Fedora version to target (default: 43)
   SKIP_PACKAGES   Skip these packages (optional, comma-separated)
+  LOG_LEVEL       Logging level: DEBUG, INFO (default), WARNING, ERROR
 """
 
+import logging
 import os
 import sys
 
+from lib.config import setup_logging
 from lib.paths import ROOT, SOURCES_DIR, get_package_log_dir
 from lib.reporting import status
 from lib.vendor import VendorError, generate, is_go_package, vendor_tarball_path
@@ -66,6 +69,7 @@ def run_for_package(
             "state": "skipped",
             "version": ver,
             "log": None,
+            "force_run": False,
         }
         return True
 
@@ -141,7 +145,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
+        setup_logging()
         main()
     except KeyboardInterrupt:
-        print("\nUser Interrupted.", file=sys.stderr)
+        logging.warning("User Interrupted.")
         sys.exit(130)

@@ -32,7 +32,13 @@ def status(stage: str, pkg: str, result: str, detail: str = "") -> None:
 
 def print_summary(packages: dict, report: dict, copr_repo: str) -> None:
     """Print the final build summary table."""
-    stage_keys = ["spec", "vendor", "srpm", "mock"] + (["copr"] if copr_repo else [])
+    if not packages:
+        print("\nNo packages to summarize.")
+        return
+
+    stage_keys = ["validate", "spec", "vendor", "srpm", "mock"] + (
+        ["copr"] if copr_repo else []
+    )
     col_w = max(len(p) for p in packages) + 2
     header = f"{'package':<{col_w}}" + "".join(f"{s:<18}" for s in stage_keys)
     sep = "-" * len(header)
@@ -40,11 +46,17 @@ def print_summary(packages: dict, report: dict, copr_repo: str) -> None:
     for pkg in packages:
         row = f"{pkg:<{col_w}}"
         for stage in stage_keys:
-            pkg_data = report["stages"][stage].get(pkg, {})
+            pkg_data = report.get("stages", {}).get(stage, {}).get(pkg, {})
             state = pkg_data.get("state", "-")
-            icon = {"success": "OK", "failed": "FAIL", "skipped": "SKIP"}.get(
-                state, state
-            )
+            # Validate uses WARN for failures (warning level), other stages use FAIL
+            if stage == "validate":
+                icon = {"success": "OK", "failed": "WARN", "skipped": "SKIP"}.get(
+                    state, state
+                )
+            else:
+                icon = {"success": "OK", "failed": "FAIL", "skipped": "SKIP"}.get(
+                    state, state
+                )
             ts = pkg_data.get("completed_at")
             cell = f"{icon}({ts})" if ts and state == "skipped" else icon
             row += f"{cell:<18}"

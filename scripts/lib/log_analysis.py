@@ -23,7 +23,16 @@ _PKG_CONFLICT_RE = re.compile(
 )
 
 # 404 Client Error: Not Found for url: https://...
-_HTTP_ERROR_RE = re.compile(r"(\d{3}) Client Error: \S+ for url: (\S+)")
+_HTTP_ERROR_RE = re.compile(r"(\d{3}) Client Error: .+? for url: (\S+)")
+
+# error: Bad file: /root/rpmbuild/SOURCES/mpvpaper-1.2.1.tar.gz: No such file or directory
+_SRPM_MISSING_SOURCE_RE = re.compile(
+    r"^error: Bad file: /\S+/(\S+\.tar\.(?:gz|bz2|xz)): No such file or directory"
+)
+
+# Generic error: line handler (catches miscellaneous errors)
+# error: Something went wrong: details...
+_GENERIC_ERROR_RE = re.compile(r"^error: (.+)$")
 
 # + %cmake  (unexpanded RPM macro run as shell command → "fg: no job control")
 _UNEXPANDED_MACRO_RE = re.compile(r"^\+ %(\w+)")
@@ -36,6 +45,11 @@ _FG_NO_JOB_CONTROL_RE = re.compile(
 # /var/tmp/rpm-tmp.fRdqHf: line 59: /usr/bin/cmake: No such file or directory
 _MISSING_BINARY_RE = re.compile(
     r"^/var/tmp/rpm-tmp\.\w+: line \d+: (/\S+): No such file or directory"
+)
+
+# /var/tmp/rpm-tmp.PsPh8C: line 47: cargo: command not found
+_BARE_COMMAND_NOT_FOUND_RE = re.compile(
+    r"^/var/tmp/rpm-tmp\.\w+: line \d+: (\S+): command not found"
 )
 
 # CMake Error: The source directory "..." does not appear to contain CMakeLists.txt.
@@ -62,6 +76,23 @@ _MESON_PROBLEM_RE = re.compile(
 _MESON_WRAP_FALLBACK_RE = re.compile(
     r"Looking for a fallback subproject for the dependency (\S+)"
 )
+
+# CMake Error at CMakeLists.txt:128 (find_package):
+#   Could not find a package configuration file provided by "glslang"
+_CMAKE_MISSING_PKGCONFIG_RE = re.compile(
+    r"CMake Error at CMakeLists\.txt:\d+ \(find_package\):"
+)
+
+# CMake Error at /usr/share/cmake/Modules/FindPkgConfig.cmake:1093 (message):
+#   The following required packages were not found:
+#    - lcms2
+_CMAKE_PKG_CHECK_MODULES_RE = re.compile(
+    r"CMake Error at /usr/share/cmake/Modules/FindPkgConfig\.cmake:\d+ \(message\):"
+)
+
+# CMake Error at CMakeLists.txt:130 (find_package):
+#   By not providing "FindQt6.cmake" in CMAKE_MODULE_PATH...
+_CMAKE_MISSING_PKGCONFIG_BYNAME_RE = re.compile(r'By not providing "Find(\w+)\.cmake"')
 
 # CMake Error at CMakeLists.txt:49 (add_library):
 #   Cannot find source file:
@@ -92,6 +123,45 @@ _EMPTY_DEBUGFILES_RE = re.compile(
 # error: File not found: /builddir/build/BUILD/.../BUILDROOT/...
 _FILES_NOT_FOUND_RE = re.compile(
     r"^error: (?:Directory|File) not found: /builddir/build/BUILD/[^/]+/BUILDROOT(/\S+)"
+)
+
+# error: failed to get `bitflags` as a dependency of package `cosmic-client-toolkit v0.2.0 (...)
+# Caused by: [6] Could not resolve hostname (Could not resolve host: index.crates.io)
+_CARGO_NETWORK_ERROR_RE = re.compile(r"^error: failed to get `([^`]+)` as a dependency")
+
+# error: File must begin with "/": %{_userunitdir}/app-graphical.slice
+_SPEC_FILE_MACRO_RE = re.compile(
+    r"^error: File must begin with \"/\": (%{[^}]+}/[^'\s]+)"
+)
+
+# /path/to/file.cpp:123:45: error: 'symbol' was not declared in this scope
+# /path/to/file.c:456:10: error: undefined reference to 'symbol'
+_COMPILER_ERROR_RE = re.compile(r"^([^:]+):(\d+):\d+: (?:error|fatal error): (.+)$")
+
+# /usr/bin/ld: /path/to/object.o: in function `main':
+# (.text+0x123): undefined reference to `symbol'
+_LINKER_UNDEFINED_REF_RE = re.compile(
+    r"(?:undefined reference|undefined symbol) to ['\`]([^'`]+)['\`]"
+)
+
+# collect2: error: ld returned 1 exit status
+_LINKER_RETURN_CODE_RE = re.compile(r"^collect2: error: ld returned \d+ exit status")
+
+# error: incorrect format: unknown tag: "pkgid"
+# This is a librpm format issue that can cause spec parsing to fail
+_LIBRPM_FORMAT_ERROR_RE = re.compile(
+    r"error: incorrect format: unknown tag: \"([^\"]+)\""
+)
+
+# Executing(%install), Executing(%package), Executing(%check) phases
+# + exit code indicates failure in that phase
+_RPM_PHASE_EXECUTING_RE = re.compile(
+    r"^Executing\(%(\w+)\): /bin/sh -e /var/tmp/rpm-tmp\.\w+"
+)
+
+# error: Bad exit status from /var/tmp/rpm-tmp.XXX (%install)
+_BAD_EXIT_STATUS_RE = re.compile(
+    r"^error: Bad exit status from /var/tmp/rpm-tmp\.\w+ \(%(\w+)\)"
 )
 
 
@@ -173,6 +243,32 @@ def _analyze_srpm_log(log_path: Path) -> list[tuple[int, str, str, str, str]]:
                     "http",
                 )
             )
+            continue
+        m = _SRPM_MISSING_SOURCE_RE.match(line)
+        if m:
+            filename = m.group(1)
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f'source file "{filename}" not downloaded — check spectool output above for download error (network issue, URL mismatch, or authentication required)',
+                    filename,
+                    "http",
+                )
+            )
+            continue
+        m = _GENERIC_ERROR_RE.match(line)
+        if m:
+            error_msg = m.group(1).strip()
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f"SRPM error: {error_msg}",
+                    error_msg,
+                    "none",
+                )
+            )
     return issues
 
 
@@ -243,6 +339,19 @@ def _analyze_mock_build_log(log_path: Path) -> list[tuple[int, str, str, str, st
                 )
             )
             continue
+        m = _BARE_COMMAND_NOT_FOUND_RE.match(line)
+        if m:
+            command = m.group(1)
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f'command not found: "{command}" — add to packages.yaml build_requires',
+                    command,
+                    "tool",
+                )
+            )
+            continue
         m = _CMAKE_NO_CMAKELISTS_RE.search(line)
         if m:
             issues.append(
@@ -254,6 +363,68 @@ def _analyze_mock_build_log(log_path: Path) -> list[tuple[int, str, str, str, st
                     "none",
                 )
             )
+            continue
+        m = _CMAKE_MISSING_PKGCONFIG_RE.search(line)
+        if m:
+            # Look for the package name in the next line
+            pkg = ""
+            if lineno < len(raw_lines):
+                next_line = raw_lines[lineno]
+                pkg_match = re.search(
+                    r'Could not find a package configuration file provided by "([^"]+)"',
+                    next_line,
+                )
+                if pkg_match:
+                    pkg = pkg_match.group(1)
+            if pkg:
+                issues.append(
+                    (
+                        lineno,
+                        line.strip(),
+                        f'missing CMake package: "{pkg}"',
+                        pkg,
+                        "pkgconfig",
+                    )
+                )
+            continue
+        m = _CMAKE_MISSING_PKGCONFIG_BYNAME_RE.search(line)
+        if m:
+            pkg = m.group(1)
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f'missing CMake package: "{pkg}"',
+                    pkg,
+                    "pkgconfig",
+                )
+            )
+            continue
+        m = _CMAKE_PKG_CHECK_MODULES_RE.search(line)
+        if m:
+            # Look for package names starting with " - " in following lines
+            pkgs = []
+            for next_idx in range(lineno, min(lineno + 10, len(raw_lines))):
+                next_line = raw_lines[next_idx]
+                if next_line.strip().startswith("- "):
+                    pkg = next_line.strip()[2:].strip()
+                    if pkg:
+                        pkgs.append(pkg)
+                elif next_line.strip() and not next_line.startswith(" "):
+                    # Stop at first non-indented, non-empty line
+                    break
+            # Report first package; others will be caught in subsequent lines
+            if pkgs:
+                pkg_list = ", ".join(f'"{p}"' for p in pkgs)
+                issues.append(
+                    (
+                        lineno,
+                        line.strip(),
+                        f"missing pkgconfig packages: {pkg_list}",
+                        pkgs[0],
+                        "pkgconfig",
+                    )
+                )
             continue
         m = _MAKE_MISSING_TOOL_RE.match(line)
         if m:
@@ -384,6 +555,135 @@ def _analyze_mock_build_log(log_path: Path) -> list[tuple[int, str, str, str, st
                     line.strip(),
                     f'file declared in packages.yaml but not found after build: "{filepath}" — build system does not produce this file, remove from files: in packages.yaml',
                     filepath,
+                    "none",
+                )
+            )
+            continue
+        m = _CARGO_NETWORK_ERROR_RE.match(line)
+        if m:
+            crate = m.group(1)
+            # Look for the "Caused by: failed to download from" lines to extract URL
+            url = ""
+            for next_line in raw_lines[lineno : min(lineno + 10, len(raw_lines))]:
+                if "failed to download from" in next_line:
+                    url_match = re.search(r"`([^`]+)`", next_line)
+                    if url_match:
+                        url = url_match.group(1)
+                    break
+            error_msg = f'cargo failed to download crate "{crate}" from {url} — network/DNS error during dependency resolution'
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    error_msg,
+                    url if url else crate,
+                    "none",
+                )
+            )
+            continue
+        m = _SPEC_FILE_MACRO_RE.match(line)
+        if m:
+            macro_path = m.group(1)
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f'RPM macro "{macro_path}" not expanded — add package providing macro to build_requires (e.g., systemd-rpm-macros for %{{_userunitdir}})',
+                    "",
+                    "none",
+                )
+            )
+            continue
+        m = _LINKER_UNDEFINED_REF_RE.search(line)
+        if m:
+            symbol = m.group(1)
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f'linker error: undefined reference to symbol "{symbol}" — missing library in build_requires or incompatible dependency version',
+                    symbol,
+                    "none",
+                )
+            )
+            continue
+        m = _LINKER_RETURN_CODE_RE.match(line)
+        if m:
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    "linker error: linking failed — check previous lines for missing symbols or incompatible libraries",
+                    "",
+                    "none",
+                )
+            )
+            continue
+        m = _COMPILER_ERROR_RE.match(line)
+        if m:
+            filepath, lineno_src, error_msg = m.group(1), m.group(2), m.group(3)
+            # Classify error type
+            hint = ""
+            if "was not declared in this scope" in error_msg:
+                hint = "undeclared identifier — missing header file or incorrect library version"
+            elif "no member named" in error_msg or "has no member" in error_msg:
+                hint = "struct/class has no such member — incompatible dependency version or API mismatch"
+            elif "expected" in error_msg and "but got" in error_msg:
+                hint = "type mismatch — check function signature or argument types (may be API change in dependency)"
+            else:
+                hint = error_msg.rstrip(".")
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f"compilation error (line {lineno_src}): {hint}",
+                    filepath,
+                    "none",
+                )
+            )
+            continue
+        m = _LIBRPM_FORMAT_ERROR_RE.search(line)
+        if m:
+            tag = m.group(1)
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f'librpm format error: unknown tag "{tag}" in spec file — check for invalid RPM macros or malformed spec syntax',
+                    tag,
+                    "none",
+                )
+            )
+            continue
+        m = _BAD_EXIT_STATUS_RE.match(line)
+        if m:
+            phase = m.group(1)
+            phase_friendly = {
+                "prep": "source preparation (%prep)",
+                "build": "build (%build)",
+                "install": "installation (%install)",
+                "package": "packaging (%package)",
+                "check": "test (%check)",
+            }.get(phase, f"RPM phase ({phase})")
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f"failed during {phase_friendly} — check previous lines for the actual error",
+                    phase,
+                    "none",
+                )
+            )
+            continue
+        m = _GENERIC_ERROR_RE.match(line)
+        if m:
+            error_msg = m.group(1).strip()
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    f"build error: {error_msg}",
+                    error_msg,
                     "none",
                 )
             )

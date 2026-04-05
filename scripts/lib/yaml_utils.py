@@ -179,10 +179,20 @@ def load_build_status(path: Path = BUILD_STATUS_YAML) -> dict:
     """Load build-report.yaml or return empty structure."""
     if path.exists():
         try:
-            return yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text())
+            if not isinstance(data, dict):
+                # Non-dict content, use default structure
+                data = {}
         except yaml.YAMLError as e:
             sys.exit(f"error: failed to parse {path}: {e}")
-    return {"stages": {s: {} for s in STAGES}}
+    else:
+        data = {}
+
+    # Normalize: ensure stages key exists
+    if "stages" not in data:
+        data["stages"] = {s: {} for s in STAGES}
+
+    return data
 
 
 def dump_yaml_pretty(data: dict) -> str:

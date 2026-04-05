@@ -26,6 +26,8 @@ local-repo/
 build-report.yaml
 build-report.*.yaml
 logs/
+.coverage
+.htmlcov/
 
 
 # Environment

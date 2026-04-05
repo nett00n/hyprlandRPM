@@ -40,14 +40,27 @@ def vendor_tarball_path(pkg_name: str, version: str, sources_dir: Path) -> Path:
 
 
 def _download(url: str, dest: Path) -> None:
-    with urllib.request.urlopen(url, timeout=60) as resp:
-        dest.write_bytes(resp.read())
+    try:
+        with urllib.request.urlopen(url, timeout=60) as resp:
+            dest.write_bytes(resp.read())
+    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+        raise VendorError(f"failed to download {url}: {e}") from e
+    except OSError as e:
+        raise VendorError(f"failed to download {url}: {e}") from e
 
 
 def _extract(archive: Path, target_dir: Path) -> Path:
     with tarfile.open(archive) as tf:
         top_dirs = {m.name.split("/")[0] for m in tf.getmembers() if m.name}
-        tf.extractall(target_dir, filter="data")
+        # filter="data" prevents path traversal attacks but requires Python 3.12+
+        try:
+            tf.extractall(target_dir, filter="data")  # type: ignore
+        except TypeError:
+            # Fall back for Python < 3.12: manual member validation
+            for member in tf.getmembers():
+                if member.name.startswith("/") or ".." in member.name:
+                    raise VendorError(f"Unsafe tarball member: {member.name}")
+            tf.extractall(target_dir)
     if len(top_dirs) == 1:
         return target_dir / top_dirs.pop()
     return target_dir

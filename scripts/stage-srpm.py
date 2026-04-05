@@ -11,14 +11,17 @@ Environment variables:
   FEDORA_VERSION  Fedora version to target (default: 43)
   SKIP_PACKAGES   Skip these packages (optional, comma-separated)
   PROCEED_BUILD   Skip packages where mock stage already succeeded
+  LOG_LEVEL       Logging level: DEBUG, INFO (default), WARNING, ERROR
 """
 
+import logging
 import os
 import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
+from lib.config import setup_logging
 from lib.paths import ROOT, SOURCES_DIR, get_package_log_dir
 from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
@@ -180,7 +183,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
+        setup_logging()
         main()
     except KeyboardInterrupt:
-        print("\nUser Interrupted.", file=sys.stderr)
+        logging.warning("User Interrupted.")
         sys.exit(130)

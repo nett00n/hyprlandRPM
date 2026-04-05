@@ -12,17 +12,20 @@ templates/full-report.md.j2 # Jinja2 template for detailed build report
 templates/_*.j2                    # Jinja2 snippet: simple, no includes
 templates/__*.j2                   # Jinja2 snippet: composite, includes other snippets
 templates/packages-entry.yaml.j2   # Jinja2 template for new packages.yaml entries
-scripts/full-cycle.py              # runs the complete pipeline end-to-end
-scripts/gen-spec.py                # renders specs from packages.yaml + templates/spec.j2
+scripts/full-cycle.py              # full build orchestrator: spec → vendor → srpm → mock → copr
 scripts/gen-report.py              # renders the build report from build-report.yaml
-scripts/gen-vendor-tarball.py      # standalone: generate Go vendor tarball for one package
-scripts/scaffold-package.py        # scaffolds a new packages.yaml entry from a GitHub URL
-scripts/stage-validate.py          # pipeline stage: validate packages.yaml entries
-scripts/stage-spec.py              # pipeline stage: generate spec files
-scripts/stage-vendor.py            # pipeline stage: generate Go vendor tarballs
-scripts/stage-srpm.py              # pipeline stage: build SRPMs
-scripts/stage-mock.py              # pipeline stage: local mock build
-scripts/stage-copr.py              # pipeline stage: submit to Copr
+scripts/scaffold-package.py        # scaffolds a new packages.yaml entry from a submodule
+scripts/update-versions.py         # fetches latest submodule tags and updates packages.yaml
+scripts/pkg-log-analysis.py        # analyzes build logs for actionable errors
+scripts/stage-validate.py          # stage 0: validate packages.yaml entries
+scripts/stage-spec.py              # stage 1: generate spec files
+scripts/stage-vendor.py            # stage 1b: generate Go vendor tarballs
+scripts/stage-srpm.py              # stage 2: build SRPMs
+scripts/stage-mock.py              # stage 3: local mock build
+scripts/stage-copr.py              # stage 4: submit to Copr
+scripts/stage-show-plan.py         # show build plan (what will run, cache, or skip)
+scripts/format-yaml.py             # YAML formatter invoked by `make fmt-yaml`
+scripts/serve.py                   # dev convenience: local HTTP file server for build artifacts
 scripts/lib/                       # shared library modules for all pipeline scripts
 requirements-dev.txt               # Python deps (jinja2, pyyaml, mypy, ruff, yamllint, flake8, rpmlint)
 submodules/<org>/<name>/           # upstream sources as git submodules
@@ -83,15 +86,23 @@ This registers the submodule and scaffolds the `packages.yaml` entry in one step
 
 Alternatively, step by step:
 
-1. Add repository as a submodule: `git submodule add <url> submodules/<org>/<name>`
+1. View available submodules and their latest tags (optional):
+   ```shell
+   make list-tags PACKAGE=<name>  # list tags for one package
+   make list-tags                 # list tags for all submodules
+   ```
 
-1. Build container image: `make container-build` (or `make container-all` for all Fedora versions)
+2. Add repository as a submodule:
+   ```shell
+   git submodule add <url> submodules/<org>/<name>
+   make add-submodule PACKAGE=<name>  # register it in git (same as step 1 above)
+   ```
+
+3. Build container image: `make container-build` (or `make container-all` for all Fedora versions)
 
 1. Create virtualenv if not exist: `make setup-venv`
 
-1. Execute
-   `. .venv/bin/activate && python3 scripts/scaffold-package.py <name>`
-   with your package instead of `<name>`
+1. Execute: `make scaffold-package PACKAGE=<name>` with your package instead of `<name>`
 
 1. New entry would be added to `packages.yaml`:
 
@@ -132,10 +143,10 @@ Alternatively, step by step:
 1. Start build cycle:
 
    ```shell
-   make pkg-full-cycle PKG=<name> FEDORA_VERSION=43 COPR_REPO=nett00n/hyprland
+   make full-cycle PACKAGE=<name> FEDORA_VERSION=43 COPR_REPO=nett00n/hyprland
    # Default variable values:
    # FEDORA_VERSION=43
-   # PKG= (or PACKAGE=) — all packages if unset
+   # PACKAGE= (or PKG=) — all packages if unset
    # COPR_REPO= — no push to Copr if unset
    ```
 
@@ -147,7 +158,7 @@ Alternatively, step by step:
 1. If the build failed, analyze logs for actionable errors:
 
    ```shell
-   make pkg-log-analysis PKG=<name>
+   make stage-log-analyze PACKAGE=<name>
    ```
 
    This parses mock/srpm logs and reports:
@@ -158,8 +169,6 @@ Alternatively, step by step:
 
 1. Fix issues in `packages.yaml` (add `build_requires`, exclude incompatible plugins, etc.) and retry
 
-1. If anything new happened, make a report in `docs/errs/` using `_template.md`
-
 1. Verify with rpmlint:
 
 ```shell
@@ -167,6 +176,52 @@ rpmlint packages/<name>/<name>.spec
 ```
 
 13. Commit, make PR
+
+## Utility Commands
+
+### Download Sources
+
+Pre-download sources for a package using `spectool` (useful for offline builds or debugging):
+
+```shell
+make sources PACKAGE=<name>  # download for one package
+make sources                 # download for all packages
+```
+
+### Suggest Requires
+
+After building an RPM, analyze its dependencies and suggest `requires` entries:
+
+```shell
+make gather-requires PACKAGE=path/to/package.rpm
+```
+
+Pass the path to a built `.rpm` file. Reports SONAME dependencies and suggests `requires:` entries for `packages.yaml`.
+
+### Remove Package
+
+Completely remove a package from the repository (deletes from `packages.yaml`, build logs, spec files, submodules, and container volumes):
+
+```shell
+make delete-package PACKAGE=<name>
+```
+
+Or using the `PKG` alias:
+
+```shell
+make delete-package PKG=<name>
+```
+
+### Clear Build Status
+
+Reset the build status for one or more packages in `build-report.yaml`:
+
+```shell
+make build-pop PKG=pkg1,pkg2    # remove status for specific packages
+make build-pop PKG=""            # remove status for ALL packages (requires confirmation)
+```
+
+This is useful after fixing issues to force a re-run without manual YAML editing.
 
 ### Go packages
 
@@ -195,25 +250,44 @@ prep_commands:
 To generate the vendor tarball manually (outside the full pipeline):
 
 ```shell
-python3 scripts/gen-vendor-tarball.py <name>
+make stage-vendor PACKAGE=<name>
 ```
+
+**Why Go vendoring works:** `go mod vendor` automatically includes all dependencies (including git sources) in `vendor/`, and Go checks `vendor/` first during builds with no special configuration needed.
+
+### Rust packages
+
+Rust packages do **not** use vendoring. Instead, they follow the canonical COPR/Fedora approach:
+- Build all Rust dependencies as separate RPM packages
+- Use system-installed crates instead of bundled sources
+- This is simpler, follows Fedora guidelines, and avoids git dependency issues
+
+**Rationale:** Rust git dependencies cannot be properly handled in offline COPR builds yet
 
 ### Shared Libraries (`scripts/lib/`)
 
 - **cache.py** — input hash computation for caching and build invalidation
+- **config.py** — configuration helpers (packager info from env/git, logging setup)
+- **copr.py** — Copr API interaction and build status polling
 - **deps.py** — dependency graph inference from `depends_on` and `build_requires`
 - **detection.py** — license and Meson dependency detection from build files
-- **gitmodules.py** — `.gitmodules` parsing, submodule commit/tag info extraction, and changelog generation
+- **github.py** — GitHub API helpers (release info caching, changelog generation)
+- **gitmodules.py** — `.gitmodules` parsing, submodule commit/tag info extraction
 - **jinja_utils.py** — Jinja2 environment setup
 - **log_analysis.py** — parsing mock/srpm logs for failure reporting
-- **migration.py** — schema migration from old to new YAML format
 - **paths.py** — canonical path constants (`SOURCES_DIR`, `BUILD_STATUS_YAML`, etc.) and helpers (`mock_chroot()`)
+- **pipeline.py** — build pipeline state management and caching helpers
 - **reporting.py** — build status printing and badge generation
 - **rpm_macros.py** — RPM macro path normalization (e.g., `/usr/bin/foo` → `%{_bindir}/foo`)
-- **subprocess_utils.py** — subprocess wrappers (`run_cmd`, `run_git`)
+- **stage_utils.py** — shared utilities for stage scripts (`make_stage_entry()`, etc.)
+- **subprocess_utils.py** — subprocess wrappers with timeout support (`run_cmd`, `run_git`)
 - **tarball.py** — tarball source name detection via streaming curl|tar
-- **vendor.py** — Go vendor tarball generation
+- **validation.py** — package metadata validation (files, versions, groups, gitmodules)
+- **vendor.py** — Go package vendoring wrapper with Python 3.10+ compatibility
+- **vendor_golang.py** — Go module vendoring with `go mod vendor`
+- **vendor_rust.py** — ABANDONED: Rust crate vendoring (git deps are unresolvable in offline builds; Rust uses COPR native approach instead)
 - **version.py** — semantic version parsing and selection
+- **yaml_format.py** — YAML formatting with literal block scalar support, yamllint config parsing
 - **yaml_utils.py** — loading/saving packages.yaml, filtering, build status tracking, `init_stage()` boilerplate helper
 
 ## Package Version Auto-Updates
@@ -298,7 +372,7 @@ The repository uses multiple linters and formatters to maintain code quality. Al
 ### Setup (one-time)
 
 ```shell
-make setup-venv   # creates .venv and installs requirements-dev.txt (mypy, ruff, yamllint, flake8, rpmlint)
+make setup-venv   # creates .venv and installs requirements.txt (runtime deps)
 make container-build   # build container image for Fedora 43 (or FEDORA_VERSION=X for specific version)
 ```
 
@@ -306,65 +380,92 @@ make container-build   # build container image for Fedora 43 (or FEDORA_VERSION=
 
 ```shell
 # Run all linters (inside container, installs dev tools on first run)
-make lint    # ruff check + flake8 + mypy + rpmlint + yamllint
+make lint    # lint-ruff + lint-flake + lint-mypy + lint-rpm + lint-yaml
 
 # Format code
-make ruff-format   # format Python scripts
-make fmt           # complete formatting: ruff + path normalization + YAML sorting
+make fmt           # fmt-ruff + fmt-yaml + normalize-paths + sort-lists
 
 # Pre-commit workflow: run all checks + formatting
-make pre-commit QUIET=true   # add QUIET=true for concise output
+make pre-commit QUIET=1   # runs: lint + fmt
 ```
 
-**What each checker does:**
+**Linter checks:**
 
-- **ruff** — fast Python linter and formatter
-- **flake8** — style checker for Python
-- **mypy** — static type checker for Python
-- **rpmlint** — RPM spec linter
-- **yamllint** — validates YAML files (packages.yaml, etc.)
+- **lint-ruff** — fast Python linter on scripts/
+- **lint-flake** — style checker for Python (flake8)
+- **lint-mypy** — static type checker for Python
+- **lint-rpm** — RPM spec linter (rpmlint)
+- **lint-yaml** — validates YAML files (yamllint)
+
+**Format operations:**
+
+- **fmt-ruff** — ruff format for Python
+- **fmt-yaml** — YAML formatting
+- **normalize-paths** — convert absolute paths ↔ RPM macros
+- **sort-lists** — alphabetically sort build_requires, requires, files
 
 All checks automatically exclude `submodules/` directory.
+
+### Logging Levels
+
+All scripts support the `LOG_LEVEL` environment variable to control verbosity:
+
+```shell
+# Show everything (traces, debug info)
+LOG_LEVEL=DEBUG make stage-validate PACKAGE=hyprland
+
+# Default: info-level messages only
+make stage-validate PACKAGE=hyprland
+
+# Quiet: only warnings and errors
+LOG_LEVEL=WARNING make stage-validate PACKAGE=hyprland
+
+# Silent: only errors and critical failures
+LOG_LEVEL=ERROR make stage-validate PACKAGE=hyprland
+```
+
+Levels: `DEBUG`, `INFO` (default), `WARNING`, `ERROR`, `CRITICAL`.
 
 ## Local Build Workflow
 
 Prerequisites: a container image built with `make container-build`, and a Python venv:
 
 ```shell
-make setup-venv   # one-time: creates .venv and installs requirements-dev.txt
+make setup-venv   # one-time: creates .venv and installs requirements.txt
 make container-build   # one-time: build container image for Fedora 43
 ```
 
 ```shell
-# Regenerate all spec files
-make pkg-spec
+# Regenerate spec files
+make stage-spec PACKAGE=<name>
 
 # Download sources, build SRPM, test with mock
-make pkg-mock PACKAGE=<name> FEDORA_VERSION=43
+make stage-srpm PACKAGE=<name>
+make stage-mock PACKAGE=<name> FEDORA_VERSION=43
 ```
 
 ### Full Cycle Pipeline Options
 
-The `pkg-full-cycle` target supports several flags:
+The `full-cycle` target supports several flags:
 
 ```shell
 # Default: build spec → vendor → srpm → mock → copr (if COPR_REPO set)
-make pkg-full-cycle PACKAGE=<name> FEDORA_VERSION=43
+make full-cycle PACKAGE=<name> FEDORA_VERSION=43
 
 # Resume from interrupted run (skip already-succeeded stages)
-make pkg-full-cycle PACKAGE=<name> PROCEED_BUILD=true
+make full-cycle PACKAGE=<name> PROCEED_BUILD=true
 
 # Skip mock stage (stop after srpm, useful for quick validation)
-make pkg-full-cycle PACKAGE=<name> SKIP_MOCK=true
+make full-cycle PACKAGE=<name> SKIP_MOCK=true
 
 # Skip copr submission (test locally without pushing)
-make pkg-full-cycle PACKAGE=<name> SKIP_COPR=true
+make full-cycle PACKAGE=<name> SKIP_COPR=true
 
 # Wait for COPR builds to complete (default: async with --nowait)
-make pkg-full-cycle PACKAGE=<name> COPR_REPO=nett00n/hyprland SYNCHRONOUS_COPR_BUILD=true
+make full-cycle PACKAGE=<name> COPR_REPO=nett00n/hyprland SYNCHRONOUS_COPR_BUILD=true
 
 # Combine options
-make pkg-full-cycle PACKAGE=<name> SKIP_MOCK=true FEDORA_VERSION=42
+make full-cycle PACKAGE=<name> SKIP_MOCK=true FEDORA_VERSION=42
 ```
 
 #### COPR Build Behavior
@@ -380,7 +481,7 @@ of in-progress builds and updates `build-report.yaml` with the latest state.
 
 ### Build Cache and Force Re-run
 
-By default, `pkg-full-cycle` skips stages whose inputs haven't changed (hash-based caching).
+By default, `full-cycle` skips stages whose inputs haven't changed (hash-based caching).
 To force a stage to re-run, edit `build-report.yaml` and set `force_run: true`:
 
 ```yaml
@@ -403,7 +504,7 @@ stages:
 
 ### Build Report Backups
 
-At the start of each `pkg-full-cycle` run, the existing `build-report.yaml` is automatically backed up
+At the start of each `full-cycle` run, the existing `build-report.yaml` is automatically backed up
 with an RFC 3339 timestamp (filesystem-safe): `build-report.2026-03-21T10-30-45+00-00.yaml`.
 This happens before any processing begins, preserving the previous state and allowing rollback if needed.
 
@@ -411,26 +512,33 @@ This happens before any processing begins, preserving the previous state and all
 
 ```shell
 # Run stages individually (each reads/writes build-report.yaml)
-make stage-validate PKG=<name>   # validate packages.yaml (required fields, conventions)
-make stage-spec     PKG=<name>
-make stage-vendor   PKG=<name>   # Go packages only: generates vendor tarball
-make stage-srpm     PKG=<name>
-make stage-mock     PKG=<name>
-make stage-copr     PKG=<name> COPR_REPO=nett00n/hyprland
+make stage-validate PACKAGE=<name>   # validate packages.yaml (required fields, conventions)
+make stage-spec     PACKAGE=<name>
+make stage-vendor   PACKAGE=<name>   # Go packages: generates vendor tarball (skipped for Rust)
+make stage-srpm     PACKAGE=<name>
+make stage-mock     PACKAGE=<name> FEDORA_VERSION=43
+make stage-copr     PACKAGE=<name> COPR_REPO=nett00n/hyprland
 
 # Compose a custom pipeline (e.g. skip copr)
-make stage-validate stage-spec stage-vendor stage-srpm stage-mock PKG=<name>
+make stage-validate stage-spec stage-vendor stage-srpm stage-mock PACKAGE=<name>
 ```
 
 `PACKAGE` (or `PKG`) is matched case-insensitively, so `PACKAGE=hyprland` and `PACKAGE=Hyprland` both work.
 
-When `PACKAGE` is set, `pkg-full-cycle` automatically includes transitive build dependencies and processes them in topological order.
+When `PACKAGE` is set, `full-cycle` automatically includes transitive build dependencies and processes them in topological order.
 
 ## Submitting to Copr
 
+Use `full-cycle` with `COPR_REPO` set:
+
 ```shell
-export COPR_REPO=nett00n/hyprland-extras
-make pkg-copr PACKAGE=<name>
+make full-cycle PACKAGE=<name> COPR_REPO=nett00n/hyprland-extras
+```
+
+Or use `stage-copr` alone after building locally:
+
+```shell
+make stage-copr PACKAGE=<name> COPR_REPO=nett00n/hyprland-extras
 ```
 
 Requires `copr-cli` configured with `~/.config/copr`.
@@ -440,7 +548,7 @@ Requires `copr-cli` configured with `~/.config/copr`.
 - [ ] `packages.yaml` entry is complete and correct
 - [ ] `make stage-validate PACKAGE=<name>` passes with no errors
 - [ ] `rpmlint` passes with no errors
-- [ ] Builds cleanly with `make pkg-mock PKG=<name>`
+- [ ] Builds cleanly with `make stage-mock PACKAGE=<name>`
 - [ ] `Source0:` points to an upstream release tarball (not a manual archive) and uses `#/%{name}-%{version}.tar.gz` suffix to avoid filename collisions between packages at the same version
 - [ ] No bundled C/C++ libraries (Go vendor tarballs are acceptable)
 - [ ] Changelog entry added with correct date and your name

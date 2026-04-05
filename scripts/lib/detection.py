@@ -61,6 +61,8 @@ def detect_build_system(repo: Path) -> str | None:
         return "cmake"
     if (repo / "meson.build").exists():
         return "meson"
+    if (repo / "Cargo.toml").exists():
+        return "cargo"
     if (repo / "configure.ac").exists():
         return "autotools"
     if (repo / "configure").exists() and (repo / "Makefile.in").exists():

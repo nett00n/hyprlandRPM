@@ -14,13 +14,16 @@ Environment variables:
   SKIP_PACKAGES        Skip these packages (optional, comma-separated)
   PROCEED_BUILD        Skip packages where copr stage already succeeded
   SYNCHRONOUS_COPR_BUILD  If 'true', wait for build completion (default: async with --nowait)
+  LOG_LEVEL       Logging level: DEBUG, INFO (default), WARNING, ERROR
 """
 
+import logging
 import os
-import re
 import sys
 from typing import Any
 
+from lib.config import setup_logging
+from lib.copr import check_copr_credentials, parse_build_id, validate_copr_repo
 from lib.paths import ROOT, get_package_log_dir
 from lib.reporting import status, verbose_proceed_check
 from lib.subprocess_utils import run_cmd
@@ -31,32 +34,6 @@ from lib.yaml_utils import (
     now_epoch,
     save_build_status,
 )
-
-
-def parse_build_id(output: str) -> int | None:
-    for line in output.splitlines():
-        if "Created builds:" in line:
-            try:
-                return int(line.split()[-1])
-            except (ValueError, IndexError):
-                pass
-    return None
-
-
-def check_copr_credentials() -> bool:
-    """Verify COPR credentials are valid."""
-    ok, stdout, stderr = run_cmd(["copr-cli", "whoami"])
-    if not ok:
-        print("error: COPR credentials are invalid or missing", file=sys.stderr)
-        print(
-            "  Set up credentials at: https://copr.fedorainfracloud.org/api/",
-            file=sys.stderr,
-        )
-        print("  Save to: ~/.config/copr/copr.conf", file=sys.stderr)
-        if stderr:
-            print(f"  Details: {stderr.strip()}", file=sys.stderr)
-        return False
-    return True
 
 
 def run_for_package(
@@ -173,7 +150,7 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(2)
-    if not re.match(r"^[\w-]+/[\w.-]+$", copr_repo):
+    if not validate_copr_repo(copr_repo):
         print(f"error: Invalid COPR_REPO format: {copr_repo}", file=sys.stderr)
         sys.exit(2)
 
@@ -201,7 +178,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
+        setup_logging()
         main()
     except KeyboardInterrupt:
-        print("\nUser Interrupted.", file=sys.stderr)
+        logging.warning("User Interrupted.")
         sys.exit(130)
