@@ -62,7 +62,7 @@ libmpdclient-devel: 2.23
 libnl3-devel: 3.12.0
 meson: 1.10.2
 ninja-build: 1.13.2
-pipewire-devel: 1.6.2
+pipewire-devel: 1.6.3
 playerctl-devel: 2.4.1
 pulseaudio-libs-devel: 17.0
 scdoc: 1.11.3
@@ -98,5 +98,5 @@ Development files for waybar.
 %files devel
 
 %changelog
-* Wed Apr 08 2026 nett00n <copr@nett00n.org> - 0.15.0-1
+* Fri Apr 10 2026 nett00n <copr@nett00n.org> - 0.15.0-1
 - Update to 0.15.0

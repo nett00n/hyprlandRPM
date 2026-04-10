@@ -164,6 +164,10 @@ _BAD_EXIT_STATUS_RE = re.compile(
     r"^error: Bad exit status from /var/tmp/rpm-tmp\.\w+ \(%(\w+)\)"
 )
 
+# /usr/bin/ar: unable to copy file 'libhyprland_lib.a'; reason: No space left on device
+# dd: failed to open 'file': No space left on device
+_NO_SPACE_LEFT_RE = re.compile(r"No space left on device")
+
 
 def _dnf_whatprovides(query: str) -> list[str]:
     try:
@@ -614,6 +618,18 @@ def _analyze_mock_build_log(log_path: Path) -> list[tuple[int, str, str, str, st
                     lineno,
                     line.strip(),
                     "linker error: linking failed — check previous lines for missing symbols or incompatible libraries",
+                    "",
+                    "none",
+                )
+            )
+            continue
+        m = _NO_SPACE_LEFT_RE.search(line)
+        if m:
+            issues.append(
+                (
+                    lineno,
+                    line.strip(),
+                    "build container ran out of disk space during compilation/linking — increase mock build environment size in copr settings or free disk space on build machine",
                     "",
                     "none",
                 )

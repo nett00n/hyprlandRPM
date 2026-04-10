@@ -43,7 +43,7 @@ libdrm-devel: 2.4.131
 mesa-libgbm-devel: 26.0.3
 ninja-build: 1.13.2
 pam-devel: 1.7.2
-pipewire-devel: 1.6.2
+pipewire-devel: 1.6.3
 qt6-qtbase-devel: 6.10.3
 qt6-qtbase-private-devel: 6.10.3
 qt6-qtdeclarative-devel: 6.10.3
