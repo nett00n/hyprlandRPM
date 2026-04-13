@@ -206,6 +206,7 @@ def run_for_package(
             "state": "skipped",
             "version": None,
             "force_run": False,
+            "reason": "config: skip",
         }
         return True
 

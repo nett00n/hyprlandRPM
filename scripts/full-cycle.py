@@ -29,7 +29,12 @@ from datetime import datetime, timezone
 from lib.cache import compute_input_hashes
 from lib.deps import build_dep_graph, topological_sort, transitive_deps
 from lib.log_analysis import report_mock_failures
-from lib.pipeline import compute_forced_stages, inject_stage_meta, is_cached
+from lib.pipeline import (
+    compute_forced_stages,
+    inject_stage_meta,
+    is_cached,
+    cache_miss_reason,
+)
 from lib.paths import BUILD_LOG_DIR, ROOT, get_package_log_dir, mock_chroot
 from lib.reporting import print_summary
 from lib.yaml_utils import (
@@ -230,6 +235,9 @@ def run_build_pipeline(
         # Spec
         if is_cached("spec", pkg, build_status, new_hashes, forced_stages):
             print("    spec: cached")
+            entry = build_status["stages"]["spec"].get(pkg)
+            if entry:
+                entry["reason"] = "cached"
         else:
             rebuilt_packages.add(pkg)
             started_at = int(time.time())
@@ -237,6 +245,19 @@ def run_build_pipeline(
                 build_status.get("stages", {}).get("spec", {}).get(pkg, {}).get("state")
             )
             is_proceed_skip = proceed and prior_state == "success"
+            reason = (
+                "proceed-skip"
+                if is_proceed_skip
+                else cache_miss_reason(
+                    "spec",
+                    pkg,
+                    build_status,
+                    new_hashes,
+                    forced_stages,
+                    meta,
+                    rebuilt_packages,
+                )
+            )
             if not _stage["stage-spec"].run_for_package(
                 pkg, meta, all_packages, build_status, fedora_version
             ):
@@ -247,6 +268,7 @@ def run_build_pipeline(
                     started_at,
                     new_hashes,
                     update_hashes=not is_proceed_skip,
+                    reason=reason,
                 )
                 save_build_status(build_status)
                 # Skip downstream stages unless any are forced
@@ -262,6 +284,7 @@ def run_build_pipeline(
                     started_at,
                     new_hashes,
                     update_hashes=not is_proceed_skip,
+                    reason=reason,
                 )
 
         save_build_status(build_status)
@@ -269,6 +292,9 @@ def run_build_pipeline(
         # Vendor
         if is_cached("vendor", pkg, build_status, new_hashes, forced_stages):
             print("    vendor: cached")
+            entry = build_status["stages"]["vendor"].get(pkg)
+            if entry:
+                entry["reason"] = "cached"
         else:
             rebuilt_packages.add(pkg)
             started_at = int(time.time())
@@ -279,6 +305,19 @@ def run_build_pipeline(
                 .get("state")
             )
             is_proceed_skip = proceed and prior_state == "success"
+            reason = (
+                "proceed-skip"
+                if is_proceed_skip
+                else cache_miss_reason(
+                    "vendor",
+                    pkg,
+                    build_status,
+                    new_hashes,
+                    forced_stages,
+                    meta,
+                    rebuilt_packages,
+                )
+            )
             result = _stage["stage-vendor"].run_for_package(
                 pkg, meta, build_status, fedora_version
             )
@@ -290,6 +329,7 @@ def run_build_pipeline(
                     started_at,
                     new_hashes,
                     update_hashes=not is_proceed_skip,
+                    reason=reason,
                 )
                 save_build_status(build_status)
                 # Skip downstream stages unless any are forced
@@ -303,6 +343,7 @@ def run_build_pipeline(
                     started_at,
                     new_hashes,
                     update_hashes=not is_proceed_skip,
+                    reason=reason,
                 )
 
         save_build_status(build_status)
@@ -310,6 +351,9 @@ def run_build_pipeline(
         # SRPM
         if is_cached("srpm", pkg, build_status, new_hashes, forced_stages):
             print("    srpm: cached")
+            entry = build_status["stages"]["srpm"].get(pkg)
+            if entry:
+                entry["reason"] = "cached"
         else:
             rebuilt_packages.add(pkg)
             started_at = int(time.time())
@@ -317,6 +361,19 @@ def run_build_pipeline(
                 build_status.get("stages", {}).get("srpm", {}).get(pkg, {}).get("state")
             )
             is_proceed_skip = proceed and prior_state == "success"
+            reason = (
+                "proceed-skip"
+                if is_proceed_skip
+                else cache_miss_reason(
+                    "srpm",
+                    pkg,
+                    build_status,
+                    new_hashes,
+                    forced_stages,
+                    meta,
+                    rebuilt_packages,
+                )
+            )
             if not _stage["stage-srpm"].run_for_package(
                 pkg, meta, build_status, fedora_version, proceed
             ):
@@ -327,6 +384,7 @@ def run_build_pipeline(
                     started_at,
                     new_hashes,
                     update_hashes=not is_proceed_skip,
+                    reason=reason,
                 )
                 save_build_status(build_status)
                 # Skip downstream stages unless any are forced
@@ -340,6 +398,7 @@ def run_build_pipeline(
                     started_at,
                     new_hashes,
                     update_hashes=not is_proceed_skip,
+                    reason=reason,
                 )
 
         save_build_status(build_status)
@@ -347,9 +406,15 @@ def run_build_pipeline(
         # Mock
         if skip_mock:
             print("    mock: skipped (SKIP_MOCK=true)")
+            entry = build_status["stages"]["mock"].get(pkg)
+            if entry:
+                entry["reason"] = "SKIP_MOCK"
         else:
             if is_cached("mock", pkg, build_status, new_hashes, forced_stages):
                 print("    mock: cached")
+                entry = build_status["stages"]["mock"].get(pkg)
+                if entry:
+                    entry["reason"] = "cached"
             else:
                 rebuilt_packages.add(pkg)
                 started_at = int(time.time())
@@ -360,6 +425,19 @@ def run_build_pipeline(
                     .get("state")
                 )
                 is_proceed_skip = proceed and prior_state == "success"
+                reason = (
+                    "proceed-skip"
+                    if is_proceed_skip
+                    else cache_miss_reason(
+                        "mock",
+                        pkg,
+                        build_status,
+                        new_hashes,
+                        forced_stages,
+                        meta,
+                        rebuilt_packages,
+                    )
+                )
                 if not _stage["stage-mock"].run_for_package(
                     pkg,
                     meta,
@@ -377,6 +455,7 @@ def run_build_pipeline(
                         started_at,
                         new_hashes,
                         update_hashes=not is_proceed_skip,
+                        reason=reason,
                     )
                     save_build_status(build_status)
                     # Skip copr unless it is forced
@@ -390,6 +469,7 @@ def run_build_pipeline(
                         started_at,
                         new_hashes,
                         update_hashes=not is_proceed_skip,
+                        reason=reason,
                     )
 
             save_build_status(build_status)
@@ -397,9 +477,15 @@ def run_build_pipeline(
         # Copr
         if skip_copr:
             print("    copr: skipped (SKIP_COPR=true)")
+            entry = build_status["stages"]["copr"].get(pkg)
+            if entry:
+                entry["reason"] = "SKIP_COPR"
         elif copr_repo:
             if is_cached("copr", pkg, build_status, new_hashes, forced_stages):
                 print("    copr: cached")
+                entry = build_status["stages"]["copr"].get(pkg)
+                if entry:
+                    entry["reason"] = "cached"
             else:
                 rebuilt_packages.add(pkg)
                 started_at = int(time.time())
@@ -410,6 +496,19 @@ def run_build_pipeline(
                     .get("state")
                 )
                 is_proceed_skip = proceed and prior_state == "success"
+                reason = (
+                    "proceed-skip"
+                    if is_proceed_skip
+                    else cache_miss_reason(
+                        "copr",
+                        pkg,
+                        build_status,
+                        new_hashes,
+                        forced_stages,
+                        meta,
+                        rebuilt_packages,
+                    )
+                )
                 success = _stage["stage-copr"].run_for_package(
                     pkg,
                     meta,
@@ -426,6 +525,7 @@ def run_build_pipeline(
                     started_at,
                     new_hashes,
                     update_hashes=not is_proceed_skip and success,
+                    reason=reason,
                 )
 
             save_build_status(build_status)

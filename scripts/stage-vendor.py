@@ -54,6 +54,7 @@ def run_for_package(
             "version": None,
             "log": None,
             "force_run": False,
+            "reason": "config: skip",
         }
         return True
 
@@ -70,6 +71,7 @@ def run_for_package(
             "version": ver,
             "log": None,
             "force_run": False,
+            "reason": "not-go",
         }
         return True
 
@@ -83,6 +85,7 @@ def run_for_package(
             "version": ver,
             "log": None,
             "force_run": False,
+            "reason": "spec failed",
         }
         return True
 

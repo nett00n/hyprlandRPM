@@ -746,6 +746,9 @@
                         <div class="detail-label">${stage}</div>
                         <div class="detail-value">State: <strong>${info.state}</strong></div>
                 `);
+                if (info.reason) {
+                    html.push(`<div class="detail-value">Reason: <code>${info.reason}</code></div>`);
+                }
                 if (info.version) {
                     html.push(`<div class="detail-value">Version: ${info.version}</div>`);
                 }

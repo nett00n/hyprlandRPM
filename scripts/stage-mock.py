@@ -109,6 +109,7 @@ def run_for_package(
             "version": None,
             "log": None,
             "force_run": False,
+            "reason": "config: skip",
         }
         return True
 
@@ -145,6 +146,7 @@ def run_for_package(
             "version": ver,
             "log": None,
             "force_run": False,
+            "reason": detail,
         }
         if has_devel:
             entry["subpackages"] = {"devel": {"state": "skipped", "version": ver}}

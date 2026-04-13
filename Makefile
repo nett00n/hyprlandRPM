@@ -215,7 +215,9 @@ fmt-ruff: check-image check-venv setup-volumes ## Run ruff format on scripts
 fmt-yaml: check-image check-venv setup-volumes ## Format YAML files with consistent style
 	$(call run_with_result,$(CONTAINER_PYTHON) scripts/format-yaml.py '*.yaml',YAML format applied,YAML format failed,$(MAKE_LOGS_DIR)/fmt-yaml)
 
-pre-commit: test lint fmt ## Run all checks and formatting (test + lint + fmt). Use COVERAGE=1 to include coverage report
+pre-commit: check-venv ## Run all checks and formatting (test + lint + fmt). Use COVERAGE=1 to include coverage report
+	@$(PYTHON) scripts/validate-packages.py || exit 1
+	$(MAKE) test lint fmt || exit 1
 	@if [ "$(COVERAGE)" = "1" ]; then \
 		echo "$(HIGHLIGHT_PREFIX) Running coverage analysis..."; \
 		$(MAKE) coverage || exit 1; \

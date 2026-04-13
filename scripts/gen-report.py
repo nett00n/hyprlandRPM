@@ -119,6 +119,7 @@ def collect_packages(
                             spec.get("completed_at"),
                             run_completed_at,
                         ),
+                        "reason": spec.get("reason"),
                     },
                     "srpm": {
                         "state": srpm.get("state"),
@@ -128,6 +129,7 @@ def collect_packages(
                             srpm.get("completed_at"),
                             run_completed_at,
                         ),
+                        "reason": srpm.get("reason"),
                     },
                     "mock": {
                         "state": mock.get("state"),
@@ -137,6 +139,7 @@ def collect_packages(
                             mock.get("completed_at"),
                             run_completed_at,
                         ),
+                        "reason": mock.get("reason"),
                     },
                     "copr": {
                         "state": copr.get("state"),
@@ -146,6 +149,7 @@ def collect_packages(
                             copr.get("completed_at"),
                             run_completed_at,
                         ),
+                        "reason": copr.get("reason"),
                     },
                 },
             }

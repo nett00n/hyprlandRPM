@@ -21,7 +21,6 @@ aquamarine:
   - pkgconfig(wayland-client)
   - pkgconfig(wayland-protocols)
   depends_on:
-  - aquamarine
   - hyprutils
   - hyprwayland-scanner
   description: |
@@ -1360,8 +1359,6 @@ sndio:
   - alsa-lib-devel
   - gcc
   - make
-  depends_on:
-  - sndio
   description: Portable version of OpenBSD's lightweight audio & MIDI sub-system
   devel:
     files:

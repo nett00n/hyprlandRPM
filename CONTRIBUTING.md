@@ -386,7 +386,7 @@ make lint    # lint-ruff + lint-flake + lint-mypy + lint-rpm + lint-yaml
 make fmt           # fmt-ruff + fmt-yaml + normalize-paths + sort-lists
 
 # Pre-commit workflow: run all checks + formatting
-make pre-commit QUIET=1   # runs: lint + fmt
+make pre-commit QUIET=1   # runs: validate-packages + test + lint + fmt
 ```
 
 **Linter checks:**
@@ -490,6 +490,7 @@ stages:
     hyprland:
       state: success
       force_run: true    # operator sets to force re-execution
+      reason: cached     # auto-set: explains skip/run decision
       version: "0.45.2-1.fc43"
       # ... rest of entry
 ```
@@ -497,10 +498,13 @@ stages:
 **Rules:**
 - Setting `force_run: true` on any stage forces that stage and all downstream stages to re-run
   (intra-package cascade: spec → vendor → srpm → mock → copr)
-- If any package in `depends_on` was rebuilt in the current run, all stages of the dependent
-  package are forced (inter-package dependency cascade)
+- If any package in `depends_on` was rebuilt (and not cached) in the current run, all stages of the
+  dependent package are forced (inter-package dependency cascade)
 - After a stage executes (success or fail), the `force_run` field is automatically removed
   (operator must re-set to force again; one-shot behavior)
+- The `reason` field is automatically set on each stage entry to explain why it was cached,
+  skipped, or forced to run (e.g., `"cached"`, `"hash-mismatch"`, `"spec failed"`, `"forced (dep rebuilt: hyprutils)"`).
+  When showing rebuilt dependencies, only lists deps that actually changed (cached deps filtered out).
 
 ### Build Report Backups
 

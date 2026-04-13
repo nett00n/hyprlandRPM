@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from lib.pipeline import compute_forced_stages, is_cached
+from lib.pipeline import compute_forced_stages, is_cached, cache_miss_reason, inject_stage_meta
 from lib.copr import parse_build_id, validate_copr_repo
 from lib.stage_utils import make_stage_entry
 
@@ -182,6 +182,211 @@ class TestIsCached:
         new_hashes = {"a": "hash1"}
         forced_stages = set()
         assert is_cached("spec", "pkg", build_status, new_hashes, forced_stages) is False
+
+
+class TestCacheMissReason:
+    """Test cache miss reason determination."""
+
+    def test_forced_stage(self):
+        """Return 'forced' if stage in forced_stages."""
+        build_status = {}
+        assert cache_miss_reason("spec", "pkg", build_status, {}, {"spec"}) == "forced"
+
+    def test_first_run_no_entry(self):
+        """Return 'first-run' if no prior entry."""
+        build_status = {"stages": {}}
+        assert (
+            cache_miss_reason("spec", "pkg", build_status, {}, set())
+            == "first-run"
+        )
+
+    def test_prior_failed_state(self):
+        """Return 'prior-failed' if state is failed."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "failed",
+                    }
+                }
+            }
+        }
+        assert (
+            cache_miss_reason("spec", "pkg", build_status, {}, set())
+            == "prior-failed"
+        )
+
+    def test_prior_skipped_state(self):
+        """Return 'prior-skipped' if state is skipped."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "skipped",
+                    }
+                }
+            }
+        }
+        assert (
+            cache_miss_reason("spec", "pkg", build_status, {}, set())
+            == "prior-skipped"
+        )
+
+    def test_hash_mismatch(self):
+        """Return 'hash-mismatch' when prior success but hashes differ."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "success",
+                        "hashes": {"a": "old_hash"},
+                    }
+                }
+            }
+        }
+        new_hashes = {"a": "new_hash"}
+        assert (
+            cache_miss_reason("spec", "pkg", build_status, new_hashes, set())
+            == "hash-mismatch"
+        )
+
+    def test_forced_due_to_operator(self):
+        """Return 'forced' when force_run set by operator (no deps rebuilt)."""
+        build_status = {}
+        meta = {"depends_on": []}
+        rebuilt = set()
+        result = cache_miss_reason("spec", "pkg", build_status, {}, {"spec"}, meta, rebuilt)
+        assert result == "forced"
+
+    def test_forced_due_to_dep_rebuild(self):
+        """Return 'forced (dep rebuilt: ...)' when dependency was rebuilt."""
+        build_status = {}
+        meta = {"depends_on": ["hyprutils", "hyprlang"]}
+        rebuilt = {"hyprutils"}
+        result = cache_miss_reason("spec", "pkg", build_status, {}, {"spec"}, meta, rebuilt)
+        assert result == "forced (dep rebuilt: hyprutils)"
+
+    def test_forced_due_to_multiple_dep_rebuilds(self):
+        """Return reason with all rebuilt deps."""
+        build_status = {}
+        meta = {"depends_on": ["hyprutils", "hyprlang", "hyprwayland"]}
+        rebuilt = {"hyprutils", "hyprlang"}
+        result = cache_miss_reason("spec", "pkg", build_status, {}, {"spec"}, meta, rebuilt)
+        # Order may vary due to set, so just check the structure
+        assert result.startswith("forced (dep rebuilt: ")
+        assert "hyprutils" in result
+        assert "hyprlang" in result
+
+    def test_forced_filters_out_cached_deps(self):
+        """Filter out deps from reason if they ended up cached."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "aquamarine": {"reason": "cached", "state": "success"},
+                    "glaze": {"reason": "cached", "state": "success"},
+                    "hyprlang": {"reason": "hash-mismatch", "state": "success"},
+                }
+            }
+        }
+        meta = {"depends_on": ["aquamarine", "glaze", "hyprlang"]}
+        rebuilt = {"aquamarine", "glaze", "hyprlang"}
+        result = cache_miss_reason("spec", "pkg", build_status, {}, {"spec"}, meta, rebuilt)
+        # Only hyprlang should be in reason (others are cached)
+        assert result == "forced (dep rebuilt: hyprlang)"
+        assert "aquamarine" not in result
+        assert "glaze" not in result
+
+
+class TestInjectStageMeta:
+    """Test stage metadata injection."""
+
+    def test_sets_started_at(self):
+        """inject_stage_meta sets started_at timestamp."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "success",
+                    }
+                }
+            }
+        }
+        inject_stage_meta("spec", "pkg", build_status, 1234567890, {})
+        assert build_status["stages"]["spec"]["pkg"]["started_at"] == 1234567890
+
+    def test_sets_hashes_on_success(self):
+        """inject_stage_meta sets hashes when state is success and update_hashes=True."""
+        new_hashes = {"a": "hash1"}
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "success",
+                    }
+                }
+            }
+        }
+        inject_stage_meta("spec", "pkg", build_status, 1234567890, new_hashes)
+        assert build_status["stages"]["spec"]["pkg"]["hashes"] == new_hashes
+
+    def test_skips_hashes_on_update_hashes_false(self):
+        """inject_stage_meta does not set hashes when update_hashes=False."""
+        new_hashes = {"a": "hash1"}
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "success",
+                        "hashes": {"a": "old_hash"},
+                    }
+                }
+            }
+        }
+        inject_stage_meta("spec", "pkg", build_status, 1234567890, new_hashes, update_hashes=False)
+        assert build_status["stages"]["spec"]["pkg"]["hashes"] == {"a": "old_hash"}
+
+    def test_sets_reason(self):
+        """inject_stage_meta sets reason when provided."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "success",
+                    }
+                }
+            }
+        }
+        inject_stage_meta("spec", "pkg", build_status, 1234567890, {}, reason="hash-mismatch")
+        assert build_status["stages"]["spec"]["pkg"]["reason"] == "hash-mismatch"
+
+    def test_skips_reason_when_none(self):
+        """inject_stage_meta does not set reason when None."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "success",
+                    }
+                }
+            }
+        }
+        inject_stage_meta("spec", "pkg", build_status, 1234567890, {}, reason=None)
+        assert "reason" not in build_status["stages"]["spec"]["pkg"]
+
+    def test_clears_force_run(self):
+        """inject_stage_meta removes force_run flag."""
+        build_status = {
+            "stages": {
+                "spec": {
+                    "pkg": {
+                        "state": "success",
+                        "force_run": True,
+                    }
+                }
+            }
+        }
+        inject_stage_meta("spec", "pkg", build_status, 1234567890, {})
+        assert "force_run" not in build_status["stages"]["spec"]["pkg"]
 
 
 class TestParseBuildId:

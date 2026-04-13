@@ -49,6 +49,7 @@ def run_for_package(
         build_status["stages"]["validate"][pkg] = {
             "state": "skipped",
             "force_run": False,
+            "reason": "config: skip",
         }
         return True
 
