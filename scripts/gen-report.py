@@ -81,6 +81,7 @@ def collect_packages(
     for name in names:
         validate = (stages.get("validate") or {}).get(name, {})
         spec = (stages.get("spec") or {}).get(name, {})
+        vendor = (stages.get("vendor") or {}).get(name, {})
         srpm = (stages.get("srpm") or {}).get(name, {})
         mock = (stages.get("mock") or {}).get(name, {})
         copr = (stages.get("copr") or {}).get(name, {})
@@ -120,6 +121,16 @@ def collect_packages(
                             run_completed_at,
                         ),
                         "reason": spec.get("reason"),
+                    },
+                    "vendor": {
+                        "state": vendor.get("state"),
+                        "date": _format_date(vendor.get("started_at")),
+                        "duration": _format_duration(
+                            vendor.get("started_at"),
+                            vendor.get("completed_at"),
+                            run_completed_at,
+                        ),
+                        "reason": vendor.get("reason"),
                     },
                     "srpm": {
                         "state": srpm.get("state"),
