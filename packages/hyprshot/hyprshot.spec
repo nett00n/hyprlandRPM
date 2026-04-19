@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+
 Name:           hyprshot
 Version:        1.3.0
 Release:        %autorelease%{?dist}
@@ -7,6 +8,7 @@ BuildArch:      noarch
 License:        GPL-3.0-only
 URL:            https://github.com/Gustash/Hyprshot
 Source0:        %{url}/archive/refs/tags/%{version}.tar.gz
+
 
 Requires:       /usr/bin/notify-send
 Requires:       grim
@@ -42,5 +44,5 @@ install -Dpm0755 hyprshot -t %{buildroot}/%{_bindir}
 %{_bindir}/hyprshot
 
 %changelog
-* Mon Apr 13 2026 nett00n <copr@nett00n.org> - 1.3.0-1
+* Thu Apr 16 2026 nett00n <copr@nett00n.org> - 1.3.0-1
 - Update to 1.3.0

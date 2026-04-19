@@ -1,3 +1,4 @@
+
 Name:           hyprpolkitagent
 Version:        0.1.3
 Release:        %autorelease%{?dist}
@@ -8,12 +9,13 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(polkit-agent-1)
 BuildRequires:  pkgconfig(polkit-qt6-1)
 BuildRequires:  qt6-qtdeclarative-devel
 BuildRequires:  qt6-qtquickcontrols2-devel
+
 
 %description
 A simple polkit authentication agent for Hyprland, written in QT/QML

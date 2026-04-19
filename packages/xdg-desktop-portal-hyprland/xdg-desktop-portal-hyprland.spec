@@ -1,3 +1,4 @@
+
 Name:           xdg-desktop-portal-hyprland
 Version:        1.3.11
 Release:        %autorelease%{?dist}
@@ -8,10 +9,10 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprland-protocols-devel
-BuildRequires:  hyprlang-devel
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprland-protocols-devel >= 0.4.0
+BuildRequires:  hyprlang-devel >= 0.6.4
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(gbm)
 BuildRequires:  pkgconfig(libdrm)
@@ -28,6 +29,7 @@ BuildRequires:  qt6-qtbase-devel
 BuildRequires:  qt6-qtwayland-devel
 BuildRequires:  sdbus-cpp
 BuildRequires:  systemd-rpm-macros
+
 
 %description
 xdg-desktop-portal backend for Hyprland

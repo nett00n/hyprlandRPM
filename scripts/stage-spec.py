@@ -179,6 +179,7 @@ def generate_spec(
             "changelog": changelog,
             "devel": devel,
             "dep_versions": resolve_dep_versions(pkg_meta.get("build_requires", [])),
+            "project_packages": list(all_packages.keys()),
         }
 
         template = jinja.get_template("spec.j2")

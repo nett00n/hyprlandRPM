@@ -1,3 +1,4 @@
+
 Name:           aquamarine
 Version:        0.10.0
 Release:        %autorelease%{?dist}
@@ -8,8 +9,8 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(gbm)
 BuildRequires:  pkgconfig(gl)
@@ -23,6 +24,7 @@ BuildRequires:  pkgconfig(libudev)
 BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
+
 
 %description
 Aquamarine is a very light linux rendering backend library.
@@ -43,6 +45,8 @@ Tag:               v0.10.0
 Commit:            a20a0e67a33b6848378a91b871b89588d3a12573
 
 Build dependencies:
+cmake: 4.3.0
+gcc-c++: 16.0.1
 hyprutils-devel: 0.7.1
 hyprwayland-scanner-devel: 0.4.2
 ninja-build: 1.13.2

@@ -1,3 +1,4 @@
+
 Name:           hyprpicker
 Version:        0.4.6
 Release:        %autorelease%{?dist}
@@ -9,8 +10,8 @@ Patch0:         fix-build-with-rawhide-gpp.patch
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(libjpeg)
@@ -19,6 +20,7 @@ BuildRequires:  pkgconfig(pangocairo)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  pkgconfig(xkbcommon)
+
 
 %description
 A wlroots-compatible Wayland color picker that does not suck

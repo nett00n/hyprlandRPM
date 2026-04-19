@@ -1,5 +1,6 @@
 %global debug_package %{nil}
 %global _lto_cflags %{nil}
+
 Name:           cava
 Version:        0.10.7
 Release:        %autorelease%{?dist}
@@ -22,6 +23,7 @@ BuildRequires:  portaudio-devel
 BuildRequires:  pulseaudio-libs-devel
 BuildRequires:  sdl2-compat-devel
 BuildRequires:  sndio-devel
+
 
 %description
 Cross-platform Audio Visualizer E
@@ -64,5 +66,5 @@ sdl2-compat-devel: 2.32.64
 %license LICENSE
 
 %changelog
-* Mon Apr 13 2026 nett00n <copr@nett00n.org> - 0.10.7-1
+* Sun Apr 19 2026 nett00n <copr@nett00n.org> - 0.10.7-1
 - Update to 0.10.7

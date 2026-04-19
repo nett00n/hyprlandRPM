@@ -1,3 +1,4 @@
+
 Name:           hyprutils
 Version:        0.12.0
 Release:        %autorelease%{?dist}
@@ -10,6 +11,7 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(pixman-1)
+
 
 %description
 hyprutils is a small C++ library used across the Hypr* ecosystem

@@ -1,3 +1,4 @@
+
 Name:           quickshell
 Version:        0.2.1
 Release:        %autorelease%{?dist}
@@ -21,6 +22,7 @@ BuildRequires:  qt6-qtdeclarative-devel
 BuildRequires:  qt6-qtdeclarative-private-devel
 BuildRequires:  qt6-qtshadertools-devel
 BuildRequires:  wayland-protocols-devel
+
 
 %description
 Quickshell is a toolkit for building status bars, widgets, lockscreens, and other desktop components using QtQuick. It can be used alongside your wayland compositor or window manager to build a complete desktop environment.

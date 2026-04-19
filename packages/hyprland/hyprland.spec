@@ -1,3 +1,4 @@
+
 Name:           hyprland
 Version:        0.54.2
 Release:        %autorelease%{?dist}
@@ -10,12 +11,12 @@ BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  glaze-devel
-BuildRequires:  hyprcursor-devel
-BuildRequires:  hyprgraphics-devel
-BuildRequires:  hyprland-protocols-devel
-BuildRequires:  hyprlang-devel
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprcursor-devel >= 0.1.11
+BuildRequires:  hyprgraphics-devel >= 0.1.5
+BuildRequires:  hyprland-protocols-devel >= 0.4.0
+BuildRequires:  hyprlang-devel >= 0.6.4
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  hyprwire-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
@@ -39,6 +40,7 @@ BuildRequires:  pkgconfig(xcb-icccm)
 BuildRequires:  pkgconfig(xcursor)
 BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  udis86-devel
+
 
 %description
 Hyprland is a 100% independent, dynamic tiling Wayland compositor that

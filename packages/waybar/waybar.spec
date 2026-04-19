@@ -1,3 +1,4 @@
+
 Name:           waybar
 Version:        0.15.0
 Release:        %autorelease%{?dist}
@@ -36,6 +37,7 @@ BuildRequires:  sndio-devel
 BuildRequires:  systemd
 BuildRequires:  upower-devel
 BuildRequires:  wireplumber-devel
+
 
 %description
 Highly customizable Wayland bar for Sway and Wlroots based compositors
@@ -98,5 +100,5 @@ Development files for waybar.
 %files devel
 
 %changelog
-* Thu Apr 16 2026 nett00n <copr@nett00n.org> - 0.15.0-1
+* Sun Apr 19 2026 nett00n <copr@nett00n.org> - 0.15.0-1
 - Update to 0.15.0

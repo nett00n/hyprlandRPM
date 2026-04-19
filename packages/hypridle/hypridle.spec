@@ -1,3 +1,4 @@
+
 Name:           hypridle
 Version:        0.1.7
 Release:        %autorelease%{?dist}
@@ -8,14 +9,15 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprland-protocols-devel
-BuildRequires:  hyprlang-devel
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprland-protocols-devel >= 0.4.0
+BuildRequires:  hyprlang-devel >= 0.6.4
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(sdbus-c++)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
+
 
 %description
 Hyprland's idle daemon

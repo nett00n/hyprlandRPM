@@ -1,3 +1,4 @@
+
 Name:           hyprwire
 Version:        0.3.0
 Release:        %autorelease%{?dist}
@@ -8,10 +9,11 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(libffi)
 BuildRequires:  pkgconfig(pugixml)
+
 
 %description
 A fast and consistent wire protocol for IPC

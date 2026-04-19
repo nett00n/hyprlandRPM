@@ -479,12 +479,12 @@ Hyprland-git:
     archives:
     - '%{url}/archive/%{commit}.tar.gz#/%{name}-%{version}.tar.gz'
     commit:
-      date: '20260415'
-      full: e6c5040f417001fc3cf20e21f971f926626a0f6f
+      date: '20260418'
+      full: 889ee4f26d77ff0c36f5c4767ef0629371fd2c18
     name: Hyprland
   summary: A Modern C++ Wayland Compositor [Built from latest commit, unstable]
   url: https://github.com/hyprwm/Hyprland
-  version: 0.54.0^20260415gite6c5040
+  version: 0.54.0^20260418git889ee4f
 hyprland-guiutils:
   build:
     system: cmake
@@ -566,13 +566,13 @@ hyprland-plugins:
     archives:
     - '%{url}/archive/%{commit}/%{name}-%{shortcommit}.tar.gz'
     commit:
-      date: '20260412'
-      full: 3e38db916aaecba0a7c7698c6df0c68acb89f312
+      date: '20260417'
+      full: 6059aca0cc623d8d896b02842606036c0954ba88
     patches:
     - hyprland-0.54-exclude-incompatible-plugins.patch
   summary: Official plugins for Hyprland
   url: https://github.com/hyprwm/hyprland-plugins
-  version: 0.53.0^20260412git3e38db9
+  version: 0.53.0^20260417git6059aca
 hyprland-plugins-git:
   auto_update:
     release_type: latest-commit
@@ -625,14 +625,14 @@ hyprland-plugins-git:
     archives:
     - '%{url}/archive/%{commit}/%{name}-%{shortcommit}.tar.gz'
     commit:
-      date: '20260412'
-      full: 3e38db916aaecba0a7c7698c6df0c68acb89f312
+      date: '20260417'
+      full: 6059aca0cc623d8d896b02842606036c0954ba88
     patches:
     - hyprland-0.54-exclude-incompatible-plugins.patch
   source_name: hyprland-plugins
   summary: Official plugins for Hyprland [Built from latest commit, unstable]
   url: https://github.com/hyprwm/hyprland-plugins
-  version: 0.53.0^20260412git3e38db9
+  version: 0.53.0^20260417git6059aca
 hyprland-protocols:
   build:
     system: meson
@@ -827,7 +827,7 @@ hyprlock:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
   summary: A gpu-accelerated screen lock for Hyprland
   url: https://github.com/hyprwm/hyprlock
-  version: 0.9.4
+  version: 0.9.5
 hyprpaper:
   build:
     system: cmake

@@ -1,3 +1,4 @@
+
 Name:           hyprtoolkit
 Version:        0.5.3
 Release:        %autorelease%{?dist}
@@ -10,10 +11,10 @@ Patch0:         fix-build-with-rawhide-gpp.patch
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprgraphics-devel
-BuildRequires:  hyprlang-devel
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprgraphics-devel >= 0.1.5
+BuildRequires:  hyprlang-devel >= 0.6.4
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(egl)
@@ -26,6 +27,7 @@ BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  pkgconfig(xkbcommon)
+
 
 %description
 A modern C++ Wayland-native GUI toolkit

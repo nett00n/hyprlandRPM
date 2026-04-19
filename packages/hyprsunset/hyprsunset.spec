@@ -1,3 +1,4 @@
+
 Name:           hyprsunset
 Version:        0.3.3
 Release:        %autorelease%{?dist}
@@ -8,13 +9,14 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprland-protocols-devel
-BuildRequires:  hyprlang-devel
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprland-protocols-devel >= 0.4.0
+BuildRequires:  hyprlang-devel >= 0.6.4
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
+
 
 %description
 An application to enable a blue-light filter on Hyprland

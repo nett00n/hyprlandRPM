@@ -1,3 +1,4 @@
+
 Name:           hyprgraphics
 Version:        0.5.1
 Release:        %autorelease%{?dist}
@@ -9,7 +10,7 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 BuildRequires:  cmake
 BuildRequires:  file-devel
 BuildRequires:  gcc-c++
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  librsvg2-devel
 BuildRequires:  mesa-libGL-devel
 BuildRequires:  mesa-libGLES-devel
@@ -20,6 +21,7 @@ BuildRequires:  pkgconfig(libjpeg)
 BuildRequires:  pkgconfig(libpng)
 BuildRequires:  pkgconfig(libwebp)
 BuildRequires:  pkgconfig(pixman-1)
+
 
 %description
 hyprgraphics is a small C++ library used across the Hypr* ecosystem for

@@ -1,8 +1,9 @@
-%global commit e6c5040f417001fc3cf20e21f971f926626a0f6f
+%global commit 889ee4f26d77ff0c36f5c4767ef0629371fd2c18
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
-%global commitdate 20260415
+%global commitdate 20260418
+
 Name:           hyprland-git
-Version:        0.54.0^20260415gite6c5040
+Version:        0.54.0^20260418git889ee4f
 Release:        %autorelease%{?dist}
 Summary:        A Modern C++ Wayland Compositor [Built from latest commit, unstable]
 License:        BSD-3-Clause
@@ -14,12 +15,12 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  glaze-devel
 BuildRequires:  glslang-devel
-BuildRequires:  hyprcursor-devel
-BuildRequires:  hyprgraphics-devel
-BuildRequires:  hyprland-protocols-devel
-BuildRequires:  hyprlang-devel
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprcursor-devel >= 0.1.11
+BuildRequires:  hyprgraphics-devel >= 0.1.5
+BuildRequires:  hyprland-protocols-devel >= 0.4.0
+BuildRequires:  hyprlang-devel >= 0.6.4
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  hyprwire-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
@@ -44,6 +45,7 @@ BuildRequires:  pkgconfig(xcb-icccm)
 BuildRequires:  pkgconfig(xcursor)
 BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  udis86-devel
+
 
 %description
 hyprland-git
@@ -118,5 +120,5 @@ Development files for hyprland-git.
 %{_prefix}/share/pkgconfig/hyprland.pc
 
 %changelog
-* Thu Apr 16 2026 nett00n <copr@nett00n.org> - 0.54.0^20260415gite6c5040-1
-- Update to 0.54.0^20260415gite6c5040
+* Sun Apr 19 2026 nett00n <copr@nett00n.org> - 0.54.0^20260418git889ee4f-1
+- Update to 0.54.0^20260418git889ee4f

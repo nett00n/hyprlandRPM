@@ -1,3 +1,4 @@
+
 Name:           hyprpaper
 Version:        0.8.3
 Release:        %autorelease%{?dist}
@@ -10,11 +11,11 @@ BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  file-devel
 BuildRequires:  gcc-c++
-BuildRequires:  hyprgraphics-devel
-BuildRequires:  hyprlang-devel
+BuildRequires:  hyprgraphics-devel >= 0.1.5
+BuildRequires:  hyprlang-devel >= 0.6.4
 BuildRequires:  hyprtoolkit-devel
-BuildRequires:  hyprutils-devel
-BuildRequires:  hyprwayland-scanner-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
+BuildRequires:  hyprwayland-scanner-devel >= 0.4.2
 BuildRequires:  hyprwire-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
@@ -28,6 +29,7 @@ BuildRequires:  pkgconfig(pango)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  systemd-rpm-macros
+
 
 %description
 hyprpaper is a blazing fast Wayland wallpaper utility with IPC controls

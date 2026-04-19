@@ -1,3 +1,4 @@
+
 Name:           hyprwayland-scanner
 Version:        0.4.5
 Release:        %autorelease%{?dist}
@@ -10,6 +11,7 @@ BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(pugixml)
+
 
 %description
 hyprwayland-scanner is a Wayland protocol scanner / code generatorused

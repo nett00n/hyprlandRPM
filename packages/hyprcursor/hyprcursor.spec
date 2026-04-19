@@ -1,3 +1,4 @@
+
 Name:           hyprcursor
 Version:        0.1.13
 Release:        %autorelease%{?dist}
@@ -8,12 +9,13 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprlang-devel
+BuildRequires:  hyprlang-devel >= 0.6.4
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(librsvg-2.0)
 BuildRequires:  pkgconfig(libzip)
 BuildRequires:  pkgconfig(tomlplusplus)
+
 
 %description
 The hyprland cursor format, library and utilities

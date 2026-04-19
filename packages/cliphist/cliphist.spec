@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+
 Name:           cliphist
 Version:        0.7.0
 Release:        %autorelease%{?dist}
@@ -9,6 +10,7 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 Source1:        %{name}-%{version}-vendor.tar.gz
 
 BuildRequires:  golang
+
 Requires:       wl-clipboard
 Requires:       xdg-utils
 

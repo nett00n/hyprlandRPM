@@ -1,3 +1,4 @@
+
 Name:           aylurs-gtk-shell
 Version:        3.1.1
 Release:        %autorelease%{?dist}
@@ -10,9 +11,10 @@ Source1:        %{name}-%{version}-vendor.tar.gz
 BuildRequires:  gcc-c++
 BuildRequires:  gjs
 BuildRequires:  golang
-BuildRequires:  gtk4-layer-shell-devel
+BuildRequires:  gtk4-layer-shell-devel >= 1.3.0
 BuildRequires:  meson
 BuildRequires:  ninja-build
+
 
 %description
 Scaffolding CLI tool for Astal+Gnim projects.
@@ -58,5 +60,5 @@ popd
 %{_prefix}/share/ags/
 
 %changelog
-* Mon Apr 13 2026 nett00n <copr@nett00n.org> - 3.1.1-1
+* Sun Apr 19 2026 nett00n <copr@nett00n.org> - 3.1.1-1
 - Update to 3.1.1

@@ -1,8 +1,9 @@
-%global commit 3e38db916aaecba0a7c7698c6df0c68acb89f312
+%global commit 6059aca0cc623d8d896b02842606036c0954ba88
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
-%global commitdate 20260412
+%global commitdate 20260417
+
 Name:           hyprland-plugins
-Version:        0.53.0^20260412git3e38db9
+Version:        0.53.0^20260417git6059aca
 Release:        %autorelease%{?dist}
 Summary:        Official plugins for Hyprland
 License:        BSD-3-Clause
@@ -21,6 +22,7 @@ BuildRequires:  pkgconfig(pangocairo)
 BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(wayland-server)
 BuildRequires:  pkgconfig(xkbcommon)
+
 
 %description
 hyprland-plugins
@@ -46,7 +48,7 @@ Source repository: https://github.com/nett00n/hyprland-copr
 COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 
 Package info:
-Commit:            3e38db916aaecba0a7c7698c6df0c68acb89f312
+Commit:            6059aca0cc623d8d896b02842606036c0954ba88
 
 Build dependencies:
 cmake: 4.3.0
@@ -72,7 +74,5 @@ ninja-build: 1.13.2
 %{_prefix}/lib/libxtra-dispatchers.so
 
 %changelog
-* Sun Apr 12 2026 nett00n <copr@nett00n.org> - 0.53.0^20260412git3e38db9-1
-- winwrap: overlay render after special workspace (#638)
-- Bug: window rendered on top after closing special workspace
-- Fixed render order by switching to RENDER_POST_WALLPAPER
+* Fri Apr 17 2026 nett00n <copr@nett00n.org> - 0.53.0^20260417git6059aca-1
+- CI: use org-wide actions

@@ -1,3 +1,4 @@
+
 Name:           hyprqt6engine
 Version:        0.1.0
 Release:        %autorelease%{?dist}
@@ -16,13 +17,14 @@ BuildRequires:  cmake(Qt6Gui)
 BuildRequires:  cmake(Qt6GuiPrivate)
 BuildRequires:  cmake(Qt6Widgets)
 BuildRequires:  gcc-c++
-BuildRequires:  hyprlang-devel
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprlang-devel >= 0.6.4
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  ninja-build
 BuildRequires:  qt6-qtbase-devel
 BuildRequires:  qt6-qtbase-private-devel
 BuildRequires:  qt6-qtwayland-devel
 BuildRequires:  qt6-rpm-macros
+
 
 %description
 QT6 Theme Provider for Hyprland. Compatible with KDE, replaces qt6ct

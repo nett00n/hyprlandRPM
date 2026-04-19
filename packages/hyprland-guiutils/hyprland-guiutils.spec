@@ -1,3 +1,4 @@
+
 Name:           hyprland-guiutils
 Version:        0.2.1
 Release:        %autorelease%{?dist}
@@ -9,15 +10,16 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprgraphics-devel
-BuildRequires:  hyprlang-devel
+BuildRequires:  hyprgraphics-devel >= 0.1.5
+BuildRequires:  hyprlang-devel >= 0.6.4
 BuildRequires:  hyprtoolkit-devel
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(xkbcommon)
+
 
 %description
 Hyprland GUI utilities (successor to hyprland-qtutils)

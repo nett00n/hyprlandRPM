@@ -1,3 +1,4 @@
+
 Name:           hyprshutdown
 Version:        0.1.0
 Release:        %autorelease%{?dist}
@@ -10,13 +11,14 @@ BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
 BuildRequires:  glaze-devel
-BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprgraphics-devel >= 0.1.5
 BuildRequires:  hyprtoolkit-devel
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(pixman-1)
+
 
 %description
 A graceful shutdown/logout utility for Hyprland, which prevents apps from

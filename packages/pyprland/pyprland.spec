@@ -1,3 +1,4 @@
+
 Name:           pyprland
 Version:        3.1.1
 Release:        %autorelease%{?dist}
@@ -10,6 +11,7 @@ Source0:        %{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.t
 BuildRequires:  python3-devel
 BuildRequires:  python3-hatchling
 BuildRequires:  python3-pip
+
 Requires:       python3-aiofiles
 Requires:       python3-aiohttp
 Requires:       python3-pillow
@@ -57,5 +59,5 @@ python3 -m pip install --no-deps --no-build-isolation --root %{buildroot} --pref
 %{python3_sitelib}/pyprland-%{version}.dist-info
 
 %changelog
-* Tue Apr 14 2026 nett00n <copr@nett00n.org> - 3.1.1-1
+* Sun Apr 19 2026 nett00n <copr@nett00n.org> - 3.1.1-1
 - Update to 3.1.1

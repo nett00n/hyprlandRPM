@@ -1,8 +1,9 @@
-%global commit 3e38db916aaecba0a7c7698c6df0c68acb89f312
+%global commit 6059aca0cc623d8d896b02842606036c0954ba88
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
-%global commitdate 20260412
+%global commitdate 20260417
+
 Name:           hyprland-plugins-git
-Version:        0.53.0^20260412git3e38db9
+Version:        0.53.0^20260417git6059aca
 Release:        %autorelease%{?dist}
 Summary:        Official plugins for Hyprland [Built from latest commit, unstable]
 License:        BSD-3-Clause
@@ -21,6 +22,7 @@ BuildRequires:  pkgconfig(pangocairo)
 BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(wayland-server)
 BuildRequires:  pkgconfig(xkbcommon)
+
 
 %description
 hyprland-plugins-git
@@ -75,5 +77,5 @@ ninja-build: 1.13.2
 %{_prefix}/lib/libxtra-dispatchers.so
 
 %changelog
-* Thu Apr 16 2026 nett00n <copr@nett00n.org> - 0.53.0^20260412git3e38db9-1
-- Update to 0.53.0^20260412git3e38db9
+* Sun Apr 19 2026 nett00n <copr@nett00n.org> - 0.53.0^20260417git6059aca-1
+- Update to 0.53.0^20260417git6059aca

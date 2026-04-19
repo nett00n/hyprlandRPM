@@ -1,3 +1,4 @@
+
 Name:           hyprlauncher
 Version:        0.1.5
 Release:        %autorelease%{?dist}
@@ -10,10 +11,10 @@ Patch0:         fix-build-with-rawhide-gpp.patch
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprgraphics-devel
-BuildRequires:  hyprlang-devel
+BuildRequires:  hyprgraphics-devel >= 0.1.5
+BuildRequires:  hyprlang-devel >= 0.6.4
 BuildRequires:  hyprtoolkit-devel
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  hyprwire-devel
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(fontconfig)
@@ -22,6 +23,7 @@ BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libqalculate)
 BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(xkbcommon)
+
 
 %description
 A multipurpose and versatile launcher / picker for Hyprland Features:

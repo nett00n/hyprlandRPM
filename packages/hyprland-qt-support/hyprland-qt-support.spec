@@ -1,3 +1,4 @@
+
 Name:           hyprland-qt-support
 Version:        0.1.0
 Release:        %autorelease%{?dist}
@@ -11,9 +12,10 @@ BuildRequires:  cmake(Qt6Qml)
 BuildRequires:  cmake(Qt6Quick)
 BuildRequires:  cmake(Qt6QuickControls2)
 BuildRequires:  gcc-c++
-BuildRequires:  hyprlang-devel
+BuildRequires:  hyprlang-devel >= 0.6.4
 BuildRequires:  ninja-build
 BuildRequires:  qt6-rpm-macros
+
 
 %description
 A qml style provider for hypr* qt apps

@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+
 Name:           glaze
 Version:        7.1.0
 Release:        %autorelease%{?dist}
@@ -12,6 +13,7 @@ BuildRequires:  gcc-c++
 BuildRequires:  libasan
 BuildRequires:  libubsan
 BuildRequires:  ninja-build
+
 
 %description
 One of the fastest JSON libraries in the world. Glaze reads and
@@ -29,7 +31,6 @@ Tag:               v7.1.0
 Commit:            b71542bb16c9d793545062185d7fd9bedbc0b638
 
 Build dependencies:
-gcc-c++: 16.0.1
 libasan: 16.0.1
 libubsan: 16.0.1
 ninja-build: 1.13.2

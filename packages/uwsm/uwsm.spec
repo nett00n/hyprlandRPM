@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+
 Name:           uwsm
 Version:        0.26.4
 Release:        %autorelease%{?dist}
@@ -14,6 +15,7 @@ BuildRequires:  python3-dbus
 BuildRequires:  python3-pyxdg
 BuildRequires:  scdoc
 BuildRequires:  systemd-rpm-macros
+
 
 %description
 Universal Wayland Session Manager

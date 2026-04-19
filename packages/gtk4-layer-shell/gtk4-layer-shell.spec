@@ -1,3 +1,4 @@
+
 Name:           gtk4-layer-shell
 Version:        1.3.0
 Release:        %autorelease%{?dist}
@@ -14,6 +15,7 @@ BuildRequires:  meson
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  vala
+
 
 %description
 A library for using the Layer Shell and Session Lock Wayland protocols

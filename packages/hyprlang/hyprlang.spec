@@ -1,3 +1,4 @@
+
 Name:           hyprlang
 Version:        0.6.8
 Release:        %autorelease%{?dist}
@@ -8,8 +9,9 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  ninja-build
+
 
 %description
 hyprlang is the official implementation library for the hypr configuration

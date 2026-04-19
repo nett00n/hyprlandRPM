@@ -117,36 +117,45 @@ def load_config() -> tuple[str, str, str, str, str, bool, bool, bool]:
 
 
 def prepare_packages(package_filter: str, skip_filter: str) -> dict:
-    """Load, filter, and expand packages with transitive dependencies."""
-    all_packages = get_packages()
-    packages = filter_packages(all_packages, package_filter)
-    packages = skip_packages(packages, skip_filter)
+    """Load, sort, filter, and expand packages with transitive dependencies.
 
-    if not package_filter:
-        return packages
+    Always applies topological sort to ensure correct build order.
+    For selective builds (PACKAGE=), also expands transitive dependencies.
+    """
+    all_packages = get_packages()
 
     graph = build_dep_graph(all_packages)
-    expanded: dict = {}
-    dep_reason: dict[str, str] = {}
-    for name in packages:
-        for dep in transitive_deps(name, graph):
-            if dep not in expanded:
-                expanded[dep] = all_packages[dep]
-                dep_reason[dep] = name
-        expanded[name] = all_packages[name]
-
     try:
-        order = topological_sort({k: graph[k] & set(expanded) for k in expanded})
+        order = topological_sort(graph)
     except ValueError as e:
         sys.exit(f"error: {e}")
 
-    requested = {n.strip() for n in package_filter.split(",") if n.strip()}
-    print(f"\nPackage build plan ({len(expanded)} total):")
-    for pkg in order:
-        reason = "" if pkg in requested else f"  (dep of {dep_reason.get(pkg, '?')})"
-        print(f"  {pkg}{reason}")
+    # Rebuild all_packages in topological order
+    sorted_packages = {k: all_packages[k] for k in order}
+    packages = filter_packages(sorted_packages, package_filter)
+    packages = skip_packages(packages, skip_filter)
 
-    return {k: expanded[k] for k in order if k in expanded}
+    if package_filter:
+        # Expand transitive deps for selective build
+        expanded: dict = {}
+        dep_reason: dict[str, str] = {}
+        for name in list(packages):
+            for dep in transitive_deps(name, graph):
+                if dep not in expanded:
+                    expanded[dep] = all_packages[dep]
+                    dep_reason[dep] = name
+            expanded[name] = all_packages[name]
+        requested = {n.strip() for n in package_filter.split(",") if n.strip()}
+        # Re-sort the expanded set (preserve topological order)
+        packages = {k: expanded[k] for k in order if k in expanded}
+        print(f"\nPackage build plan ({len(packages)} total):")
+        for pkg in packages:
+            reason = (
+                "" if pkg in requested else f"  (dep of {dep_reason.get(pkg, '?')})"
+            )
+            print(f"  {pkg}{reason}")
+
+    return packages
 
 
 def setup_build_status(

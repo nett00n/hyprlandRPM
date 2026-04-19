@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+
 Name:           hyprland-protocols
 Version:        0.7.0
 Release:        %autorelease%{?dist}
@@ -8,6 +9,7 @@ URL:            https://github.com/hyprwm/hyprland-protocols
 Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  meson
+
 
 %description
 hyprland-protocols

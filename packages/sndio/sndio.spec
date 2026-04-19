@@ -1,3 +1,4 @@
+
 Name:           sndio
 Version:        1.10.0
 Release:        %autorelease%{?dist}
@@ -9,6 +10,7 @@ Source0:        https://sndio.org/sndio-%{version}.tar.gz
 BuildRequires:  alsa-lib-devel
 BuildRequires:  gcc
 BuildRequires:  make
+
 
 %description
 Portable version of OpenBSD's lightweight audio & MIDI sub-system

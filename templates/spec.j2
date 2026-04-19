@@ -1,3 +1,4 @@
+{# RPM Build Globals #}
 {% if no_debug_package %}
 %global debug_package %{nil}
 {% endif %}
@@ -9,6 +10,8 @@
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
 %global commitdate {{ commit.date }}
 {% endif %}
+
+{# Package Metadata #}
 Name:           {{ name }}
 Version:        {{ version }}
 Release:        {{ release }}%{?dist}
@@ -18,6 +21,7 @@ BuildArch:      {{ buildarch }}
 {% endif %}
 License:        {{ license }}
 URL:            {{ url }}
+{# Sources and Patches #}
 {% for source in sources %}
 Source{{ loop.index0 }}:        {{ source }}
 {% endfor %}
@@ -29,13 +33,39 @@ Source{{ dep.source_index }}:        {{ dep.url }}
 Patch{{ loop.index0 }}:         {{ patch }}
 {% endfor %}
 
+{# Build Requirements with version constraints for internal project packages #}
 {% for dep in build_requires %}
-BuildRequires:  {{ dep }}
+{# Extract dep name, search for resolved version #}
+{% set dep_name = dep.split()[0] %}
+{% set ns = namespace(found=false) %}
+{# Only constrain -devel packages that are internal projects #}
+{% if dep_name.endswith('-devel') %}
+{% set base_name = dep_name[:-6] %}
+{# Check if this is an internal project package #}
+{% for pkg in project_packages %}
+{% if not ns.found and pkg.lower() == base_name %}
+{% for dv in dep_versions %}
+{% if dv.name == dep_name %}
+{# Internal project package: enforce minimum version with >= #}
+BuildRequires:  {{ dep_name }} >= {{ dv.version }}
+{% set ns.found = true %}
+{% endif %}
 {% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{# No version constraint: use as-is (system packages, tools, unresolved deps) #}
+{% if not ns.found %}
+BuildRequires:  {{ dep }}
+{% endif %}
+{% endfor %}
+
+{# Runtime Requirements #}
 {% for dep in requires %}
 Requires:       {{ dep }}
 {% endfor %}
 
+{# Package Description and Changelog Info #}
 %description
 {{ description }}
 {% if changelog.source_url or changelog.copr_url or changelog.tag or changelog.commit %}
@@ -50,6 +80,7 @@ Source repository: {{ changelog.source_url }}
 COPR repository:   {{ changelog.copr_url }}
 {% endif %}
 
+{# Git commit and tag info #}
 Package info:
 {% if changelog.tag %}
 Tag:               {{ changelog.tag }}
@@ -59,6 +90,7 @@ Commit:            {{ changelog.commit }}
 {% endif %}
 {% if dep_versions %}
 
+{# Resolved build dependency versions #}
 Build dependencies:
 {% for dep in dep_versions %}
 {{ dep.name }}: {{ dep.version }}
@@ -66,6 +98,7 @@ Build dependencies:
 {% endif %}
 {% endif %}
 
+{# Build Sections #}
 %prep
 %autosetup -p1{% if commit %} -n {{ source_name or '%{name}' }}-%{commit}{% elif source_dir %} -n {{ source_dir }}{% elif source_name %} -n {{ source_name }}-%{version}{% endif %}
 
@@ -79,10 +112,12 @@ Build dependencies:
 %install
 {{ install_cmd }}
 
+{# Main Package Files #}
 %files
 {% for f in files %}
 {{ f }}
 {% endfor %}
+{# Optional Development Package #}
 {% if devel %}
 
 %package devel
@@ -101,6 +136,7 @@ Development files for {{ name }}.
 {% endfor %}
 {% endif %}
 
+{# Changelog Entry #}
 %changelog
 * {{ changelog.date }} {{ changelog.packager }} - {{ changelog.version }}-{% if '%autorelease' in changelog.release %}1{% else %}{{ changelog.release }}{% endif %}
 

@@ -1,3 +1,4 @@
+
 Name:           hyprpwcenter
 Version:        0.1.2
 Release:        %autorelease%{?dist}
@@ -9,14 +10,15 @@ Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.
 BuildRequires:  aquamarine-devel
 BuildRequires:  cmake
 BuildRequires:  gcc-c++
-BuildRequires:  hyprgraphics-devel
+BuildRequires:  hyprgraphics-devel >= 0.1.5
 BuildRequires:  hyprtoolkit-devel
-BuildRequires:  hyprutils-devel
+BuildRequires:  hyprutils-devel >= 0.7.1
 BuildRequires:  ninja-build
 BuildRequires:  pkgconfig(cairo)
 BuildRequires:  pkgconfig(libdrm)
 BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  pkgconfig(pixman-1)
+
 
 %description
 A GUI Pipewire control center built with hyprtoolkit
