@@ -108,7 +108,7 @@ glaze:
   - '%doc README.md'
   - '%license LICENSE'
   license: MIT
-  release: 2
+  release: 0
   rpm:
     no_debug_package: true
   source:
@@ -116,7 +116,7 @@ glaze:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
   summary: Extremely fast, in memory, JSON and reflection library for modern C++.
   url: https://github.com/stephenberry/glaze
-  version: 8.0.0
+  version: 8.1.0
 glaze-v7:
   auto_update:
     release_type: pinned-version
@@ -493,13 +493,13 @@ hyprland-plugins:
     archives:
     - '%{url}/archive/%{commit}/%{name}-%{shortcommit}.tar.gz'
     commit:
-      date: '20260806'
-      full: a9eaa5263ae64291c1711c43bd5602c4a8b88c7c
+      date: '20260818'
+      full: 83ce4b2a70d3c1a6ed8dc6db7f1fac17db2215b1
     patches:
     - hyprland-0.54-exclude-incompatible-plugins.patch
   summary: Official plugins for Hyprland
   url: https://github.com/hyprwm/hyprland-plugins
-  version: 0.56.0^20260806gita9eaa52
+  version: 0.56.0^20260818git83ce4b2
 hyprland-protocols:
   build:
     system: meson
@@ -1084,13 +1084,13 @@ hyprutils:
   - '%license LICENSE'
   - '%{_libdir}/libhyprutils.so*'
   license: BSD-3-Clause
-  release: 5
+  release: 0
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
   summary: Small C++ library for utilities used across the Hypr ecosystem
   url: https://github.com/hyprwm/hyprutils
-  version: 0.14.0
+  version: 0.14.1
 hyprwayland-scanner:
   build:
     system: cmake
@@ -1375,7 +1375,7 @@ cliphist:
   - '%license LICENSE'
   - '%{_bindir}/cliphist'
   license: GPL-3.0-or-later
-  release: 8
+  release: 9
   requires:
   - wl-clipboard
   - xdg-utils
@@ -1670,7 +1670,7 @@ eww:
   - '%license LICENSE'
   - '%{_bindir}/eww'
   license: MIT
-  release: 13
+  release: 14
   requires: []
   rpm:
     no_debug_package: false
@@ -1906,7 +1906,7 @@ satty:
   - '%license LICENSE'
   - '%{_bindir}/satty'
   license: MPL-2.0
-  release: 8
+  release: 9
   requires: []
   rpm:
     no_debug_package: false
@@ -2060,7 +2060,7 @@ ironbar:
   - '%license LICENSE'
   - '%{_bindir}/ironbar'
   license: MIT
-  release: 13
+  release: 14
   requires: []
   rpm:
     no_debug_package: false

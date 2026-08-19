@@ -134,6 +134,7 @@ New packages: snappy switcher, mpvpaper. Added a `recommends` field to package c
 - `fuzzel` — App launcher and fuzzy finder for Wayland, inspired by rofi and dmenu
 - `gammastep` — Adjust the color temperature of your screen according to your surroundings. This may help your eyes hurt less if you are working in front of the screen at night.
 - `hyprland-per-window-layout` — Per-window keyboard layout daemon for Hyprland
+- `ironbar` — Customisable Wayland GTK4 bar written in Rust
 - `mpvpaper` — A video wallpaper program for wlroots based wayland compositors.
 - `network-manager-applet` — Tray applet and an advanced network connection editor
 - `nnn` — n³ The unorthodox terminal file manager
@@ -165,7 +166,7 @@ New packages: snappy switcher, mpvpaper. Added a `recommends` field to package c
 
 ## Build Status 📊
 
-- **[View detailed build report](./docs/full-report.md)** — Fedora 44 · 2026-08-09
+- **[View detailed build report](./docs/full-report.md)** — Fedora 44 · 2026-08-19
 - **[Monitor builds on COPR](https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/monitor/)**
 
 <!-- BEGIN: Footer -->
@@ -211,7 +212,7 @@ as well and make the source available. No warranty is provided
 
 ### Contributors
 
-- Vladimir Budylnikov
+- Vladimir Budylnikov- Vladimir nett00n Budylnikov- [github-actions[bot]](https://github.com/github-actions[bot])
 ---
 
 ## Additional Information

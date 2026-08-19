@@ -1,14 +1,14 @@
-%global commit a9eaa5263ae64291c1711c43bd5602c4a8b88c7c
+%global commit 83ce4b2a70d3c1a6ed8dc6db7f1fac17db2215b1
 %global shortcommit %(c=%{commit}; echo ${c:0:7})
-%global commitdate 20260806
+%global commitdate 20260818
 
 Name:           hyprland-plugins
-Version:        0.56.0^20260806gita9eaa52
+Version:        0.56.0^20260818git83ce4b2
 Release:        1%{?dist}
 Summary:        Official plugins for Hyprland
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/hyprland-plugins
-Source0:        https://github.com/hyprwm/hyprland-plugins/archive/a9eaa5263ae64291c1711c43bd5602c4a8b88c7c/hyprland-plugins-a9eaa52.tar.gz
+Source0:        https://github.com/hyprwm/hyprland-plugins/archive/83ce4b2a70d3c1a6ed8dc6db7f1fac17db2215b1/hyprland-plugins-83ce4b2.tar.gz
 Patch0:         hyprland-0.54-exclude-incompatible-plugins.patch
 
 BuildRequires:  cmake
@@ -49,7 +49,7 @@ Source repository: https://github.com/nett00n/hyprland-copr
 COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 
 Package info:
-Commit:            a9eaa5263ae64291c1711c43bd5602c4a8b88c7c
+Commit:            83ce4b2a70d3c1a6ed8dc6db7f1fac17db2215b1
 
 %prep
 %autosetup -p1 -n %{name}-%{commit}
@@ -67,6 +67,6 @@ Commit:            a9eaa5263ae64291c1711c43bd5602c4a8b88c7c
 %{_prefix}/lib/libhypr*.so
 
 %changelog
-* Fri Aug 07 2026 nett00n <copr@nett00n.org> - 0.56.0^20260806gita9eaa52-1
+* Tue Aug 18 2026 nett00n <copr@nett00n.org> - 0.56.0^20260818git83ce4b2-1
 
-- hyprbars: chase hyprland (#696)
+- vkfix: chase hyprland

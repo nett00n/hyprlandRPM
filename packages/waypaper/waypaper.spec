@@ -43,13 +43,13 @@ Package info:
 
 %install
 %pyproject_install
-%pyproject_save_files -l -a waypaper
+%pyproject_save_files -L -a waypaper
 
 %files -f %{pyproject_files}
 %doc README.md
 %license LICENSE
 
 %changelog
-* Thu Aug 06 2026 nett00n <copr@nett00n.org> - 2.8-9
+* Wed Aug 19 2026 nett00n <copr@nett00n.org> - 2.8-9
 
 - Update to 2.8
