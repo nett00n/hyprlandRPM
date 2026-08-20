@@ -166,7 +166,7 @@ New packages: snappy switcher, mpvpaper. Added a `recommends` field to package c
 
 ## Build Status 📊
 
-- **[View detailed build report](./docs/full-report.md)** — Fedora 44 · 2026-08-19
+- **[View detailed build report](./docs/full-report.md)** — Fedora 44 · 2026-08-20
 - **[Monitor builds on COPR](https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/monitor/)**
 
 <!-- BEGIN: Footer -->
@@ -212,7 +212,7 @@ as well and make the source available. No warranty is provided
 
 ### Contributors
 
-- Vladimir Budylnikov- Vladimir nett00n Budylnikov- [github-actions[bot]](https://github.com/github-actions[bot])
+- Vladimir nett00n Budylnikov- Vladimir Budylnikov- [github-actions[bot]](https://github.com/github-actions[bot])
 ---
 
 ## Additional Information
