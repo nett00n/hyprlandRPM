@@ -1,12 +1,12 @@
 %global debug_package %{nil}
 
 Name:           snappy-switcher
-Version:        4.0.0
-Release:        20%{?dist}
+Version:        4.5.0
+Release:        1%{?dist}
 Summary:        alt-tab switch window for wayland compositor
 License:        GPL-3.0
 URL:            https://github.com/OpalAayan/snappy-switcher
-Source0:        https://github.com/OpalAayan/snappy-switcher/archive/refs/tags/v4.0.0.tar.gz#/snappy-switcher-4.0.0.tar.gz
+Source0:        https://github.com/OpalAayan/snappy-switcher/archive/refs/tags/v4.5.0.tar.gz#/snappy-switcher-4.5.0.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  make
@@ -37,8 +37,8 @@ Source repository: https://github.com/nett00n/hyprland-copr
 COPR repository:   https://copr.fedorainfracloud.org/coprs/nett00n/hyprland/
 
 Package info:
-Tag:               v4.0.0
-Commit:            c2823cdd006c36d50c1e625dccbbc6685b43f1f4
+Tag:               v4.5.0
+Commit:            da6bb208264cb59a4defec4c21320bd2dc576518
 
 %prep
 %autosetup -p1
@@ -60,6 +60,6 @@ make %{?_smp_mflags}
 %{_sysconfdir}/xdg/snappy-switcher/config.ini
 
 %changelog
-* Wed Jun 03 2026 nett00n <copr@nett00n.org> - 4.0.0-20
+* Thu Aug 20 2026 nett00n <copr@nett00n.org> - 4.5.0-1
 
-- fix(build): resolve wayland-protocols path for Fedora
+- v4.5.0

@@ -1496,7 +1496,7 @@ quickshell:
   - '%{_datadir}/applications/org.quickshell.desktop'
   - '%{_datadir}/icons/hicolor/scalable/apps/org.quickshell.svg'
   license: LGPL-3.0-or-later
-  release: 38
+  release: 1
   requires: []
   rpm:
     no_debug_package: false
@@ -1507,7 +1507,7 @@ quickshell:
   source_dir: quickshell
   summary: Flexible QtQuick based desktop shell toolkit
   url: https://git.outfoxxed.me/quickshell/quickshell.git
-  version: 0.3.0
+  version: 0.3.1
 hyprland-per-window-layout:
   build:
     commands: []
@@ -1720,7 +1720,7 @@ snappy-switcher:
   - '%{_docdir}/snappy-switcher/config.ini.example'
   - '%{_sysconfdir}/xdg/snappy-switcher/config.ini'
   license: GPL-3.0
-  release: 20
+  release: 1
   requires: []
   rpm:
     no_debug_package: true
@@ -1729,7 +1729,7 @@ snappy-switcher:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
   summary: alt-tab switch window for wayland compositor
   url: https://github.com/OpalAayan/snappy-switcher
-  version: 4.0.0
+  version: 4.5.0
 mpvpaper:
   auto_update:
     release_type: latest-tag
