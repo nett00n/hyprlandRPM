@@ -563,6 +563,7 @@ update-daily: ## Update versions, validate+format packages.yaml, build (package 
 			git push || exit 1; \
 		fi; \
 	fi
+	@echo $(HIGHLIGHT_PREFIX) "$$(cat logs/.update-versions-count 2>/dev/null || echo '?') package(s) updated tonight"
 	@if [ -f logs/.update-daily-failed ]; then \
 		rm -f logs/.update-daily-failed; \
 		echo "$(HIGHLIGHT_PREFIX) ✗ Some packages failed to build tonight (docs and commit were still produced; see stage-log-analyze output above, or check logs/build/<pkg>)"; \

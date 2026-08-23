@@ -12,13 +12,13 @@ Usage:
 """
 
 import argparse
-import re
 import sys
 
 import yaml
 
 from lib.paths import PACKAGES_YAML, ROOT
 from lib.rpm_macros import normalize_file_entry
+from lib.yaml_utils import write_yaml_file
 
 
 def iter_file_lists(data: dict):
@@ -45,19 +45,25 @@ def collect_replacements(data: dict, reverse: bool) -> dict[str, str]:
     return replacements
 
 
-def apply_replacements(content: str, replacements: dict[str, str]) -> str:
-    """Replace each old entry with the normalized form in the raw YAML text."""
-    for old, new in replacements.items():
-        content = content.replace(f'"{old}"', f'"{new}"')
-        content = content.replace(f"'{old}'", f"'{new}'")
-        quoted_new = f'"{new}"' if "%{" in new else new
-        content = re.sub(
-            r"(^\s*-\s+)" + re.escape(old) + r"(\s*)$",
-            r"\g<1>" + quoted_new + r"\g<2>",
-            content,
-            flags=re.MULTILINE,
-        )
-    return content
+def apply_replacements(data: dict, reverse: bool) -> int:
+    """Normalize every `files:` entry in place. Returns the count changed.
+
+    Mutates the parsed tree directly instead of splicing the raw YAML text:
+    a raw-text replace isn't scoped to `files:` lists, so a `files:` entry
+    that happens to also appear (as a substring or a whole other list item)
+    in `requires:`, `build.install`, etc. would get rewritten too, and a bad
+    substitution would ship to disk with no re-parse to catch it.
+    """
+    changed = 0
+    for file_list in iter_file_lists(data):
+        for i, entry in enumerate(file_list or []):
+            if entry is None:
+                continue
+            normalized = normalize_file_entry(entry, reverse)
+            if normalized != entry:
+                file_list[i] = normalized
+                changed += 1
+    return changed
 
 
 def main() -> None:
@@ -79,8 +85,7 @@ def main() -> None:
     if not PACKAGES_YAML.exists():
         sys.exit(f"error: {PACKAGES_YAML} not found")
 
-    content = PACKAGES_YAML.read_text()
-    data = yaml.safe_load(content)
+    data = yaml.safe_load(PACKAGES_YAML.read_text())
 
     replacements = collect_replacements(data, args.reverse)
 
@@ -94,13 +99,13 @@ def main() -> None:
         print(f"  {old!r}")
         print(f"    -> {new!r}")
 
-    new_content = apply_replacements(content, replacements)
-
     if args.dry_run:
         print("\n[dry-run] No changes written.")
         return
 
-    PACKAGES_YAML.write_text(new_content)
+    apply_replacements(data, args.reverse)
+
+    write_yaml_file(PACKAGES_YAML, data)
     print(f"\nUpdated {PACKAGES_YAML.relative_to(ROOT)}")
 
 

@@ -31,6 +31,7 @@ from lib.gitmodules import (
 from lib.paths import GITMODULES, PACKAGES_YAML, ROOT
 from lib.version import latest_semver
 from lib.yaml_config import DEFAULT as YAML_CONFIG
+from lib.yaml_utils import write_yaml_file
 
 
 def cmd_add(modules: list[dict], pkg_name: str) -> None:
@@ -214,7 +215,7 @@ def cmd_add(modules: list[dict], pkg_name: str) -> None:
     else:
         data = {key: entry}
 
-    PACKAGES_YAML.write_text(YAML_CONFIG.dump(data))
+    write_yaml_file(PACKAGES_YAML, data)
 
     print(f"appended '{key}' to {PACKAGES_YAML}", file=sys.stderr)
     print(YAML_CONFIG.dump({key: entry}))

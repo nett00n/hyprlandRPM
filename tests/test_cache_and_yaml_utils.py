@@ -1,6 +1,7 @@
 """Unit tests for scripts/lib/cache.py and lib/yaml_utils.py"""
 
 import pytest
+import yaml
 
 import sys
 from pathlib import Path
@@ -20,6 +21,7 @@ from lib.yaml_utils import (
     load_groups_yaml,
     dump_yaml_pretty,
     prepare_stage,
+    write_yaml_file,
     write_yaml_preserving_comments,
 )
 
@@ -619,6 +621,48 @@ class TestWriteYamlPreservingComments:
 
         assert len(changed) == 1  # Only pkg1 changed
         assert "pkg1" in changed
+
+
+class TestWriteYamlFile:
+    """Test write_yaml_file's `---` document-start preservation.
+
+    dump_yaml_pretty()/yaml_config.DEFAULT always write with
+    explicit_start=False, silently dropping a file's leading `---`
+    (see docs/CHANGELOG.md 2026-08-23). write_yaml_file() is the shared
+    fix: it reads the file's own current state and preserves it.
+    """
+
+    def test_preserves_existing_document_start(self, tmp_path):
+        path = tmp_path / "packages.yaml"
+        path.write_text("---\nfoo:\n  version: '1.0'\n")
+
+        write_yaml_file(path, {"foo": {"version": "2.0"}})
+
+        assert path.read_text().startswith("---\n")
+
+    def test_omits_document_start_when_absent(self, tmp_path):
+        path = tmp_path / "sources.lock.yaml"
+        path.write_text("foo:\n  sha256: abc\n")
+
+        write_yaml_file(path, {"foo": {"sha256": "def"}})
+
+        assert not path.read_text().startswith("---")
+
+    def test_new_file_gets_no_document_start(self, tmp_path):
+        path = tmp_path / "new.yaml"
+        assert not path.exists()
+
+        write_yaml_file(path, {"foo": {"version": "1.0"}})
+
+        assert not path.read_text().startswith("---")
+
+    def test_content_is_written_correctly(self, tmp_path):
+        path = tmp_path / "packages.yaml"
+        path.write_text("---\nfoo:\n  version: '1.0'\n")
+
+        write_yaml_file(path, {"foo": {"version": "2.0"}})
+
+        assert yaml.safe_load(path.read_text()) == {"foo": {"version": "2.0"}}
 
 
 class TestCacheHelpers:

@@ -20,9 +20,9 @@ import sys
 import yaml
 from lib.paths import PACKAGES_YAML
 from lib.yaml_utils import (
-    dump_yaml_pretty,
     find_package_name,
     get_packages,
+    write_yaml_file,
 )
 
 
@@ -84,7 +84,7 @@ def main() -> None:
         updated.append((pkg_name, old_release))
 
     # Write back
-    PACKAGES_YAML.write_text(dump_yaml_pretty(data))
+    write_yaml_file(PACKAGES_YAML, data)
 
     # Print results
     if lock:

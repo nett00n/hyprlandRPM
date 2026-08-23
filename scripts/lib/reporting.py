@@ -136,6 +136,31 @@ def print_summary(packages: dict, stages: dict, copr_repo: str) -> None:
             row += f"{cell:<18}"
         print(row)
     print(sep)
+    print(build_totals_line(packages, stages))
+
+
+def build_totals_line(packages, stages: dict) -> str:
+    """Return a one-line aggregate count of built/cached/failed packages.
+
+    Judged from the "mock" stage -- the actual local build step -- since
+    "spec"/"srpm"/"copr" states don't reflect whether the package's RPM was
+    actually (re)built vs. reused from cache.
+    """
+    built = cached = failed = other = 0
+    for pkg in packages:
+        entry = stages.get("mock", {}).get(pkg, {})
+        if entry.get("reason") == "cached":
+            cached += 1
+        elif entry.get("state") == "success":
+            built += 1
+        elif entry.get("state") == "failed":
+            failed += 1
+        else:
+            other += 1
+    parts = [f"{built} built", f"{cached} cached", f"{failed} failed"]
+    if other:
+        parts.append(f"{other} skipped/pending")
+    return f"Totals: {', '.join(parts)} ({len(packages)} total)"
 
 
 def badge_short(

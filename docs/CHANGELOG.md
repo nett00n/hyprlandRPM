@@ -12,6 +12,29 @@ entry as `- <Added|Changed|Fixed|Removed>: <what changed>`. Full ruleset in
 
 History before this file's introduction is not backfilled - see `git log`.
 
+## 2026-08-23
+
+- Fixed: `update_package_releases()` (`lib/yaml_utils.py`) now writes `release:`
+  values through yaml load/dump like the rest of the module instead of a
+  `MULTILINE|DOTALL` regex substitution that could rewrite the *next* package's
+  release (or silently no-op) when a package block didn't match the expected
+  two-space `release:` shape. A release update targeting a package absent from
+  packages.yaml now raises instead of being reported as written. Fixes #BUG-0011.
+- Fixed: `rpm-dir-prefixes-convert.py`'s `apply_replacements()` now mutates the parsed
+  `files:` lists in place instead of doing a file-global raw-text `str.replace`/regex
+  substitution -- the old version could rewrite a matching path anywhere else in
+  packages.yaml (`requires:`, `build.install`, a `description`, ...), never re-parsed
+  the result before writing, and emitted double quotes into a file where every
+  `files:` entry is single-quoted. This script runs unattended every night via `make
+  update-daily` -> `fmt` -> `normalize-paths`. Added `tests/test_rpm_dir_prefixes_convert.py`
+  (previously untested, docs/todo.md #TODO-0041).
+- Added: `lib.yaml_utils.write_yaml_file()`, a shared writer that preserves a YAML
+  file's existing `---` document start (previously every packages.yaml/groups.yaml
+  writer using `dump_yaml_pretty()`/`yaml_config.DEFAULT` silently dropped it, since
+  that config always sets `explicit_start=False`). Routed `update_package_releases()`,
+  `write_yaml_preserving_comments()`, `delete-package.py`, `set-package-release.py`,
+  `scaffold-package.py`, and `lib.source_lock.save_lock()` through it.
+
 ## 2026-08-19
 
 - Fixed: `eww`, `satty`, `ironbar`, and `cliphist` (`packages.yaml`) each

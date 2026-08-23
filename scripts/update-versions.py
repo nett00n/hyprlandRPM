@@ -19,7 +19,7 @@ from lib.gitmodules import (
     get_tag_commit,
     parse_gitmodules,
 )
-from lib.paths import GITMODULES, PACKAGES_YAML, ROOT
+from lib.paths import GITMODULES, LOG_DIR, PACKAGES_YAML, ROOT
 from lib.subprocess_utils import run_git
 from lib.version import (
     PINNED_RELEASE_TYPES,
@@ -417,6 +417,11 @@ def main() -> None:
             print(f"  {pkg}: {old} -> {new}", file=sys.stderr)
     else:
         print("packages.yaml: all versions already up to date", file=sys.stderr)
+
+    # Sentinel file for `make update-daily`'s end-of-run summary line -- see
+    # LOG_DIR / ".update-versions-count" consumer in Makefile's update-daily target.
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    (LOG_DIR / ".update-versions-count").write_text(f"{len(changed)}\n")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ from .paths import (
 )
 from .version import COMMIT_VERSION_RELEASE_TYPES
 from .yaml_config import DEFAULT as DEFAULT_YAML_CONFIG
+from .yaml_config import FORMAT_FILE
 
 STAGES = build_db.STAGES
 
@@ -185,6 +186,19 @@ def dump_yaml_pretty(data: dict) -> str:
     return DEFAULT_YAML_CONFIG.dump(data)
 
 
+def write_yaml_file(path: Path, data: dict) -> None:
+    """Dump `data` to `path`, preserving whether the file has a `---` document start.
+
+    dump_yaml_pretty()/yaml_config.DEFAULT set explicit_start=False, so writing
+    through them strips the `---` that packages.yaml/groups.yaml/repo.yaml carry.
+    Only `make fmt` and `make update-daily` re-run format-yaml.py to put it back,
+    so standalone writers (delete-package, set-package-release, scaffold-package)
+    would otherwise leave a document-start yamllint warning behind.
+    """
+    explicit_start = path.exists() and path.read_text().lstrip().startswith("---")
+    path.write_text(FORMAT_FILE(2, explicit_start=explicit_start).dump(data))
+
+
 def prepare_stage(
     stage_name: str,
     target: str,
@@ -281,7 +295,7 @@ def write_yaml_preserving_comments(
                         pkg_data["source"] = source
 
     if changed:
-        path.write_text(dump_yaml_pretty(data))
+        write_yaml_file(path, data)
     return changed
 
 
@@ -307,7 +321,9 @@ def update_package_releases(packages: dict, target: str) -> dict[str, int]:
         target: build_db target key (mock chroot) to read stored state from
 
     Returns:
-        Dict of {pkg_name: new_release} for packages that were updated
+        Dict of {pkg_name: new_release} for packages that were updated.
+        Reflects values actually written to packages.yaml -- a target
+        missing from the file raises instead of being reported as written.
     """
     from lib.cache import compute_input_hashes, hashes_match
     from lib.deps import effective_deps
@@ -377,19 +393,15 @@ def update_package_releases(packages: dict, target: str) -> dict[str, int]:
 
     # Write updates back to packages.yaml if any
     if updates:
-        import re
-
-        content = PACKAGES_YAML.read_text()
-
-        for pkg_name, new_release in updates.items():
-            # Use regex to safely replace release value for each package
-            # Pattern: find package name at line start, then find release: value
-            pattern = f"^({re.escape(pkg_name)}:.*?^  release: )\\d+(\\n)"
-            replacement = f"\\g<1>{new_release}\\2"
-            content = re.sub(
-                pattern, replacement, content, flags=re.MULTILINE | re.DOTALL
+        data = yaml.safe_load(PACKAGES_YAML.read_text())
+        missing = sorted(p for p in updates if p not in data)
+        if missing:
+            # Never silently drop a write and still report it as done (BUG-0011).
+            raise KeyError(
+                f"release update targets not in {PACKAGES_YAML.name}: {', '.join(missing)}"
             )
-
-        PACKAGES_YAML.write_text(content)
+        for pkg_name, new_release in updates.items():
+            data[pkg_name]["release"] = new_release
+        write_yaml_file(PACKAGES_YAML, data)
 
     return updates

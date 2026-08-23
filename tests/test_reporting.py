@@ -73,10 +73,13 @@ class TestPrintSummary:
         packages = {"pkg1": {}}
         print_summary(packages, stages, copr_repo="")
         captured = capsys.readouterr()
-        assert "n/a" in captured.out
-        assert "cached" not in captured.out
-        assert "SKIP" not in captured.out
-        assert "2026-08-18" not in captured.out
+        # Totals line legitimately says "0 cached" -- scope the "cached" check
+        # to the per-package table above it, not the aggregate totals line.
+        table = captured.out.rsplit("Totals:", 1)[0]
+        assert "n/a" in table
+        assert "cached" not in table
+        assert "SKIP" not in table
+        assert "2026-08-18" not in table
 
     def test_cached_reason_still_renders_cached(self, capsys):
         """A genuine cache hit still renders "cached"."""

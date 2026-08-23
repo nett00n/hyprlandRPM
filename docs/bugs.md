@@ -4,7 +4,7 @@ Automation behaving wrong today. Complexity/cleanup/features go in `docs/todo.md
 instead. GitHub issues are for reporter-facing items (someone else's bug/request);
 this file is the maintainer's own log and may cite issue numbers. Entries are deleted
 when fixed (the fix gets a `docs/CHANGELOG.md` bullet); IDs are never reused or
-renumbered, so deletions leave gaps. Next free ID: **BUG-0047**.
+renumbered, so deletions leave gaps. Next free ID: **BUG-0048**.
 
 Each entry ends with a `[P#/D#]` marker:
 
@@ -38,19 +38,6 @@ difficulty. Move an entry into a real section below once it has all three.
   night. Already carries a `FIXME(BUG-0040)` comment at `lib/copr.py:332-335` pointing
   back here. A per-chroot listing mentioning both `succeeded` and `failed` resolves to
   whichever line the substring scan hits first, since the match is unanchored [P1/D2]
-
-- #BUG-0011 `lib/yaml_utils.py:update_package_releases` mutates packages.yaml via
-  regex string substitution on raw text instead of load/mutate/dump like the rest of
-  the module -> fragile, depends on exact indentation matching. The pattern, verbatim
-  at `lib/yaml_utils.py:387`: `^({pkg}:.*?^  release: )\d+(\n)` compiled with
-  `MULTILINE | DOTALL` and called with no `count=` -- if a package block has no
-  `release:` key at exactly two-space indent, the non-greedy `.*?` runs straight past
-  the end of that block and rewrites the *next* package's release instead; a
-  `release:` with a trailing comment or different indentation is a silent no-op.
-  Either way `full-cycle.py:781-785` still prints `Release updates: {...}` claiming
-  the write happened, so the NVR stays put and Copr rejects the resubmission as a
-  duplicate. Holds together today only because all 49 packages (not 45 -- count
-  re-verified 2026-08-18) happen to match the pattern exactly [P1/D2]
 
 - #BUG-0012 `scripts/validate-packages.py` (the pre-commit gate) and
   `lib/validation.py` (used by `stage-validate`, the actual build) are two
@@ -168,9 +155,22 @@ nightly job. Audited end to end 2026-08, re-verified 2026-08-18:
   the full `pre-commit` target with `test`+`lint` was deliberately dropped from this
   path, CHANGELOG 2026-08-02, closed TODO-0064). But `full-cycle.py:781-785` still
   calls `update_package_releases()`, which rewrites packages.yaml in place *after*
-  the gate has run (via the regex of BUG-0011). The packages.yaml that lands in the
-  daily commit (`Makefile:556`) is the post-regex one, which
-  validate-packages.py/yamllint/format-yaml.py never inspected [P1/D2]
+  the gate has run. The packages.yaml that lands in the daily commit (`Makefile:556`)
+  is the post-rewrite one, which validate-packages.py/yamllint/format-yaml.py never
+  inspected [P1/D2]
+
+## Packaging metadata
+
+- #BUG-0047 `lib/rpm_macros.py:normalize_file_entry`'s forward direction (abs -> macro)
+  only matches entries starting with `/` (`rpm_macros.py:59`), so a `files:` entry already
+  in non-canonical `%{_prefix}/...` form (e.g. `%{_prefix}/bin/ags`, verified live at
+  `packages.yaml:75-76`, 39 such entries total across the file) is never canonicalized to
+  `%{_bindir}`/`%{_libdir}`/etc, even though `make normalize-paths --reverse` followed by
+  a forward pass *does* canonicalize them (round-trip is not idempotent forward-only).
+  Also: `PREFIXES` (`rpm_macros.py:6-25`) has no `/usr/lib` entry, so `/usr/lib/x` (as
+  opposed to `/usr/lib64/x`) falls through to `%{_prefix}/lib/x` on the reverse pass
+  too. Cosmetic only -- both forms are valid RPM spec syntax -- but inconsistent with the
+  rest of the file [P3/D2]
 
 ## Container / Makefile
 

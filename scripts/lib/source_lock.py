@@ -28,7 +28,7 @@ import yaml
 
 from lib import paths
 from lib.spec_utils import process_archive_urls
-from lib.yaml_config import DEFAULT as DEFAULT_YAML_CONFIG
+from lib.yaml_utils import write_yaml_file
 
 _CHUNK_SIZE = 1024 * 1024
 
@@ -97,7 +97,7 @@ def load_lock() -> dict:
 
 def save_lock(lock: dict) -> None:
     """Write `lock` back to sources.lock.yaml."""
-    paths.SOURCES_LOCK.write_text(DEFAULT_YAML_CONFIG.dump(lock))
+    write_yaml_file(paths.SOURCES_LOCK, lock)
 
 
 def verify(pkg_name: str, meta: dict, sources_dir: Path) -> list[str]:

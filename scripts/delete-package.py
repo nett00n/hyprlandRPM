@@ -25,10 +25,10 @@ from lib import build_db  # noqa: E402
 from lib.paths import GROUPS_YAML, PACKAGES_YAML, ROOT, get_package_log_dir  # noqa: E402
 from lib.source_lock import load_lock, save_lock  # noqa: E402
 from lib.yaml_utils import (  # noqa: E402
-    dump_yaml_pretty,
     find_package_name,
     get_packages,
     load_groups_yaml,
+    write_yaml_file,
 )
 
 
@@ -73,7 +73,7 @@ def main() -> None:
 
     if pkg_name in packages:
         packages.pop(pkg_name)
-        PACKAGES_YAML.write_text(dump_yaml_pretty(packages))
+        write_yaml_file(PACKAGES_YAML, packages)
         parts.append("packages.yaml")
 
     changed_groups = [
@@ -84,7 +84,7 @@ def main() -> None:
     for group_name in changed_groups:
         groups[group_name]["packages"].remove(pkg_name)
     if changed_groups:
-        GROUPS_YAML.write_text(dump_yaml_pretty(groups))
+        write_yaml_file(GROUPS_YAML, groups)
         parts.append(f"groups.yaml ({', '.join(changed_groups)})")
 
     if pkg_name in lock:

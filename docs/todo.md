@@ -189,16 +189,17 @@ else is still fedora+x86_64-only:
   `stage-vendor.py:70-75`) -> extract to a small helper (the old `lib/stage_utils.py`
   was removed in the sqlite migration; a new home is needed, e.g.
   `lib/stage_common.py`) [P3/D1]
-- #TODO-0041 9 top-level scripts have zero tests (re-verified 2026-08-18; membership
+- #TODO-0041 8 top-level scripts have zero tests (re-verified 2026-08-23; membership
   changed -- `pkg-log-analysis.py` and `validate-packages.py` are now tested and drop
-  off this list; `serve.py` and `gen-readme-shell.py` are added): `format-yaml.py`,
+  off this list; `serve.py` and `gen-readme-shell.py` are added; `rpm-dir-prefixes-convert.py`
+  now has `tests/test_rpm_dir_prefixes_convert.py` and drops off too, alongside its
+  regex-over-raw-text rewrite -- see docs/CHANGELOG.md 2026-08-23): `format-yaml.py`,
   `gather-requires.py`, `gen-readme-shell.py`, `list-tags.py`, `pkg-build-pop.py`,
-  `rpm-dir-prefixes-convert.py`, `serve.py`, `set-package-release.py`,
-  `sort-yaml-lists.py` -> violates the project's own TDD rule; worst offenders are the
-  two regex-based YAML block parsers, `sort-yaml-lists.py` and
-  `rpm-dir-prefixes-convert.py`. `gather-requires`/`list-tags` have Makefile-level
-  `make -n` coverage only (`tests/integration/test_make_targets.py:583,605-616`),
-  which never executes the script [P1/D4]
+  `serve.py`, `set-package-release.py`, `sort-yaml-lists.py` -> violates the project's
+  own TDD rule; worst offender remaining is the one regex-based YAML block parser,
+  `sort-yaml-lists.py`. `gather-requires`/`list-tags` have Makefile-level `make -n`
+  coverage only (`tests/integration/test_make_targets.py:583,605-616`), which never
+  executes the script [P1/D4]
 - #TODO-0042 `lib/log_analysis.py` is 1257 lines (re-verified 2026-08-18, grown from
   944) of ~41 copy-pasted `if m: issues.append(...); continue` blocks from
   hand-written regexes -> a data table of (regex, formatter) pairs would cut it by
