@@ -12,6 +12,17 @@ entry as `- <Added|Changed|Fixed|Removed>: <what changed>`. Full ruleset in
 
 History before this file's introduction is not backfilled - see `git log`.
 
+## 2026-08-24
+
+- Fixed: `poll_copr_status()` (`lib/copr.py`) now matches the full copr-cli
+  state vocabulary (`succeeded/failed/canceled/skipped/forked` as terminal;
+  `running/starting/pending/importing/waiting` as non-terminal) as whole
+  tokens, taking the rightmost match, instead of an unanchored
+  `"succeeded"`/`"failed"` substring scan. Previously `canceled`/`skipped`/
+  `forked` builds were never recognized and stayed `unknown` forever, getting
+  re-polled and resubmitted every night (BUG-0002). An unrecognized status
+  now prints a warning instead of silently no-opping. Fixes #BUG-0040.
+
 ## 2026-08-23
 
 - Fixed: `update_package_releases()` (`lib/yaml_utils.py`) now writes `release:`

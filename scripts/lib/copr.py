@@ -31,6 +31,29 @@ COPR_API_PROJECT = (
 TERMINAL_STATES = {"success", "failed"}
 CHROOT_LOG_CANDIDATES = ("builder-live.log.gz", "build.log.gz")
 
+# Every state copr-cli's `status` command can print (see copr_cli.helpers.
+# colorize_status upstream). Matched as whole tokens, case-insensitively, and
+# the *rightmost* match in the output wins -- see poll_copr_status().
+_COPR_STATE_RE = re.compile(
+    r"\b(succeeded|failed|canceled|skipped|forked|"
+    r"running|starting|pending|importing|waiting)\b"
+)
+
+# Maps copr-cli's terminal states onto our own two-value state vocabulary.
+# canceled/skipped/forked are terminal -- the build will never resolve itself
+# -- so they're treated the same as a real failure: is_cached() only trusts
+# "success", so anything else naturally gets resubmitted the next run (see
+# docs/bugs.md BUG-0002). running/starting/pending/importing/waiting are
+# intentionally absent: they're non-terminal, so the row is left alone and
+# polled again next time.
+_COPR_TERMINAL_STATE_MAP = {
+    "succeeded": "success",
+    "failed": "failed",
+    "canceled": "failed",
+    "skipped": "failed",
+    "forked": "failed",
+}
+
 # Verdicts for chroot_coverage(): "verified"/"failed" come from a real local mock
 # row; "unbuilt" is a same-arch chroot nobody has tried locally yet; "unverifiable"
 # is a different-arch chroot (aarch64) mock can never build here -- see
@@ -329,20 +352,19 @@ def poll_copr_status(target: str, packages_list: list[str]) -> bool:
         if not ok:
             continue
 
-        # FIXME(BUG-0040): only maps succeeded/failed -- any other terminal
-        # state (canceled, skipped, stuck import) never matches and the row
-        # stays "unknown" forever, re-polled and resubmitted nightly (see
-        # BUG-0002). See docs/bugs.md.
-        # Parse output to get state (status command outputs "succeeded" or "failed" etc)
-        new_state = None
-        for line in stdout.splitlines():
-            line_lower = line.lower()
-            if "succeeded" in line_lower:
-                new_state = "success"
-                break
-            elif "failed" in line_lower:
-                new_state = "failed"
-                break
+        # copr-cli status prints a single state token (see _COPR_STATE_RE).
+        # Match whole tokens and take the rightmost one, so a stray earlier
+        # mention of another state's name can't win by appearing first.
+        matches = _COPR_STATE_RE.findall(stdout.lower())
+        copr_state = matches[-1] if matches else None
+        if copr_state is None and stdout.strip():
+            print(
+                f"warning: copr-cli status {build_id} returned an "
+                f"unrecognized state, leaving {pkg}/{target} as {state!r}: "
+                f"{stdout.strip()!r}",
+                file=sys.stderr,
+            )
+        new_state = _COPR_TERMINAL_STATE_MAP.get(copr_state)
 
         # Update if status changed
         if new_state and new_state != state:

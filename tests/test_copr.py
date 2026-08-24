@@ -288,6 +288,69 @@ class TestPollCoprStatus:
         assert result is False
         mock_run_cmd.assert_not_called()
 
+    @pytest.mark.parametrize("copr_state", ["canceled", "skipped", "forked"])
+    @patch("lib.copr.fetch_failed_chroot_logs")
+    @patch("lib.copr.run_cmd")
+    def test_poll_status_other_terminal_states_map_to_failed(
+        self, mock_run_cmd, mock_fetch_logs, copr_state
+    ):
+        """BUG-0040: canceled/skipped/forked are terminal but were previously
+        never recognized, leaving the row stuck at 'unknown' forever."""
+        mock_run_cmd.return_value = (True, copr_state, "")
+
+        _seed_copr("pkg1", build_id=123, state="unknown")
+        result = poll_copr_status(TARGET, ["pkg1"])
+
+        assert result is True
+        assert build_db.get_stage("pkg1", "copr", TARGET)["state"] == "failed"
+        mock_fetch_logs.assert_called_once_with("pkg1", 123)
+
+    @pytest.mark.parametrize(
+        "copr_state", ["running", "starting", "pending", "importing", "waiting"]
+    )
+    @patch("lib.copr.run_cmd")
+    def test_poll_status_non_terminal_states_left_alone(self, mock_run_cmd, copr_state):
+        """Non-terminal copr-cli states must not be treated as a status change."""
+        mock_run_cmd.return_value = (True, copr_state, "")
+
+        _seed_copr("pkg1", build_id=123, state="unknown")
+        result = poll_copr_status(TARGET, ["pkg1"])
+
+        assert result is False
+        assert build_db.get_stage("pkg1", "copr", TARGET)["state"] == "unknown"
+
+    @patch("lib.copr.run_cmd")
+    def test_poll_status_unrecognized_output_warns_and_leaves_state(
+        self, mock_run_cmd, capsys
+    ):
+        """An unrecognized copr-cli output must not be silently swallowed."""
+        mock_run_cmd.return_value = (True, "some future status nobody knows", "")
+
+        _seed_copr("pkg1", build_id=123, state="unknown")
+        result = poll_copr_status(TARGET, ["pkg1"])
+
+        assert result is False
+        assert build_db.get_stage("pkg1", "copr", TARGET)["state"] == "unknown"
+        captured = capsys.readouterr()
+        assert "unrecognized state" in captured.err
+        assert "pkg1" in captured.err
+
+    @patch("lib.copr.run_cmd")
+    def test_poll_status_rightmost_token_wins(self, mock_run_cmd):
+        """BUG-0040: a listing mentioning multiple state words must not
+        resolve to whichever one happens to appear first."""
+        mock_run_cmd.return_value = (
+            True,
+            "fedora-44-x86_64 succeeded\nfedora-43-x86_64 failed",
+            "",
+        )
+
+        _seed_copr("pkg1", build_id=123, state="unknown")
+        result = poll_copr_status(TARGET, ["pkg1"])
+
+        assert result is True
+        assert build_db.get_stage("pkg1", "copr", TARGET)["state"] == "failed"
+
 
 CHROOT_LIST_RESPONSE = {
     "items": [
