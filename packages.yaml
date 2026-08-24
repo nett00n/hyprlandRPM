@@ -493,13 +493,13 @@ hyprland-plugins:
     archives:
     - '%{url}/archive/%{commit}/%{name}-%{shortcommit}.tar.gz'
     commit:
-      date: '20260818'
-      full: 83ce4b2a70d3c1a6ed8dc6db7f1fac17db2215b1
+      date: '20260823'
+      full: 2b41ad87ba68226472b8a811c3f580a1eabb10bb
     patches:
     - hyprland-0.54-exclude-incompatible-plugins.patch
   summary: Official plugins for Hyprland
   url: https://github.com/hyprwm/hyprland-plugins
-  version: 0.56.0^20260818git83ce4b2
+  version: 0.56.0^20260823git2b41ad8
 hyprland-protocols:
   build:
     system: meson
@@ -1441,7 +1441,7 @@ uwsm:
   - '%{_userunitdir}/wayland-wm-env@.service'
   - '%{_userunitdir}/wayland-wm@.service'
   license: MIT
-  release: 6
+  release: 1
   requires: []
   rpm:
     no_debug_package: true
@@ -1451,7 +1451,7 @@ uwsm:
     bundled_deps: []
   summary: Universal Wayland Session Manager
   url: https://github.com/Vladimir-csp/uwsm
-  version: 0.26.6
+  version: 0.26.7
 quickshell:
   build:
     commands:
