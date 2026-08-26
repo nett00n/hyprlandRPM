@@ -493,13 +493,13 @@ hyprland-plugins:
     archives:
     - '%{url}/archive/%{commit}/%{name}-%{shortcommit}.tar.gz'
     commit:
-      date: '20260823'
-      full: 2b41ad87ba68226472b8a811c3f580a1eabb10bb
+      date: '20260825'
+      full: 67bedb1699c7597100e26ce65159e92c8f62420a
     patches:
     - hyprland-0.54-exclude-incompatible-plugins.patch
   summary: Official plugins for Hyprland
   url: https://github.com/hyprwm/hyprland-plugins
-  version: 0.56.0^20260823git2b41ad8
+  version: 0.56.0^20260825git67bedb1
 hyprland-protocols:
   build:
     system: meson
