@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 from lib import build_db
-from lib.config import setup_logging
+from lib.config import env_flag, setup_logging
 from lib.paths import (
     ARCH,
     DISTRO,
@@ -196,7 +196,7 @@ def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     mock_chroot_override = os.environ.get("MOCK_CHROOT", "")
     target = resolve_target(fedora_version, mock_chroot_override)
-    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
+    proceed = env_flag("PROCEED_BUILD")
 
     run_id = build_db.start_run(
         target,

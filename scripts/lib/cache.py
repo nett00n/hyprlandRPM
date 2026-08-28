@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from typing import Any
 
 from lib.deps import effective_deps
 from lib.paths import ROOT, TEMPLATE_DIR
@@ -13,7 +14,7 @@ def _sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def _normalize_keys(obj):
+def _normalize_keys(obj: Any) -> Any:
     """Recursively convert all dict keys to strings for consistent serialization."""
     if isinstance(obj, dict):
         return {str(k): _normalize_keys(v) for k, v in obj.items()}

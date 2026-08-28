@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import sys
+from collections.abc import Iterator
 
 import yaml
 
@@ -21,7 +22,7 @@ from lib.rpm_macros import normalize_file_entry
 from lib.yaml_utils import write_yaml_file
 
 
-def iter_file_lists(data: dict):
+def iter_file_lists(data: dict) -> Iterator[list]:
     """Yield every list from any `files:` key in the packages tree."""
     packages = data.get("packages", data) if "packages" in data else data
     for pkg in packages.values():

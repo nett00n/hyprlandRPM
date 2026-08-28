@@ -34,6 +34,43 @@ History before this file's introduction is not backfilled - see `git log`.
   re-polled and resubmitted every night (BUG-0002). An unrecognized status
   now prints a warning instead of silently no-opping. Fixes #BUG-0040.
 
+- Fixed: `poll_copr_status()` (`lib/copr.py`) now `continue`s once a copr-cli status
+  token fails to parse, instead of falling through and calling
+  `_COPR_TERMINAL_STATE_MAP.get(copr_state)` with `copr_state` still possibly
+  `None` -- harmless at runtime (`dict.get(None)` just misses) but the exact thing
+  `make lint-mypy` was failing on, since 2026-08-24's BUG-0040 fix above.
+- Added: `mypy.ini` -- `make lint-mypy` previously ran with no config
+  (`--ignore-missing-imports --exclude submodules` inline in the Makefile), so it
+  accepted untyped functions and unannotated returns. Now enforces
+  `disallow_untyped_defs`/`disallow_incomplete_defs` plus six previously-free
+  strictness flags (`check_untyped_defs`, `warn_redundant_casts`,
+  `warn_unused_ignores`, `warn_unreachable`, `strict_equality`,
+  `no_implicit_reexport`); added the ~15 missing annotations this required across
+  `serve.py`, `lib/cache.py`, `lib/yaml_config.py`, `lib/validation.py`,
+  `lib/reporting.py`, `lib/vendor.py`, `stage-vendor.py`, and
+  `rpm-dir-prefixes-convert.py`. `disallow_any_generics` and `warn_return_any` stay
+  off for now, each commented with the `docs/todo.md` entry (TODO-0079/-0081) that
+  turns it on.
+- Fixed: `mpvpaper`/`waypaper`'s `version:` in `packages.yaml` were unquoted YAML
+  scalars (`1.9`, `2.8`) that loaded as Python `float`, not `str`. Harmless today
+  only because ~15 call sites already defensively wrap `str(meta["version"])`;
+  `gen-spec.py`'s two GitHub-release-cache/bundled-dep-tarball sites didn't, and a
+  two-component version whose minor reaches `10` would parse as the wrong float
+  (`1.10` -> `1.1`). Quoted both values and added the missing `str()` calls.
+- Changed: 16 inline `os.environ.get(X, "").lower() == "true"` boolean-env parses
+  (`PROCEED_BUILD`, `SKIP_MOCK`, `SKIP_COPR`, `SYNCHRONOUS_COPR_BUILD`,
+  `REQUIRE_CHROOT_COVERAGE`, `FORCE_CHECKSUM`) across `stage-srpm.py`,
+  `stage-vendor.py`, `stage-copr.py`, `stage-validate.py`, `stage-spec.py`,
+  `stage-mock.py`, `full-cycle.py`, `refresh-checksums.py` now go through
+  `lib.config.env_flag()` (already used by 4 other call sites, and written
+  specifically for this) instead of matching only the literal `true`.
+  `make stage-mock PACKAGE=X PROCEED_BUILD=1` previously ran in non-proceed mode
+  with no error, silently dropping the operator's opt-in.
+- Fixed: `run_cmd()` (`lib/subprocess_utils.py`) no longer raises `ValueError` from
+  inside a helper documented to return `(ok, stdout, stderr)`, when `CMD_TIMEOUT`
+  is set to a non-numeric value (or inherited empty from `.env`). Falls back to the
+  3600s default with a stderr warning instead.
+
 ## 2026-08-23
 
 - Fixed: `update_package_releases()` (`lib/yaml_utils.py`) now writes `release:`

@@ -30,9 +30,10 @@ import logging
 import os
 import shutil
 import sys
+from pathlib import Path
 
 from lib import build_db, vendor_store
-from lib.config import setup_logging
+from lib.config import env_flag, setup_logging
 from lib.paths import ARCH, DISTRO, ROOT, SOURCES_DIR, resolve_target
 from lib.reporting import event, status
 from lib.vendor import (
@@ -123,7 +124,7 @@ def run_for_package(
             str(tarball), "rpmbuild-volume", "vendor", pkg, target, ver
         )
 
-    def _record_store(store_path) -> None:
+    def _record_store(store_path: Path) -> None:
         # One row per (pkg, input-hash), shared across every target -- see
         # lib/vendor_store.py.
         build_db.record_artifact(
@@ -201,7 +202,7 @@ def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     mock_chroot_override = os.environ.get("MOCK_CHROOT", "")
     target = resolve_target(fedora_version, mock_chroot_override)
-    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
+    proceed = env_flag("PROCEED_BUILD")
 
     run_id = build_db.start_run(
         target,

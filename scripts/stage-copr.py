@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import build_db
-from lib.config import setup_logging
+from lib.config import env_flag, setup_logging
 from lib.copr import (
     check_copr_credentials,
     fetch_failed_chroot_logs,
@@ -180,8 +180,8 @@ def main() -> None:
     if not check_copr_credentials():
         sys.exit(2)
 
-    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
-    synchronous = os.environ.get("SYNCHRONOUS_COPR_BUILD", "").lower() == "true"
+    proceed = env_flag("PROCEED_BUILD")
+    synchronous = env_flag("SYNCHRONOUS_COPR_BUILD")
 
     run_id = build_db.start_run(
         target,
@@ -194,7 +194,7 @@ def main() -> None:
 
     packages = prepare_stage("copr", target, proceed)
 
-    require_coverage = os.environ.get("REQUIRE_CHROOT_COVERAGE", "").lower() == "true"
+    require_coverage = env_flag("REQUIRE_CHROOT_COVERAGE")
     covered = print_chroot_coverage(copr_repo, packages)
     if not covered and require_coverage:
         print(

@@ -151,7 +151,7 @@ def print_summary(packages: dict, stages: dict, copr_repo: str) -> None:
     print(build_totals_line(packages, stages))
 
 
-def build_totals_line(packages, stages: dict) -> str:
+def build_totals_line(packages: dict, stages: dict) -> str:
     """Return a one-line aggregate count of built/cached/failed packages.
 
     Judged from the "mock" stage -- the actual local build step -- since

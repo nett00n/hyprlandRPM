@@ -4,6 +4,7 @@ import shutil
 import tarfile
 import tempfile
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -11,7 +12,7 @@ class VendorError(Exception):
     pass
 
 
-def _log_fn(log_path: Path | None):
+def _log_fn(log_path: Path | None) -> Callable[[str], None]:
     """Return a logging function that writes to stdout and optionally to a file."""
 
     def _log(msg: str) -> None:

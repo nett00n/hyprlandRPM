@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 import pytest
 
-from lib.subprocess_utils import run_cmd, run_git
+from lib.subprocess_utils import _cmd_timeout, run_cmd, run_git
 
 
 class TestRunCmd:
@@ -98,6 +98,34 @@ class TestRunCmd:
         ok, stdout, stderr = run_cmd(["ls"], cwd=tmp_path)
         assert ok is True
         assert "marker.txt" in stdout
+
+
+class TestCmdTimeout:
+    """Test _cmd_timeout() -- CMD_TIMEOUT env var parsing."""
+
+    def test_default_when_unset(self, monkeypatch):
+        monkeypatch.delenv("CMD_TIMEOUT", raising=False)
+        assert _cmd_timeout() == 3600
+
+    def test_default_when_empty(self, monkeypatch):
+        monkeypatch.setenv("CMD_TIMEOUT", "")
+        assert _cmd_timeout() == 3600
+
+    def test_parses_valid_integer(self, monkeypatch):
+        monkeypatch.setenv("CMD_TIMEOUT", "120")
+        assert _cmd_timeout() == 120
+
+    def test_falls_back_on_invalid_value(self, monkeypatch, capsys):
+        monkeypatch.setenv("CMD_TIMEOUT", "30s")
+        assert _cmd_timeout() == 3600
+        assert "CMD_TIMEOUT" in capsys.readouterr().err
+
+    def test_run_cmd_does_not_raise_on_invalid_cmd_timeout(self, monkeypatch):
+        """A malformed CMD_TIMEOUT must not crash run_cmd() (previously raised ValueError)."""
+        monkeypatch.setenv("CMD_TIMEOUT", "not-a-number")
+        ok, stdout, stderr = run_cmd(["echo", "ok"])
+        assert ok is True
+        assert "ok" in stdout
 
 
 class TestRunGit:

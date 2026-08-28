@@ -1,6 +1,8 @@
 """Centralized ruamel.yaml configuration."""
 
 import io
+from typing import Any
+
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString
 
@@ -41,7 +43,7 @@ class YamlConfig:
         return yml
 
     @staticmethod
-    def _wrap_literals(obj):
+    def _wrap_literals(obj: Any) -> Any:
         """Recursively mark multiline strings for literal block style."""
         if isinstance(obj, str) and "\n" in obj:
             return LiteralScalarString(obj)

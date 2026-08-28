@@ -216,6 +216,26 @@ class TestStageValidate:
             # Should not raise
             main()
 
+    def test_main_proceed_build_1_is_honored(self, monkeypatch):
+        """PROCEED_BUILD=1 must proceed, same as "true" -- regression test for
+        the pre-fix inline `.lower() == "true"` parse, which silently ignored
+        the `1` a `make FOO=1` command line naturally produces (BUG-0016-shaped:
+        the operator's opt-in is dropped with no error). Now routed through
+        lib.config.env_flag()."""
+        monkeypatch.setenv("PROCEED_BUILD", "1")
+        with (
+            patch.object(stage_validate, "prepare_stage") as mock_prepare,
+            patch.object(stage_validate, "run_for_package") as mock_run,
+            patch.object(stage_validate, "run_global_checks") as mock_global,
+        ):
+            mock_prepare.return_value = ({}, {})
+            mock_run.return_value = True
+            mock_global.return_value = True
+
+            main()
+
+            assert mock_prepare.call_args.args[2] is True
+
     def test_main_exits_on_global_check_failure(self, monkeypatch):
         """Test main() exits with code 1 on global check failure."""
         monkeypatch.delenv("PROCEED_BUILD", raising=False)

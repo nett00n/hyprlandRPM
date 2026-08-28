@@ -21,7 +21,7 @@ import sys
 
 from lib import build_db
 from lib.build_systems import BUILD_SYSTEMS
-from lib.config import get_packager, setup_logging
+from lib.config import env_flag, get_packager, setup_logging
 from lib.github import build_changelog
 from lib.gitmodules import get_changelog_info, parse_gitmodules, resolve_module
 from lib.jinja_utils import create_jinja_env
@@ -291,7 +291,7 @@ def main() -> None:
     fedora_version = os.environ.get("FEDORA_VERSION", "43")
     mock_chroot_override = os.environ.get("MOCK_CHROOT", "")
     target = resolve_target(fedora_version, mock_chroot_override)
-    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
+    proceed = env_flag("PROCEED_BUILD")
 
     run_id = build_db.start_run(
         target,

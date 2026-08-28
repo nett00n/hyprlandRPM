@@ -236,7 +236,7 @@ def build_context(
     if build.get("install"):
         install_cmd = "\n".join(build["install"])
 
-    version = pkg["version"]
+    version = str(pkg["version"])
     release = pkg.get("release", 1)
     pkg_url = pkg.get("url", "").rstrip("/")
     submodule_path = url_to_submodule.get(pkg_url) or url_to_submodule.get(
@@ -271,7 +271,7 @@ def build_context(
 
     for i, dep in enumerate(source.get("bundled_deps", [])):
         dep_name = dep["name"]
-        dep_version = dep["version"]
+        dep_version = str(dep["version"])
         source_index = num_main_sources + i
         extracted_dir = f"{dep_name}-{dep_version}"
         target_dir = f"{dep_name}-src"

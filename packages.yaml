@@ -1768,7 +1768,7 @@ mpvpaper:
     - '%{url}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz'
   summary: A video wallpaper program for wlroots based wayland compositors.
   url: https://github.com/GhostNaN/mpvpaper
-  version: 1.9
+  version: '1.9'
 libcava:
   build:
     commands:
@@ -1960,7 +1960,7 @@ waypaper:
     name: waypaper
   summary: GUI wallpaper manager for Wayland and Xorg Linux systems
   url: https://github.com/anufrievroman/waypaper
-  version: 2.8
+  version: '2.8'
 screeninfo:
   auto_update:
     release_type: latest-tag

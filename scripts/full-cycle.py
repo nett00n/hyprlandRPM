@@ -157,9 +157,9 @@ def load_config() -> tuple[str, str, str, str, str, bool, bool, bool, bool]:
     copr_repo = os.environ.get("COPR_REPO", "")
     package_filter = os.environ.get("PACKAGE", "")
     skip_filter = os.environ.get("SKIP_PACKAGES", "")
-    skip_mock = os.environ.get("SKIP_MOCK", "").lower() == "true"
-    skip_copr = os.environ.get("SKIP_COPR", "").lower() == "true"
-    synchronous_copr = os.environ.get("SYNCHRONOUS_COPR_BUILD", "").lower() == "true"
+    skip_mock = env_flag("SKIP_MOCK")
+    skip_copr = env_flag("SKIP_COPR")
+    synchronous_copr = env_flag("SYNCHRONOUS_COPR_BUILD")
     force_rebuild = env_flag("FORCE_REBUILD")
     if force_rebuild and env_flag("PROCEED_BUILD"):
         print(
@@ -249,7 +249,7 @@ def setup_run(
     package_filter: str,
 ) -> int:
     """Print resume status (if applicable) and start a new run. Returns run_id."""
-    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
+    proceed = env_flag("PROCEED_BUILD")
     if proceed:
         print_proceed_status(packages, target, copr_repo)
 
@@ -605,9 +605,7 @@ def run_build_pipeline(
     # REQUIRE_CHROOT_COVERAGE=true.
     coverage_blocked = False
     if not skip_copr and copr_repo and not blockers:
-        require_coverage = (
-            os.environ.get("REQUIRE_CHROOT_COVERAGE", "").lower() == "true"
-        )
+        require_coverage = env_flag("REQUIRE_CHROOT_COVERAGE")
         covered = print_chroot_coverage(copr_repo, packages)
         if not covered and require_coverage:
             coverage_blocked = True
@@ -819,7 +817,7 @@ def main() -> None:
         # Reload packages to pick up updated release values
         packages = prepare_packages(package_filter, skip_filter)
 
-    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
+    proceed = env_flag("PROCEED_BUILD")
     force_packages = resolve_force_packages(force_rebuild, package_filter, packages)
     if force_packages:
         print(f"\nFORCE_REBUILD: forcing every stage for {', '.join(force_packages)}")

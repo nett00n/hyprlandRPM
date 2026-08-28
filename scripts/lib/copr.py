@@ -357,13 +357,15 @@ def poll_copr_status(target: str, packages_list: list[str]) -> bool:
         # mention of another state's name can't win by appearing first.
         matches = _COPR_STATE_RE.findall(stdout.lower())
         copr_state = matches[-1] if matches else None
-        if copr_state is None and stdout.strip():
-            print(
-                f"warning: copr-cli status {build_id} returned an "
-                f"unrecognized state, leaving {pkg}/{target} as {state!r}: "
-                f"{stdout.strip()!r}",
-                file=sys.stderr,
-            )
+        if copr_state is None:
+            if stdout.strip():
+                print(
+                    f"warning: copr-cli status {build_id} returned an "
+                    f"unrecognized state, leaving {pkg}/{target} as {state!r}: "
+                    f"{stdout.strip()!r}",
+                    file=sys.stderr,
+                )
+            continue
         new_state = _COPR_TERMINAL_STATE_MAP.get(copr_state)
 
         # Update if status changed

@@ -3,7 +3,32 @@
 import os
 import shlex
 import subprocess
+import sys
 from pathlib import Path
+
+_DEFAULT_TIMEOUT = 3600
+
+
+def _cmd_timeout() -> int:
+    """Return CMD_TIMEOUT from the environment, or the default if unset/invalid.
+
+    A non-numeric value (e.g. "30s", or an empty CMD_TIMEOUT= inherited from
+    .env) used to raise ValueError here, uncaught -- crashing the first
+    run_cmd() of the run from inside a helper documented to return
+    (ok, stdout, stderr) rather than raise.
+    """
+    raw = os.environ.get("CMD_TIMEOUT")
+    if not raw:
+        return _DEFAULT_TIMEOUT
+    try:
+        return int(raw)
+    except ValueError:
+        print(
+            f"warning: CMD_TIMEOUT={raw!r} is not a valid integer, "
+            f"falling back to {_DEFAULT_TIMEOUT}s",
+            file=sys.stderr,
+        )
+        return _DEFAULT_TIMEOUT
 
 
 def run_cmd(
@@ -23,7 +48,7 @@ def run_cmd(
     Returns (ok, stdout, stderr).
     """
     if timeout is None:
-        timeout = int(os.environ.get("CMD_TIMEOUT", 3600))
+        timeout = _cmd_timeout()
     try:
         result = subprocess.run(
             cmd,

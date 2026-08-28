@@ -3,7 +3,7 @@
 Cleanup, complexity, and unbuilt features. Automation behaving wrong today goes in
 `docs/bugs.md` instead. Entries are deleted when done (the fix gets a
 `docs/CHANGELOG.md` bullet); IDs are never reused or renumbered, so deletions leave
-gaps. Next free ID: **TODO-0079**.
+gaps. Next free ID: **TODO-0085**.
 
 Each entry ends with a `[P#/D#]` marker:
 
@@ -251,6 +251,64 @@ else is still fedora+x86_64-only:
   (not-vendored), `:104` (spec failed), `:132` (tarball exists), `:144` (vendor-store
   hit) -> inconsistent stage rows. Decide first whether a `log` pointing at an empty
   file is better than `NULL` for the report renderer [P2/D1]
+- #TODO-0079 every record in the codebase is an unparameterized `dict` -- 134 bare
+  `dict`/`list`/`tuple` annotations, and exactly one structured type in all 12k
+  lines (`update-versions.py:42`'s `Pin`, a `NamedTuple`). Unlocks mypy's
+  `disallow_any_generics` (155 errors on the current tree; left off in `mypy.ini`
+  pending this). Three shapes worth naming, in payoff order: (1) the stage-results
+  row -- built by `_stage_entry` (`lib/build_db.py:148-158`), consumed via `.get()`
+  in `lib/pipeline.py`, `lib/copr.py:341-345`, `gen-report.py:95-102`,
+  `lib/version.py:152`. `_row_dict` (`build_db.py:139`) deliberately *drops NULL
+  columns* so absent-key defaults keep working -- a contract stated in a docstring
+  and enforced nowhere; a `TypedDict(total=False)` states it in the type system.
+  (2) package metadata from `packages.yaml`. (3) `compute_input_hashes()`'s
+  `-> dict` (`lib/cache.py:102-117`), whose five keys are compared by whole-dict
+  equality in `hashes_match()` (`:120-123`). Do the stage row first -- it's the one
+  with the documented-but-unchecked invariant [P2/D4]
+- #TODO-0080 stage and state names are magic strings across 16 files.
+  `build_db.STAGES` (`lib/build_db.py:18`) and `copr.TERMINAL_STATES`
+  (`lib/copr.py:31`) exist but are values, not types: every `stage`/`state`
+  parameter is plain `str` and the literals are retyped by hand ~190 times --
+  `full-cycle.py` (28), `lib/reporting.py` (24), `lib/copr.py` (18),
+  `stage-copr.py` (17), `lib/pipeline.py` (16), and 11 more files. A typo is a
+  silent mismatch, not an error: the same shape as BUG-0014 (an unrecognized
+  `release_type` falling through a dispatch) and BUG-0002 (`unknown` vs
+  `success`). Fix: `Stage`/`State` `Literal` aliases in `lib/build_db.py`, applied
+  to `set_stage`/`finalize_stage`/`get_stage` first. `lib/version.py:20-48`
+  already does the value half of this well (`RELEASE_TYPES` and friends as
+  `frozenset`s with a "single source of truth" comment); this is the type half of
+  the same idea [P2/D2]
+- #TODO-0081 `Any` laundered through annotated signatures -- a function annotated
+  `-> str | None` / `-> dict` / `-> bool` returning a raw `yaml.safe_load` /
+  `json.loads` / `.get()` result. Unlocks mypy's `warn_return_any` (17 errors on
+  the current tree; left off in `mypy.ini` pending this). Worst are the trust
+  boundaries: `lib/yaml_utils.py:33`, `lib/github.py:54,121`. The annotation is
+  the fake here -- the caller sees `str`, the value is `Any`. Fix: typed loader
+  wrappers that validate at the parse boundary, after which the annotations
+  become true. `gen-spec.py:410`'s `url_to_submodule: dict[str, object]` is the
+  same tell in the other direction -- values are `Path`, declared `object`, and
+  the parameter receiving it (`gen-spec.py:214`) is a bare `dict` [P2/D3]
+- #TODO-0082 ruff runs with default rules only -- no `ruff.toml`, so
+  `Makefile:287`'s `ruff check scripts/` runs `E,F` alone (same gap `mypy.ini`
+  just fixed for mypy). `--select ANN,A,B,PLW,PLR,RUF,SIM,TC,FBT,N` reports 231
+  findings, several of them variable-lifetime bugs rather than style: `PLW2901`
+  redefined-loop-name x8 (`format-yaml.py:54`, `gather-requires.py:56`,
+  `gen-spec.py:46,187,421`, `lib/config.py:62`, `lib/github.py:197`,
+  `lib/yaml_format.py:68`), `RUF059` unused unpacked variable x2 (`lib/copr.py:95`,
+  `update-versions.py:390`), `B904` x2, `B905` x1 (`gen-report.py:286`). Select
+  `B,RUF,SIM` plus the useful `PLW` subset; leave `PLR0912/0913/0915` and `N999`
+  off -- they fire on the known-large files already tracked as TODO-0039/-0042 and
+  on the intentional `kebab-case.py` script names [P3/D2]
+- #TODO-0083 no scalar-type validation for `packages.yaml` -- nothing checks that
+  a YAML scalar loaded from `packages.yaml` has the type the code assumes.
+  `lib/validation.py:11`'s `REQUIRED_FIELDS` checks presence only, so
+  `version: 1.9` (a float) passed both validators until it was found by hand and
+  fixed 2026-08-28 (see `docs/CHANGELOG.md`). Add a field->type table to
+  `lib/validation.py` (`version: str`, `release: int`, `url: str`,
+  `source.commit.full: str`) and reject mismatches. The `str()` wrappers now
+  littering ~15 call sites are compensation for the absence of this check and can
+  start coming out once it exists -- which is why this should land before
+  TODO-0079's `TypedDict` work, not after [P2/D2]
 
 ## Daily update
 
@@ -301,6 +359,36 @@ docs/bugs.md's `## update-daily` section instead.
   so ("accepted trade-off for simpler code"), contradicting the function name.
   Misleading name on the function that rewrites packages.yaml on every nightly run.
   Rename, e.g. to `update_package_versions()` [P3/D1]
+- #TODO-0084 a single mock failure blocks Copr submission for every package this
+  run, not just the ones actually affected. `mock_failed_packages()`
+  (`full-cycle.py:261-275`) returns every package with a failed mock stage; if
+  non-empty, the Copr-submission loop (`full-cycle.py:592-651`) skips every
+  package, unrelated ones included. The gate's docstring cites "issue #8" (don't
+  publish an inconsistent dependency set), but today's two-pass structure (mock
+  for every package first, submission as a separate pass after) already
+  prevents the premature-publish case that motivated it, so the all-or-nothing
+  scope is broader than it needs to be.
+
+  Wanted: block only the failed package(s) plus their transitive dependents
+  (packages that consume the failed package's RPM), not its own dependencies
+  (already published, unaffected by a later failure downstream) or unrelated
+  packages -- e.g. if `aquamarine` fails, `mpvpaper` should still be submitted;
+  anything depending on aquamarine, transitively, should not. `lib/deps.py` has
+  the pieces but not this query: `build_dep_graph()`/`transitive_deps()`
+  (`:38-43`, `:79-88`) walk dependency-wards; `topological_sort()` (`:52-56`)
+  already builds the reverse `dependents` map internally but doesn't expose it
+  -- a `transitive_dependents()` counterpart is the natural addition.
+
+  Verified this has to be decided by graph membership alone, not by whether the
+  dependent's own mock happened to pass: a dependent CAN build successfully
+  against a stale, already-published copy of a failed ancestor, since a failed
+  mock leaves the old RPM untouched in `local-repo/` (`update_local_repo()`/
+  `prune_local_repo()`, `stage-mock.py:124-171`, only touch RPMs actually
+  produced this run) and internal `BuildRequires` are unversioned both locally
+  and on Copr (`resolve_dep_versions()`, `stage-spec.py:40-73`, only queries
+  stock Fedora repos, so `spec.j2:37-59`'s version-pin branch never matches this
+  project's own packages). So implement the block as pure graph membership --
+  never special-case "but this dependent's own mock passed" [P2/D3]
 
 ## Source verification
 

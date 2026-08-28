@@ -290,7 +290,7 @@ lint-flake: install-dev ## Run flake8 style checker on scripts
 	$(call run_with_result,$(CONTAINER_PYTHON) -m flake8 scripts/,Flake8 check passed,Flake8 check failed)
 
 lint-mypy: install-dev ## Run mypy type checker on scripts
-	$(call run_with_result,$(CONTAINER_PYTHON) -m mypy scripts/ --ignore-missing-imports --exclude submodules,Mypy check passed,Mypy check failed)
+	$(call run_with_result,$(CONTAINER_PYTHON) -m mypy scripts/,Mypy check passed,Mypy check failed)
 
 lint-rpm: install-dev ## Run rpmlint on all generated spec files
 	$(call run_with_result,$(CONTAINER_RUN) $(RPMLINT) -r $(WORK)/.rpmlintrc --ignore-unused-rpmlintrc packages/*/[a-z]*.spec,Rpmlint check passed,Rpmlint check failed)

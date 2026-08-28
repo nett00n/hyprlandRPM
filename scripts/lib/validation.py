@@ -3,6 +3,8 @@
 Validates package.yaml entries, group membership, and .gitmodules conventions.
 """
 
+from pathlib import Path
+
 from lib.gitmodules import parse_gitmodules
 from lib.paths import GITMODULES, ROOT
 from lib.version import RELEASE_TYPES
@@ -273,7 +275,7 @@ def validate_submodule_url_resolution(
     return errors, warnings
 
 
-def validate_gitmodules(root_path=ROOT) -> tuple[list[str], list[str]]:
+def validate_gitmodules(root_path: Path = ROOT) -> tuple[list[str], list[str]]:
     """Validate .gitmodules conventions.
 
     Checks:

@@ -383,7 +383,7 @@ def main() -> None:
     if not re.match(r"^[\w.-]+$", target):
         raise ValueError(f"Invalid MOCK_CHROOT: {target}")
 
-    proceed = os.environ.get("PROCEED_BUILD", "").lower() == "true"
+    proceed = env_flag("PROCEED_BUILD")
 
     run_id = build_db.start_run(
         target,

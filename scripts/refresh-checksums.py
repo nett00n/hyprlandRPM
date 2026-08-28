@@ -34,7 +34,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from lib.config import setup_logging
+from lib.config import env_flag, setup_logging
 from lib.paths import SOURCES_DIR
 from lib.source_lock import record, remote_sources, verify
 from lib.yaml_utils import filter_packages, get_packages, skip_packages
@@ -103,7 +103,7 @@ def refresh(packages: dict, force: bool) -> bool:
 
 def main() -> None:
     check = "--check" in sys.argv[1:]
-    force = os.environ.get("FORCE_CHECKSUM", "").lower() in ("1", "true")
+    force = env_flag("FORCE_CHECKSUM")
     packages = _select_packages()
 
     print("\n=== check-checksums ===" if check else "\n=== refresh-checksums ===")

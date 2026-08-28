@@ -1,4 +1,6 @@
 import http.server
+import io
+import os
 import socketserver
 import ssl
 import logging
@@ -11,7 +13,7 @@ DEFAULT_PORT = 8000
 CERT_FILE = "server.pem"
 
 
-def ensure_cert(cert_file: Path):
+def ensure_cert(cert_file: Path) -> None:
     if cert_file.exists():
         return
 
@@ -37,7 +39,7 @@ def ensure_cert(cert_file: Path):
     logging.info(f"Certificate generated at {cert_file}")
 
 
-def wrap_ssl(httpd, cert_file: Path):
+def wrap_ssl(httpd: socketserver.TCPServer, cert_file: Path) -> None:
     ensure_cert(cert_file)
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(certfile=str(cert_file))
@@ -45,15 +47,13 @@ def wrap_ssl(httpd, cert_file: Path):
 
 
 class GetHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
+    def do_GET(self) -> None:
         logging.info("%s - Headers:\n%s", self.client_address, self.headers)
         super().do_GET()
 
-    def list_directory(self, path):
+    def list_directory(self, path: str | os.PathLike[str]) -> io.BytesIO | None:
         """Override to inject simple CSS for autoindex pages."""
         from html import escape
-        from io import BytesIO
-        import os
 
         try:
             entries = os.listdir(path)
@@ -95,7 +95,7 @@ class GetHandler(http.server.SimpleHTTPRequestHandler):
 
         encoded = "\n".join(r).encode("utf-8", "surrogateescape")
 
-        f = BytesIO()
+        f = io.BytesIO()
         f.write(encoded)
         f.seek(0)
 
@@ -106,7 +106,7 @@ class GetHandler(http.server.SimpleHTTPRequestHandler):
         return f
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Simple HTTP/HTTPS file server")
     p.add_argument("-s", "--ssl", action="store_true", help="Enable HTTPS")
     p.add_argument("-b", "--base-dir", default=".", help="Directory to serve")
@@ -115,7 +115,7 @@ def parse_args():
     return p.parse_args()
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO)
     args = parse_args()
 
