@@ -81,6 +81,24 @@ class TestPrintSummary:
         assert "SKIP" not in table
         assert "2026-08-18" not in table
 
+    def test_version_column_prefers_recorded_over_declared(self, capsys):
+        """The version column shows the stage-recorded version, not the declared one."""
+        stages = {
+            "spec": {"pkg1": {"state": "success", "version": "1.2.0-1.fc43"}},
+        }
+        packages = {"pkg1": {"version": "1.0.0"}}
+        print_summary(packages, stages, copr_repo="")
+        captured = capsys.readouterr()
+        assert "1.2.0" in captured.out
+        assert "1.0.0" not in captured.out
+
+    def test_version_column_falls_back_to_declared(self, capsys):
+        """With no recorded version anywhere, the declared packages.yaml version shows."""
+        packages = {"pkg1": {"version": "0.14.0"}}
+        print_summary(packages, {}, copr_repo="")
+        captured = capsys.readouterr()
+        assert "0.14.0" in captured.out
+
     def test_cached_reason_still_renders_cached(self, capsys):
         """A genuine cache hit still renders "cached"."""
         stages = {
@@ -200,6 +218,19 @@ class TestStatus:
         status("spec", "pkg", "ok", "fedora-43-x86_64", detail="error message")
         captured = capsys.readouterr()
         assert "reason=error message" in captured.out
+
+    def test_status_with_version(self, capsys):
+        """Should include version as a ver= field."""
+        status("mock", "pkg", "ok", "fedora-43-x86_64", version="1.0-1.fc43")
+        captured = capsys.readouterr()
+        assert "ver=1.0-1.fc43" in captured.out
+
+    def test_status_without_version_omits_ver_field(self, capsys):
+        """Default version="" must not print a ver= field (back-compat for
+        validate and _skip lines, which never pass a version)."""
+        status("validate", "pkg", "ok", "fedora-43-x86_64")
+        captured = capsys.readouterr()
+        assert "ver=" not in captured.out
 
 
 class TestVerboseProceedCheck:

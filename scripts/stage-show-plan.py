@@ -23,6 +23,7 @@ from lib.config import env_flag
 from lib.deps import effective_deps
 from lib.paths import resolve_target
 from lib.pipeline import compute_forced_stages, is_cached
+from lib.version import VERSION_STAGE_PRECEDENCE, recorded_version
 from lib.yaml_utils import (
     STAGES,
     filter_packages,
@@ -68,8 +69,12 @@ def show_plan(
     stages = STAGES if copr_repo else [s for s in STAGES if s != "copr"]
 
     print("\n=== Build Plan ===")
-    print(f"  {'package':<30} " + "  ".join(f"{s:<8}" for s in stages))
-    print("  " + "-" * (30 + 10 * len(stages)))
+    print(
+        f"  {'package':<30} "
+        + "  ".join(f"{s:<8}" for s in stages)
+        + f"  {'version':<14}"
+    )
+    print("  " + "-" * (30 + 14 + 10 * len(stages)))
 
     for pkg in packages_to_show:
         if build_db.get_stage(pkg, "validate", target) is None:
@@ -103,7 +108,11 @@ def show_plan(
 
             row.append(f"{label:<8}")
 
-        print(f"  {pkg:<30} " + "  ".join(row))
+        version = recorded_version(
+            [build_db.get_stage(pkg, s, target) for s in VERSION_STAGE_PRECEDENCE],
+            meta,
+        )
+        print(f"  {pkg:<30} " + "  ".join(row) + f"  {version:<14}")
 
     print()
 

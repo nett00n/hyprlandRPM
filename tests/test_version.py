@@ -13,6 +13,8 @@ from lib.version import (
     latest_tag,
     nvr,
     clean_version,
+    recorded_version,
+    versions_for,
     rpm_version_from_tag,
 )
 
@@ -213,3 +215,59 @@ class TestCleanVersion:
     def test_version_with_multiple_hyphens(self):
         """Splits only on first hyphen."""
         assert clean_version("1.0-beta-1.fc43") == "1.0"
+
+
+class TestRecordedVersion:
+    """Test recorded_version's precedence and fallback behavior."""
+
+    def test_recorded_wins_over_declared(self):
+        """First stage-recorded version wins over the declared packages.yaml one."""
+        entries = [{"version": "1.2.0-1.fc43"}, None, None, None]
+        meta = {"version": "1.0.0"}
+        assert recorded_version(entries, meta) == "1.2.0"
+
+    def test_precedence_spec_srpm_mock_copr(self):
+        """Earlier entries in the list win over later ones."""
+        entries = [None, {"version": "2.0.0"}, {"version": "3.0.0"}, None]
+        assert recorded_version(entries, {}) == "2.0.0"
+
+    def test_none_and_empty_entries_skipped(self):
+        """None entries and entries with no/empty version are skipped."""
+        entries = [None, {}, {"version": ""}, {"version": "4.0.0"}]
+        assert recorded_version(entries, {}) == "4.0.0"
+
+    def test_falls_back_to_declared_version(self):
+        """No recorded version anywhere falls back to packages.yaml's declared version."""
+        entries = [None, None, None, None]
+        meta = {"version": "0.14.0"}
+        assert recorded_version(entries, meta) == "0.14.0"
+
+    def test_falls_back_to_dash_when_nothing_available(self):
+        """No recorded or declared version yields '-'."""
+        assert recorded_version([None, None], {}) == "-"
+
+    def test_recorded_suffix_stripped(self):
+        """Recorded version still has its -<release>.fcXX suffix stripped."""
+        entries = [{"version": "1.0.0-1.fc43"}]
+        assert recorded_version(entries, {}) == "1.0.0"
+
+
+class TestVersionsFor:
+    """Test versions_for's per-package version map."""
+
+    def test_recorded_version_wins(self):
+        """A package with a recorded stage version uses that, not the declared one."""
+        packages = {"pkg1": {"version": "1.0.0"}}
+        stages = {"spec": {"pkg1": {"version": "1.2.0-1.fc43"}}}
+        assert versions_for(packages, stages) == {"pkg1": "1.2.0"}
+
+    def test_falls_back_to_declared(self):
+        """A package with no recorded stage version falls back to packages.yaml."""
+        packages = {"pkg1": {"version": "0.14.0"}}
+        assert versions_for(packages, {}) == {"pkg1": "0.14.0"}
+
+    def test_package_absent_from_stages_still_gets_an_entry(self):
+        """A package that never appears in `stages` still gets a version entry."""
+        packages = {"pkg1": {"version": "1.0.0"}, "pkg2": {"version": "2.0.0"}}
+        stages = {"spec": {"pkg1": {"version": "1.0.0-1.fc43"}}}
+        assert versions_for(packages, stages) == {"pkg1": "1.0.0", "pkg2": "2.0.0"}

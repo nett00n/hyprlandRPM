@@ -12,7 +12,18 @@ entry as `- <Added|Changed|Fixed|Removed>: <what changed>`. Full ruleset in
 
 History before this file's introduction is not backfilled - see `git log`.
 
-## 2026-08-24
+## 2026-08-28
+
+- Added: `lib.version.recorded_version()`/`versions_for()` compute a display version
+  (NVR) per package from the first stage-recorded version across
+  spec/srpm/mock/copr, falling back to `packages.yaml`'s declared `version`. Wired
+  a `ver=<NVR>` field into `lib.reporting.event()`/`status()` log lines,
+  `full-cycle.py`'s `PROCEED_BUILD` resume table and package build plan listing,
+  `print_summary()`'s summary table (new `version` column), and
+  `report_srpm_failures()`/`report_mock_failures()`/`report_copr_failures()`'s
+  per-package failure headers -- so every stage/mock/copr log line and failure
+  report now shows which NVR it's talking about instead of leaving readers to
+  cross-reference `packages.yaml`.
 
 - Fixed: `poll_copr_status()` (`lib/copr.py`) now matches the full copr-cli
   state vocabulary (`succeeded/failed/canceled/skipped/forked` as terminal;

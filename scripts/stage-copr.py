@@ -78,7 +78,7 @@ def run_for_package(
     copr_entry = build_db.get_stage(pkg, "copr", target)
     prior_copr_state = copr_entry.get("state") if copr_entry else None
     if proceed and verbose_proceed_check("copr", pkg, prior_copr_state, target):
-        status("copr", pkg, "skip", target, "already succeeded")
+        status("copr", pkg, "skip", target, "already succeeded", version=ver)
         return True
 
     srpm_entry = build_db.get_stage(pkg, "srpm", target)
@@ -103,7 +103,7 @@ def run_for_package(
             if srpm_missing
             else f"srpm {srpm_state}"
         )
-        status("copr", pkg, "skip", target, blocker)
+        status("copr", pkg, "skip", target, blocker, version=ver)
         build_db.set_stage(
             pkg,
             "copr",
@@ -116,7 +116,7 @@ def run_for_package(
         )
         return True
 
-    event("copr", target, pkg, "run")
+    event("copr", target, pkg, "run", ver=ver)
     cmd = ["copr-cli", "build"]
     if not synchronous:
         cmd.append("--nowait")
@@ -136,7 +136,7 @@ def run_for_package(
     # a "failed" terminal state). Parse it unconditionally so failed builds
     # still get a build_id recorded, which fetch_failed_chroot_logs needs.
     build_id = parse_build_id(stdout)
-    status("copr", pkg, "ok" if ok else "fail", target)
+    status("copr", pkg, "ok" if ok else "fail", target, version=ver)
 
     if not ok and synchronous and build_id:
         fetch_failed_chroot_logs(pkg, build_id)

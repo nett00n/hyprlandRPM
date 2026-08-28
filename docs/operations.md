@@ -340,15 +340,18 @@ no multi-line banners, no state that only exists in an earlier line you've alrea
 past:
 
 ```
-2026-08-12T14:03:41-04:00	stage=mock	target=fedora-43-x86_64	pkg=hyprland	state=RUN
-2026-08-12T14:04:22-04:00	stage=mock	target=fedora-43-x86_64	pkg=hyprland	state=OK	dur=41.2s
+2026-08-12T14:03:41-04:00	stage=mock	target=fedora-43-x86_64	pkg=hyprland	state=RUN	ver=0.52.1-1.fc43
+2026-08-12T14:04:22-04:00	stage=mock	target=fedora-43-x86_64	pkg=hyprland	state=OK	ver=0.52.1-1.fc43	dur=41.2s
 2026-08-12T14:04:23-04:00	stage=mock	target=fedora-44-x86_64	pkg=hyprland-devel	state=FAIL	reason=cached
 ```
 
 Fields:
 - Timestamp: RFC 3339, second precision, local offset.
 - Tab-separated `key=value` pairs — `stage`, `target`, `pkg`, `state` always present;
-  extra fields (`reason`, `dur`, `prior`, `action`, ...) appended only when non-empty.
+  extra fields (`reason`, `ver`, `dur`, `prior`, `action`, ...) appended only when
+  non-empty. `ver` (the NVR, e.g. `0.52.1-1.fc43`) is present on every spec/vendor/srpm/
+  mock/copr line once the package's declared version is known; it's absent on
+  `validate` lines and on the config-skip lines emitted before that lookup happens.
 - `state` is colorized (RUN=yellow, OK=green, FAIL=red, SKIP=grey, CHECK=cyan) when stdout
   is a tty and `NO_COLOR` is unset; plain text otherwise, so redirected/piped output and
   log files never carry escape codes.

@@ -501,6 +501,9 @@ class TestStageShowPlan:
         assert "pkg-a" in captured.out
         assert "pkg-b" in captured.out
         assert "pkg-c" in captured.out
+        assert "1.0" in captured.out
+        assert "2.0" in captured.out
+        assert "3.0" in captured.out
 
     def test_show_plan_single_package(self, capsys):
         """Test single package name filters correctly."""

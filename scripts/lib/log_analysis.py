@@ -1190,6 +1190,7 @@ def _print_stage_issues(
     log_path: Path,
     issues: list,
     first: list[bool],
+    version: str = "",
 ) -> None:
     """Print issues for one log file. `first` is a one-element list used as a mutable flag."""
     if not issues:
@@ -1197,7 +1198,8 @@ def _print_stage_issues(
     if first[0]:
         print("\nPost-build analysis:")
         first[0] = False
-    print(f"  [{stage_label}] {pkg}:")
+    pkg_label = f"{pkg} {version}" if version else pkg
+    print(f"  [{stage_label}] {pkg_label}:")
     for lineno, raw_line, msg, dep, method in issues:
         print(f"    - {msg}")
         print(f"      {log_path}:{lineno}: {raw_line}")
@@ -1207,16 +1209,29 @@ def _print_stage_issues(
             print(f"      suggested packages:\n        {yaml_list}")
 
 
-def report_srpm_failures(packages: dict, log_dir: Path) -> None:
+def report_srpm_failures(
+    packages: dict, log_dir: Path, versions: dict[str, str] | None = None
+) -> None:
     """Print actionable errors from SRPM stage logs."""
+    versions = versions or {}
     first = [True]
     for pkg in packages:
         log_path = log_dir / pkg / "10-srpm.log"
-        _print_stage_issues("srpm", pkg, log_path, _analyze_srpm_log(log_path), first)
+        _print_stage_issues(
+            "srpm",
+            pkg,
+            log_path,
+            _analyze_srpm_log(log_path),
+            first,
+            versions.get(pkg, ""),
+        )
 
 
-def report_mock_failures(packages: dict, log_dir: Path) -> None:
+def report_mock_failures(
+    packages: dict, log_dir: Path, versions: dict[str, str] | None = None
+) -> None:
     """Print actionable errors from mock stage logs."""
+    versions = versions or {}
     first = [True]
     for pkg in packages:
         for label, filename, analyzer in [
@@ -1224,22 +1239,30 @@ def report_mock_failures(packages: dict, log_dir: Path) -> None:
             ("mock/build", "21-mock-build.log", _analyze_mock_build_log),
         ]:
             log_path = log_dir / pkg / filename
-            _print_stage_issues(label, pkg, log_path, analyzer(log_path), first)
+            _print_stage_issues(
+                label, pkg, log_path, analyzer(log_path), first, versions.get(pkg, "")
+            )
 
 
-def report_copr_failures(packages: dict, log_dir: Path) -> None:
+def report_copr_failures(
+    packages: dict, log_dir: Path, versions: dict[str, str] | None = None
+) -> None:
     """Print actionable errors from Copr stage logs.
 
     Order matters: the chroot-mismatch summary (which chroots failed vs.
     succeeded) is the most actionable single fact, so it's printed before
     the per-chroot compiler-error detail.
     """
+    versions = versions or {}
     first = [True]
     for pkg in packages:
         pkg_log_dir = log_dir / pkg
+        pkg_version = versions.get(pkg, "")
 
         copr_log = pkg_log_dir / "30-copr.log"
-        _print_stage_issues("copr", pkg, copr_log, _analyze_copr_log(copr_log), first)
+        _print_stage_issues(
+            "copr", pkg, copr_log, _analyze_copr_log(copr_log), first, pkg_version
+        )
 
         chroot_summary = pkg_log_dir / "30-copr-chroots.log"
         _print_stage_issues(
@@ -1248,10 +1271,11 @@ def report_copr_failures(packages: dict, log_dir: Path) -> None:
             chroot_summary,
             _analyze_copr_chroot_summary(chroot_summary),
             first,
+            pkg_version,
         )
 
         for chroot_name, issues in _analyze_copr_chroot_logs(pkg_log_dir).items():
             chroot_log = pkg_log_dir / f"31-copr-{chroot_name}.log"
             _print_stage_issues(
-                f"copr/build:{chroot_name}", pkg, chroot_log, issues, first
+                f"copr/build:{chroot_name}", pkg, chroot_log, issues, first, pkg_version
             )

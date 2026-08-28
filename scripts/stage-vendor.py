@@ -106,7 +106,7 @@ def run_for_package(
             "failed": "spec failed",
             "skipped": "spec skipped",
         }.get(spec_state, f"spec state: {spec_state}")
-        status("vendor", pkg, "skip", target, reason)
+        status("vendor", pkg, "skip", target, reason, version=ver)
         build_db.set_stage(
             pkg, "vendor", target, run_id, "skipped", version=ver, reason=reason
         )
@@ -136,7 +136,7 @@ def run_for_package(
         )
 
     if tarballs_exist:
-        status("vendor", pkg, "ok", target)
+        status("vendor", pkg, "ok", target, version=ver)
         build_db.set_stage(
             pkg, "vendor", target, run_id, "success", version=ver, path=str(tarball)
         )
@@ -145,10 +145,10 @@ def run_for_package(
 
     store_hit = vendor_store.find(pkg, meta, all_packages)
     if store_hit is not None:
-        event("vendor", target, pkg, "ok", reason="vendor-store hit")
+        event("vendor", target, pkg, "ok", reason="vendor-store hit", ver=ver)
         tarball.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(store_hit, tarball)
-        status("vendor", pkg, "ok", target)
+        status("vendor", pkg, "ok", target, version=ver)
         build_db.set_stage(
             pkg,
             "vendor",
@@ -164,10 +164,10 @@ def run_for_package(
         return True
 
     try:
-        event("vendor", target, pkg, "run")
+        event("vendor", target, pkg, "run", ver=ver)
         generate(pkg, meta, tarball, log_path=log, fedora_version=fedora_version)
         store_path = vendor_store.store(pkg, meta, all_packages, tarball)
-        status("vendor", pkg, "ok", target)
+        status("vendor", pkg, "ok", target, version=ver)
         build_db.set_stage(
             pkg,
             "vendor",
@@ -182,7 +182,7 @@ def run_for_package(
         _record_store(store_path)
         return True
     except VendorError as exc:
-        status("vendor", pkg, "fail", target)
+        status("vendor", pkg, "fail", target, version=ver)
         with open(log, "a") as fh:
             fh.write(f"error: {exc}\n")
         build_db.set_stage(

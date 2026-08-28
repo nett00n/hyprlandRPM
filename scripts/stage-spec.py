@@ -251,7 +251,7 @@ def run_for_package(
     log = pkg_log_dir / "00-spec.log"
     log.unlink(missing_ok=True)
 
-    event("spec", target, pkg, "run")
+    event("spec", target, pkg, "run", ver=ver)
 
     try:
         spec_content = generate_spec(pkg, meta, all_packages, fedora_version)
@@ -271,7 +271,7 @@ def run_for_package(
         ok = False
 
     state = "success" if ok else "failed"
-    status("spec", pkg, "ok" if ok else "fail", target)
+    status("spec", pkg, "ok" if ok else "fail", target, version=ver)
 
     build_db.set_stage(
         pkg,

@@ -58,6 +58,7 @@ from lib.paths import (
 )
 from lib.reporting import event, print_summary
 from lib.source_lock import missing_entries
+from lib.version import VERSION_STAGE_PRECEDENCE, nvr, recorded_version, versions_for
 from lib.yaml_utils import (
     STAGES,
     SUPPORTED_FEDORA_VERSIONS,
@@ -119,16 +120,24 @@ def print_proceed_status(packages: dict, target: str, copr_repo: str) -> None:
     stages = STAGES if copr_repo else [s for s in STAGES if s != "copr"]
     status_label = {"success": "skip", "failed": "retry", None: "run"}
     print("\nPROCEED_BUILD=true — resuming from prior build state")
-    print(f"  {'package':<30} " + "  ".join(f"{s:<8}" for s in stages))
-    print("  " + "-" * (30 + 10 * len(stages)))
-    for pkg in packages:
+    print(
+        f"  {'package':<30} "
+        + "  ".join(f"{s:<8}" for s in stages)
+        + f"  {'version':<14}"
+    )
+    print("  " + "-" * (30 + 14 + 10 * len(stages)))
+    for pkg, meta in packages.items():
         row = []
         for stage in stages:
             entry = build_db.get_stage(pkg, stage, target)
             state = entry.get("state") if entry else None
             label = status_label.get(state, state or "run")
             row.append(f"{label:<8}")
-        print(f"  {pkg:<30} " + "  ".join(row))
+        version = recorded_version(
+            [build_db.get_stage(pkg, s, target) for s in VERSION_STAGE_PRECEDENCE],
+            meta,
+        )
+        print(f"  {pkg:<30} " + "  ".join(row) + f"  {version:<14}")
     print()
 
 
@@ -204,11 +213,13 @@ def prepare_packages(package_filter: str, skip_filter: str) -> dict:
         # Re-sort the expanded set (preserve topological order)
         packages = {k: expanded[k] for k in order if k in expanded}
         print(f"\nPackage build plan ({len(packages)} total):")
-        for pkg in packages:
+        name_w = max(len(p) for p in packages) + 2
+        for pkg, meta in packages.items():
+            version = str(meta.get("version", ""))
             reason = (
                 "" if pkg in requested else f"  (dep of {dep_reason.get(pkg, '?')})"
             )
-            print(f"  {pkg}{reason}")
+            print(f"  {pkg:<{name_w}}{version}{reason}")
 
     return packages
 
@@ -331,6 +342,15 @@ def run_build_pipeline(
         # Resolve effective dependencies once per package
         deps = effective_deps(pkg, meta, all_packages)
 
+        # Version for log lines below -- "" if declared version is missing/malformed,
+        # matching the stage scripts' own tolerance for that case (they never reach
+        # their nvr() call either, since _skip is checked first).
+        pkg_ver = (
+            nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
+            if meta.get("version")
+            else ""
+        )
+
         # FORCE_REBUILD for this package wins over a PROCEED_BUILD resume.
         pkg_proceed = proceed and pkg not in force_packages
 
@@ -348,7 +368,7 @@ def run_build_pipeline(
 
         # Spec
         if is_cached("spec", pkg, target, new_hashes, forced_stages):
-            event("spec", target, pkg, "skip", reason="cached")
+            event("spec", target, pkg, "skip", reason="cached", ver=pkg_ver)
             build_db.update_reason(pkg, "spec", target, "cached")
         else:
             rebuilt_packages.add(pkg)
@@ -413,7 +433,7 @@ def run_build_pipeline(
                 pkg, meta, fedora_version, target, run_id, all_packages
             )
         elif decision == "cached":
-            event("vendor", target, pkg, "skip", reason="cached")
+            event("vendor", target, pkg, "skip", reason="cached", ver=pkg_ver)
             build_db.update_reason(pkg, "vendor", target, "cached")
         else:
             rebuilt_packages.add(pkg)
@@ -462,7 +482,7 @@ def run_build_pipeline(
 
         # SRPM
         if is_cached("srpm", pkg, target, new_hashes, forced_stages):
-            event("srpm", target, pkg, "skip", reason="cached")
+            event("srpm", target, pkg, "skip", reason="cached", ver=pkg_ver)
             build_db.update_reason(pkg, "srpm", target, "cached")
         else:
             rebuilt_packages.add(pkg)
@@ -511,11 +531,11 @@ def run_build_pipeline(
 
         # Mock
         if skip_mock:
-            event("mock", target, pkg, "skip", reason="SKIP_MOCK=true")
+            event("mock", target, pkg, "skip", reason="SKIP_MOCK=true", ver=pkg_ver)
             build_db.update_reason(pkg, "mock", target, "SKIP_MOCK")
         else:
             if is_cached("mock", pkg, target, new_hashes, forced_stages):
-                event("mock", target, pkg, "skip", reason="cached")
+                event("mock", target, pkg, "skip", reason="cached", ver=pkg_ver)
                 build_db.update_reason(pkg, "mock", target, "cached")
             else:
                 rebuilt_packages.add(pkg)
@@ -599,8 +619,14 @@ def run_build_pipeline(
             )
 
     for pkg, meta in packages.items():
+        pkg_ver = (
+            nvr(str(meta["version"]), meta.get("release", 1), fedora_version)
+            if meta.get("version")
+            else ""
+        )
+
         if skip_copr:
-            event("copr", target, pkg, "skip", reason="SKIP_COPR=true")
+            event("copr", target, pkg, "skip", reason="SKIP_COPR=true", ver=pkg_ver)
             build_db.update_reason(pkg, "copr", target, "SKIP_COPR")
             continue
 
@@ -614,6 +640,7 @@ def run_build_pipeline(
                 pkg,
                 "skip",
                 reason=f"blocked: mock failed for {', '.join(blockers)}",
+                ver=pkg_ver,
             )
             # state=skipped, matching every other upstream-failure skip case
             # in the pipeline (e.g. "spec failed", "srpm failed").
@@ -628,7 +655,14 @@ def run_build_pipeline(
             continue
 
         if coverage_blocked:
-            event("copr", target, pkg, "skip", reason="blocked: chroot coverage")
+            event(
+                "copr",
+                target,
+                pkg,
+                "skip",
+                reason="blocked: chroot coverage",
+                ver=pkg_ver,
+            )
             build_db.set_stage(
                 pkg,
                 "copr",
@@ -647,7 +681,7 @@ def run_build_pipeline(
         )
 
         if is_cached("copr", pkg, target, new_hashes, forced_stages):
-            event("copr", target, pkg, "skip", reason="cached")
+            event("copr", target, pkg, "skip", reason="cached", ver=pkg_ver)
             build_db.update_reason(pkg, "copr", target, "cached")
         else:
             rebuilt_packages.add(pkg)
@@ -708,6 +742,7 @@ def finalize_report(
     """
     stages = build_db.stage_map(target)
     print_summary(packages, stages, copr_repo)
+    versions = versions_for(packages, stages)
 
     any_failed = any(
         (stages.get(stage_name, {}).get(pkg) or {}).get("state") == "failed"
@@ -727,7 +762,7 @@ def finalize_report(
         if (stages.get("mock", {}).get(pkg) or {}).get("state") == "failed"
     ]
     if mock_failures:
-        report_mock_failures(packages, BUILD_LOG_DIR)
+        report_mock_failures(packages, BUILD_LOG_DIR, versions)
 
     # Analyze copr failures if present. Only meaningful in synchronous mode --
     # async submissions are still "unknown"/pending here and only reach a
@@ -741,7 +776,7 @@ def finalize_report(
             if (stages.get("copr", {}).get(pkg) or {}).get("state") == "failed"
         ]
         if copr_failures:
-            report_copr_failures(packages, BUILD_LOG_DIR)
+            report_copr_failures(packages, BUILD_LOG_DIR, versions)
 
     if any_failed:
         sys.exit(1)

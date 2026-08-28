@@ -1315,3 +1315,31 @@ class TestReportFailures:
         assert "failed on fedora-43-x86_64 only" in out
         assert "starts_with" in out
         assert out.index("failed on fedora-43-x86_64 only") < out.index("starts_with")
+
+    def test_report_mock_failures_includes_version_when_given(self, tmp_path, capsys):
+        """The [stage] pkg header includes the version when a versions map is passed."""
+        packages = {"pkg1": {}}
+        log_dir = tmp_path / "logs"
+        pkg_dir = log_dir / "pkg1"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / "20-mock.log").write_text("No match for argument: sndio-devel\n")
+        (pkg_dir / "21-mock-build.log").write_text("")
+
+        report_mock_failures(packages, log_dir, {"pkg1": "1.0.0-1.fc43"})
+
+        out = capsys.readouterr().out
+        assert "pkg1 1.0.0-1.fc43" in out
+
+    def test_report_failures_without_versions_keeps_current_header(self, tmp_path, capsys):
+        """The existing two-argument call form still renders a bare package name."""
+        packages = {"pkg1": {}}
+        log_dir = tmp_path / "logs"
+        pkg_dir = log_dir / "pkg1"
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / "20-mock.log").write_text("No match for argument: sndio-devel\n")
+        (pkg_dir / "21-mock-build.log").write_text("")
+
+        report_mock_failures(packages, log_dir)
+
+        out = capsys.readouterr().out
+        assert "[mock/builddep] pkg1:" in out

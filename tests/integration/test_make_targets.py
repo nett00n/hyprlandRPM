@@ -87,7 +87,9 @@ class TestFullCycleFinalize:
             full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=True)
 
         assert exc.value.code == 1
-        mock_report_copr.assert_called_once_with(packages, full_cycle.BUILD_LOG_DIR)
+        mock_report_copr.assert_called_once_with(
+            packages, full_cycle.BUILD_LOG_DIR, {"pkg1": "-"}
+        )
 
     def test_async_copr_failed_state_does_not_report(self):
         """Async mode: a 'failed' copr state doesn't drive exit or log analysis here --

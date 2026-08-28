@@ -99,14 +99,14 @@ def run_for_package(
         and verbose_proceed_check("mock", pkg, prior_mock_state, target)
         and srpm_exists
     ):
-        status("srpm", pkg, "skip", target, "mock already succeeded")
+        status("srpm", pkg, "skip", target, "mock already succeeded", version=ver)
         return True  # preserve existing srpm entry untouched
 
     # Skip if spec stage failed
     spec_entry = build_db.get_stage(pkg, "spec", target)
     spec_state = spec_entry.get("state", "") if spec_entry else ""
     if spec_state == "failed" or spec_entry is None:
-        status("srpm", pkg, "skip", target, "spec failed")
+        status("srpm", pkg, "skip", target, "spec failed", version=ver)
         build_db.set_stage(
             pkg,
             "srpm",
@@ -121,7 +121,7 @@ def run_for_package(
 
     ok, _, _ = run_cmd(["spectool", "-g", "-R", str(spec)], log)
     if not ok:
-        status("srpm", pkg, "fail", target)
+        status("srpm", pkg, "fail", target, version=ver)
         build_db.set_stage(
             pkg,
             "srpm",
@@ -136,7 +136,7 @@ def run_for_package(
 
     problems = verify_sources(pkg, meta, SOURCES_DIR)
     if problems:
-        status("srpm", pkg, "fail", target, "source verify failed")
+        status("srpm", pkg, "fail", target, "source verify failed", version=ver)
         log.parent.mkdir(parents=True, exist_ok=True)
         with open(log, "a") as fh:
             fh.write("source verification failed:\n")
@@ -156,10 +156,10 @@ def run_for_package(
         return False
 
     copy_local_patches(pkg, meta)
-    event("srpm", target, pkg, "run")
+    event("srpm", target, pkg, "run", ver=ver)
     ok, _, _ = run_cmd(["rpmbuild", "-bs", str(spec)], log)
     if not ok:
-        status("srpm", pkg, "fail", target)
+        status("srpm", pkg, "fail", target, version=ver)
         build_db.set_stage(
             pkg,
             "srpm",
@@ -173,7 +173,7 @@ def run_for_package(
         return False
 
     path = find_srpm(pkg)
-    status("srpm", pkg, "ok", target)
+    status("srpm", pkg, "ok", target, version=ver)
     build_db.set_stage(
         pkg,
         "srpm",

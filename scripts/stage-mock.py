@@ -232,7 +232,7 @@ def run_for_package(
     mock_entry = build_db.get_stage(pkg, "mock", target)
     mock_state = mock_entry.get("state") if mock_entry else None
     if proceed and verbose_proceed_check("mock", pkg, mock_state, target):
-        status("mock", pkg, "skip", target, "already succeeded")
+        status("mock", pkg, "skip", target, "already succeeded", version=ver)
         return True  # preserve existing entry (has completed_at from prior run)
 
     blocker = failed_local_dep(pkg, meta, all_packages, failed)
@@ -253,7 +253,7 @@ def run_for_package(
             else f"srpm {srpm_state}"
         )
         failed[pkg] = True
-        status("mock", pkg, "skip", target, detail)
+        status("mock", pkg, "skip", target, detail, version=ver)
         build_db.set_stage(
             pkg,
             "mock",
@@ -284,7 +284,7 @@ def run_for_package(
     if errors:
         detail = f"preflight: {errors[0]}"
         failed[pkg] = True
-        status("mock", pkg, "fail", target, detail)
+        status("mock", pkg, "fail", target, detail, version=ver)
         build_db.set_stage(
             pkg,
             "mock",
@@ -340,7 +340,7 @@ def run_for_package(
         shutil.rmtree(stale_result, ignore_errors=True)
     elif stale_result.exists():
         stale_result.unlink()
-    event("mock", target, pkg, "run")
+    event("mock", target, pkg, "run", ver=ver)
     ok, _, _ = run_cmd(cmd, log)
     # Copies build.log/root.log/state.log to logs/build/<pkg>/, then records
     # each as an artifact (repo-relative path, matching the `log` column
@@ -356,7 +356,7 @@ def run_for_package(
         # isn't always under ROOT in tests, and this stays correct either way.
         for rpm_path in update_local_repo(target, repo_dir):
             build_db.record_artifact(rpm_path, "repo", "rpm", pkg, target, ver)
-    status("mock", pkg, "ok" if ok else "fail", target)
+    status("mock", pkg, "ok" if ok else "fail", target, version=ver)
 
     extra: dict[str, Any] = {}
     if ok:

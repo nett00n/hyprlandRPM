@@ -134,3 +134,38 @@ def nvr(version: str, release: int | str, fedora_version: str) -> str:
 def clean_version(raw: str) -> str:
     """Strip -<release>.fcXX suffix (e.g., -1.fc43, -5.fc44), keep bare version."""
     return raw.split("-")[0] if raw else ""
+
+
+VERSION_STAGE_PRECEDENCE = ("spec", "srpm", "mock", "copr")
+
+
+def recorded_version(entries: list[dict | None], meta: dict) -> str:
+    """Version to display for a package: first stage-recorded version, else declared.
+
+    `entries` are stage_results rows (or None) in precedence order -- callers pass
+    [spec, srpm, mock, copr] entries (see VERSION_STAGE_PRECEDENCE), the same precedence
+    gen-report.py uses. Falls back to packages.yaml's declared `version` so pre-build
+    tables (stage-show-plan) still show something useful, and to "-" if neither is
+    available.
+    """
+    for entry in entries:
+        raw = (entry or {}).get("version")
+        if raw:
+            return clean_version(str(raw))
+    declared = meta.get("version")
+    return clean_version(str(declared)) if declared else "-"
+
+
+def versions_for(packages: dict, stages: dict) -> dict[str, str]:
+    """Map package name -> display version, for every package in `packages`.
+
+    `stages` is the {stage: {package: entry}} shape returned by
+    lib.build_db.stage_map(target). Uses the same recorded/declared precedence as
+    recorded_version().
+    """
+    return {
+        pkg: recorded_version(
+            [stages.get(s, {}).get(pkg) for s in VERSION_STAGE_PRECEDENCE], meta
+        )
+        for pkg, meta in packages.items()
+    }

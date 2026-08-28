@@ -4,6 +4,8 @@ import os
 import sys
 from datetime import datetime
 
+from lib.version import versions_for
+
 STATE_COLOR = {
     "success": "brightgreen",
     "failed": "red",
@@ -82,10 +84,12 @@ def verbose_proceed_check(
     return skip
 
 
-def status(stage: str, pkg: str, result: str, target: str, detail: str = "") -> None:
+def status(
+    stage: str, pkg: str, result: str, target: str, detail: str = "", version: str = ""
+) -> None:
     """Print a single-line stage event."""
     state = {"ok": "ok", "fail": "fail", "skip": "skip"}[result]
-    event(stage, target, pkg, state, reason=detail)
+    event(stage, target, pkg, state, reason=detail, ver=version)
 
 
 def print_summary(packages: dict, stages: dict, copr_repo: str) -> None:
@@ -102,10 +106,17 @@ def print_summary(packages: dict, stages: dict, copr_repo: str) -> None:
         ["copr"] if copr_repo else []
     )
     col_w = max(len(p) for p in packages) + 2
-    header = f"{'package':<{col_w}}" + "".join(f"{s:<18}" for s in stage_keys)
+    ver_w = 14
+    header = (
+        f"{'package':<{col_w}}"
+        + "".join(f"{s:<18}" for s in stage_keys)
+        + f"{'version':<{ver_w}}"
+    )
     sep = "-" * len(header)
     print(f"\nSummary:\n{sep}\n{header}\n{sep}")
+    versions = versions_for(packages, stages)
     for pkg in packages:
+        version = versions[pkg]
         row = f"{pkg:<{col_w}}"
         for stage in stage_keys:
             pkg_data = stages.get(stage, {}).get(pkg, {})
@@ -134,6 +145,7 @@ def print_summary(packages: dict, stages: dict, copr_repo: str) -> None:
             show_ts = state == "skipped" and reason != "not-vendored"
             cell = f"{icon}({ts})" if ts and show_ts else icon
             row += f"{cell:<18}"
+        row += f"{version:<{ver_w}}"
         print(row)
     print(sep)
     print(build_totals_line(packages, stages))
