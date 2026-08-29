@@ -120,6 +120,25 @@ def validate_copr_repo(copr_repo: str) -> bool:
     return bool(re.match(r"^[\w-]+/[\w.-]+$", copr_repo))
 
 
+def preflight(copr_repo: str) -> bool:
+    """Validate a Copr repo slug and the local credentials before any build work.
+
+    Prints the reason on failure; callers exit 2. Assumes copr_repo is non-empty --
+    an unset COPR_REPO is fatal in stage-copr.py but means "skip the copr stage" in
+    full-cycle.py, so that check stays at the call sites, not here.
+
+    Args:
+        copr_repo: Repository slug to validate
+
+    Returns:
+        True if the slug is well-formed and credentials are valid, False otherwise
+    """
+    if not validate_copr_repo(copr_repo):
+        print(f"error: Invalid COPR_REPO format: {copr_repo}", file=sys.stderr)
+        return False
+    return check_copr_credentials()
+
+
 def get_project_chroots(copr_repo: str) -> list[str]:
     """Fetch the list of chroot names a Copr project builds (e.g. every chroot
     enabled for `nett00n/hyprland`: fedora-43/44/rawhide x x86_64/aarch64).

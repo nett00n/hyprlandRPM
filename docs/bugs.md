@@ -116,17 +116,10 @@ difficulty. Move an entry into a real section below once it has all three.
 ## update-daily
 
 `make update-daily` (Makefile) chains update-versions -> validate-packages+fmt ->
-refresh-checksums -> full-cycle -> readme+copr-description -> stage-log-analyze ->
-git commit -> optional push, and is documented (docs/operations.md) as the unattended
-nightly job. Audited end to end 2026-08, re-verified 2026-08-18:
-
-- #BUG-0036 Copr preflight is dropped on the `full-cycle` path: `full-cycle.py:312`
-  calls `check_copr_credentials()` and throws away the returned boolean
-  (`stage-copr.py:main()` exits 2 on the same check), and `validate_copr_repo()` is
-  never called on this path at all -- only in `stage-copr.py:main()`. Already carries
-  a `FIXME(BUG-0036)` comment pointing back here. `make update-daily
-  COPR_REPO=<typo>` or an expired token runs the whole multi-hour build for 49
-  packages and only fails at the very end, once per package [P1/D2]
+refresh-checksums -> full-cycle -> validate-packages -> readme+copr-description ->
+stage-log-analyze -> git commit -> optional push, and is documented
+(docs/operations.md) as the unattended nightly job. Audited end to end 2026-08,
+re-verified 2026-08-18, revalidation step added 2026-08-29 (BUG-0044):
 
 - #BUG-0039 any package resubmitted tonight is published as `unknown`; only unchanged
   (cached) packages keep showing yesterday's resolved state (as of 2026-08-18,
@@ -144,17 +137,6 @@ nightly job. Audited end to end 2026-08, re-verified 2026-08-18:
   podman volumes, the same `local-repo/<target>/` directory, the same packages.yaml,
   and the same git index -- `git pull --rebase origin main` under `PUSH=1`
   (`Makefile:564`) is the sharpest edge, two runs rebasing concurrently [P1/D2]
-
-- #BUG-0044 the quality gate never sees the file that gets committed. Current order
-  (re-verified 2026-08-18, was previously misdescribed as "pre-commit"):
-  `update-versions -> validate-packages+fmt -> refresh-checksums -> full-cycle ->
-  readme+copr-description -> stage-log-analyze -> git commit` (`Makefile:541-570`;
-  the full `pre-commit` target with `test`+`lint` was deliberately dropped from this
-  path, CHANGELOG 2026-08-02, closed TODO-0064). But `full-cycle.py:781-785` still
-  calls `update_package_releases()`, which rewrites packages.yaml in place *after*
-  the gate has run. The packages.yaml that lands in the daily commit (`Makefile:556`)
-  is the post-rewrite one, which validate-packages.py/yamllint/format-yaml.py never
-  inspected [P1/D2]
 
 ## Packaging metadata
 

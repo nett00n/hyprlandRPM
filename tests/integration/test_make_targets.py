@@ -251,7 +251,6 @@ def _patched_pipeline(
                 full_cycle._stage["stage-vendor"], "run_for_package", return_value=True
             )
         )
-        enter(patch.object(full_cycle._stage["stage-copr"], "check_copr_credentials"))
         enter(
             patch.object(
                 full_cycle._stage["stage-mock"],
@@ -436,6 +435,42 @@ class TestForceRebuildOverridesProceed:
         assert received_proceed == {"hyprutils": True, "Hyprland": True}
         for call in forced_stages_spy.call_args_list:
             assert call.kwargs["force_all"] is False
+
+
+class TestFullCyclePreflight:
+    """Regression coverage for BUG-0036: full-cycle.py used to call
+    check_copr_credentials() but discard the result, and never called
+    validate_copr_repo() at all -- a bad COPR_REPO/token only failed after the
+    full multi-hour build. main() must now fail fast, before any package work.
+    """
+
+    def test_bad_preflight_exits_before_any_package_work(self, monkeypatch):
+        monkeypatch.setenv("COPR_REPO", "nett00n/hyprland")
+        monkeypatch.delenv("SKIP_COPR", raising=False)
+
+        with patch.object(
+            full_cycle, "preflight", return_value=False
+        ) as preflight_mock, patch.object(
+            full_cycle, "prepare_packages"
+        ) as prepare_packages_mock:
+            with pytest.raises(SystemExit) as exc_info:
+                full_cycle.main()
+
+        preflight_mock.assert_called_once_with("nett00n/hyprland")
+        assert exc_info.value.code == 2
+        prepare_packages_mock.assert_not_called()
+
+    def test_skip_copr_bypasses_preflight(self, monkeypatch):
+        monkeypatch.setenv("COPR_REPO", "nett00n/hyprland")
+        monkeypatch.setenv("SKIP_COPR", "true")
+
+        with patch.object(full_cycle, "preflight") as preflight_mock, patch.object(
+            full_cycle, "prepare_packages", side_effect=SystemExit("stop-here")
+        ):
+            with pytest.raises(SystemExit):
+                full_cycle.main()
+
+        preflight_mock.assert_not_called()
 
 
 class TestCoprGatedByChrootCoverage:
@@ -849,6 +884,27 @@ class TestUpdateDailyResilience:
     def test_stale_marker_cleared_at_start(self):
         stdout = self._dry_run()
         assert "mkdir -p logs && rm -f logs/.update-daily-failed" in stdout
+
+    def test_packages_yaml_revalidated_after_release_bump_before_docs(self):
+        """Coverage for docs/bugs.md BUG-0044: full-cycle.py's update_package_releases()
+        rewrites packages.yaml (release bumps/resets) *after* the pre-build
+        validate-packages+fmt gate has already run, so the file that gets committed
+        and rendered into the docs was never re-checked. A second, fmt-less
+        `validate-packages` must run between full-cycle and readme/copr-description --
+        no re-fmt, since the rewrite already goes through the same formatter
+        (write_yaml_file's FORMAT_FILE) that `make fmt` itself uses.
+        """
+        stdout = self._dry_run()
+        # Exactly one "...fmt" gate: the pre-build one. The post-build gate is
+        # validate-packages alone.
+        assert stdout.count("make validate-packages fmt") == 1
+        full_cycle_pos = stdout.index("make full-cycle || touch")
+        readme_pos = stdout.index("make readme copr-description")
+        second_validate_pos = stdout.index("make validate-packages", full_cycle_pos)
+        assert full_cycle_pos < second_validate_pos < readme_pos
+        # And it must be the bare form, not another "... fmt" line.
+        line_end = stdout.index("\n", second_validate_pos)
+        assert "fmt" not in stdout[second_validate_pos:line_end]
 
     def test_stage_log_analyze_runs_after_readme_before_commit(self):
         """Coverage for docs/bugs.md BUG-0041: full-cycle.py's next run rmtree's

@@ -30,11 +30,10 @@ from typing import Any
 from lib import build_db
 from lib.config import env_flag, setup_logging
 from lib.copr import (
-    check_copr_credentials,
     fetch_failed_chroot_logs,
     parse_build_id,
+    preflight,
     print_chroot_coverage,
-    validate_copr_repo,
 )
 from lib.paths import ARCH, DISTRO, ROOT, get_package_log_dir, resolve_target
 from lib.reporting import event, status, verbose_proceed_check
@@ -172,12 +171,7 @@ def main() -> None:
             file=sys.stderr,
         )
         sys.exit(2)
-    if not validate_copr_repo(copr_repo):
-        print(f"error: Invalid COPR_REPO format: {copr_repo}", file=sys.stderr)
-        sys.exit(2)
-
-    # Check credentials early
-    if not check_copr_credentials():
+    if not preflight(copr_repo):
         sys.exit(2)
 
     proceed = env_flag("PROCEED_BUILD")

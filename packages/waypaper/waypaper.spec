@@ -2,7 +2,7 @@
 
 Name:           waypaper
 Version:        2.8
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        GUI wallpaper manager for Wayland and Xorg Linux systems
 BuildArch:      noarch
 License:        GPL-3.0-or-later
@@ -50,6 +50,6 @@ Package info:
 %license LICENSE
 
 %changelog
-* Mon Aug 24 2026 nett00n <copr@nett00n.org> - 2.8-9
+* Fri Aug 28 2026 nett00n <copr@nett00n.org> - 2.8-10
 
 - Update to 2.8

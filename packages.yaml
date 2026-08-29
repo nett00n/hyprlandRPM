@@ -1084,7 +1084,7 @@ hyprutils:
   - '%license LICENSE'
   - '%{_libdir}/libhyprutils.so*'
   license: BSD-3-Clause
-  release: 0
+  release: 1
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -1759,7 +1759,7 @@ mpvpaper:
   - '%{_bindir}/mpvpaper'
   - '%{_bindir}/mpvpaper-holder'
   license: GPL-3.0-or-later
-  release: 5
+  release: 6
   requires: []
   rpm:
     no_debug_package: false
@@ -1942,7 +1942,7 @@ waypaper:
   - '%doc README.md'
   - '%license LICENSE'
   license: GPL-3.0-or-later
-  release: 9
+  release: 10
   requires:
   - gtk3
   - imageio-ffmpeg

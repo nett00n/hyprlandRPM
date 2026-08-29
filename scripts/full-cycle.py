@@ -36,7 +36,7 @@ import time
 from lib import build_db
 from lib.cache import compute_input_hashes
 from lib.config import env_flag
-from lib.copr import print_chroot_coverage
+from lib.copr import preflight, print_chroot_coverage
 from lib.deps import build_dep_graph, effective_deps, topological_sort, transitive_deps
 from lib.gitmodules import ensure_initialized, parse_gitmodules
 from lib.log_analysis import report_mock_failures, report_copr_failures
@@ -318,12 +318,6 @@ def run_build_pipeline(
 
     # Global checks: run once before the per-package loop
     _stage["stage-validate"].run_global_checks(all_packages, target)
-
-    if copr_repo:
-        # FIXME(BUG-0036): return value is discarded, and validate_copr_repo()
-        # is never called here -- a bad COPR_REPO/token only fails after the
-        # full build. See docs/bugs.md.
-        _stage["stage-copr"].check_copr_credentials()
 
     mock_failed: dict[str, bool] = {}
     rebuilt_packages: set[str] = set()
@@ -792,6 +786,9 @@ def main() -> None:
         synchronous_copr,
         force_rebuild,
     ) = load_config()
+
+    if copr_repo and not skip_copr and not preflight(copr_repo):
+        sys.exit(2)
 
     packages = prepare_packages(package_filter, skip_filter)
     if not packages:

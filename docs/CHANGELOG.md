@@ -12,7 +12,25 @@ entry as `- <Added|Changed|Fixed|Removed>: <what changed>`. Full ruleset in
 
 History before this file's introduction is not backfilled - see `git log`.
 
+## 2026-08-29
+
+- Fixed: `make update-daily` re-runs `validate-packages` (no `fmt`) after
+  `full-cycle` and before `readme`/`copr-description`. `full-cycle.py`'s
+  `update_package_releases()` rewrites `packages.yaml`'s release fields *after*
+  the pre-build `validate-packages`+`fmt` gate has already run, so the file that
+  gets committed and rendered into the docs was never re-checked. `fmt` is
+  deliberately not re-run: the rewrite already goes through `write_yaml_file`'s
+  `FORMAT_FILE`, the same formatter `make fmt` uses, so the file is already
+  formatting-clean. Fixes #BUG-0044.
+
 ## 2026-08-28
+
+- Fixed: `full-cycle.py`'s `main()` now runs a Copr preflight (new
+  `lib.copr.preflight()`, shared with `stage-copr.py`) before any package work and
+  exits 2 on a malformed `COPR_REPO` or invalid credentials, instead of discarding
+  `check_copr_credentials()`'s return value mid-pipeline. Previously `make
+  update-daily COPR_REPO=<typo>` (or an expired token) ran the whole multi-hour
+  build for every package before failing. Fixes #BUG-0036.
 
 - Added: `lib.version.recorded_version()`/`versions_for()` compute a display version
   (NVR) per package from the first stage-recorded version across

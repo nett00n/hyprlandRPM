@@ -284,11 +284,16 @@ make update-daily COPR_REPO=nett00n/hyprland PUSH=1      # commit and push
 Runs: bump versions → `validate-packages` + `fmt` (packages.yaml sanity/formatting only —
 **not** the full `pre-commit` gate; `scripts/` lint/test health is already CI's job on every
 push/PR, an unrelated regression there shouldn't block tonight's Copr publish) → full build
-cycle → regenerate docs → push COPR description → `git commit`. Only stages
-`packages.yaml packages/ submodules/ README.md docs/README.copr.md docs/full-report.md` — the
-automation never touches `templates/`/`blog/`, so hand-edits there are never swept into a daily
-commit. Intended to run unattended from an external nightly cron (the repo itself has no
-scheduler); pass `PUSH=1` for that.
+cycle → `validate-packages` again (no `fmt`) → regenerate docs → push COPR description →
+`git commit`. The second `validate-packages` exists because `full-cycle.py`'s
+`update_package_releases()` rewrites `packages.yaml`'s release fields *after* the first gate
+ran, and that's the file the commit and the generated docs are built from (docs/bugs.md
+BUG-0044); it skips `fmt` because the rewrite already goes through the same formatter `make
+fmt` itself uses, so there's nothing left to reformat. Only stages `packages.yaml packages/
+submodules/ README.md docs/README.copr.md docs/full-report.md` — the automation never touches
+`templates/`/`blog/`, so hand-edits there are never swept into a daily commit. Intended to run
+unattended from an external nightly cron (the repo itself has no scheduler); pass `PUSH=1` for
+that.
 
 A one-off package build failure (e.g. a chroot-specific mock failure) does **not** abort the
 run: it's recorded in `build-report.db` as usual, `readme`/`copr-description`/the docs commit

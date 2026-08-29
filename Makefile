@@ -545,6 +545,11 @@ update-daily: ## Update versions, validate+format packages.yaml, build (package 
 	$(MAKE) validate-packages fmt || exit 1
 	$(MAKE) refresh-checksums || exit 1
 	$(MAKE) full-cycle || touch logs/.update-daily-failed
+	@# full-cycle.py's update_package_releases() rewrites packages.yaml after the
+	@# pre-build gate ran, so re-validate the file that actually gets committed and
+	@# rendered into the docs below (docs/bugs.md BUG-0044). No re-fmt: the rewrite
+	@# already goes through write_yaml_file's FORMAT_FILE, same as format-yaml.py.
+	$(MAKE) validate-packages || exit 1
 	$(MAKE) readme copr-description || exit 1
 	@# stage-log-analyze must run here, after readme's gen-report.py has polled Copr
 	@# and fetched any newly-failed chroot logs (see lib.copr.poll_copr_status) --

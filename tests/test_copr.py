@@ -27,6 +27,7 @@ from lib.copr import (
     get_project_chroots,
     parse_build_id,
     poll_copr_status,
+    preflight,
     print_chroot_coverage,
     validate_copr_repo,
 )
@@ -174,6 +175,32 @@ class TestCheckCoprCredentials:
         assert result is False
         captured = capsys.readouterr()
         assert "invalid or missing" in captured.err
+
+
+class TestPreflight:
+    """Tests for preflight function (BUG-0036)."""
+
+    @patch("lib.copr.run_cmd")
+    def test_bad_slug_short_circuits_before_credentials_check(self, mock_run_cmd, capsys):
+        """An invalid slug must fail without shelling out to copr-cli at all."""
+        result = preflight("not-a-slug")
+
+        assert result is False
+        mock_run_cmd.assert_not_called()
+        captured = capsys.readouterr()
+        assert "Invalid COPR_REPO format" in captured.err
+
+    @patch("lib.copr.run_cmd")
+    def test_valid_slug_bad_credentials(self, mock_run_cmd):
+        mock_run_cmd.return_value = (False, "", "Error: unauthorized")
+
+        assert preflight("nett00n/hyprland") is False
+
+    @patch("lib.copr.run_cmd")
+    def test_valid_slug_good_credentials(self, mock_run_cmd):
+        mock_run_cmd.return_value = (True, "user: testuser\n", "")
+
+        assert preflight("nett00n/hyprland") is True
 
 
 class TestPollCoprStatus:
