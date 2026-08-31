@@ -38,13 +38,13 @@ aquamarine:
   - '%license LICENSE'
   - '%{_libdir}/libaquamarine.so*'
   license: BSD-3-Clause
-  release: 8
+  release: 1
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
   summary: A very light linux rendering backend library
   url: https://github.com/hyprwm/aquamarine
-  version: 0.14.0
+  version: 0.15.0
 aylurs-gtk-shell:
   build:
     go_subdir: cli
@@ -116,7 +116,7 @@ glaze:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
   summary: Extremely fast, in memory, JSON and reflection library for modern C++.
   url: https://github.com/stephenberry/glaze
-  version: 8.2.0
+  version: 8.3.0
 glaze-v7:
   auto_update:
     release_type: pinned-version
@@ -405,7 +405,7 @@ Hyprland:
   license: BSD-3-Clause
   recommends:
   - uwsm
-  release: 7
+  release: 8
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -441,7 +441,7 @@ hyprland-guiutils:
   - '%license LICENSE'
   - '%{_prefix}/bin/hyprland-*'
   license: BSD-3-Clause
-  release: 8
+  release: 9
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -493,13 +493,13 @@ hyprland-plugins:
     archives:
     - '%{url}/archive/%{commit}/%{name}-%{shortcommit}.tar.gz'
     commit:
-      date: '20260825'
-      full: 67bedb1699c7597100e26ce65159e92c8f62420a
+      date: '20260829'
+      full: 67c3a4c019f223c27b5bdc6bb656ce891a60861a
     patches:
     - hyprland-0.54-exclude-incompatible-plugins.patch
   summary: Official plugins for Hyprland
   url: https://github.com/hyprwm/hyprland-plugins
-  version: 0.56.0^20260825git67bedb1
+  version: 0.56.0^20260829git67c3a4c
 hyprland-protocols:
   build:
     system: meson
@@ -637,7 +637,7 @@ hyprlauncher:
   - '%license LICENSE'
   - '%{_prefix}/bin/hyprlauncher'
   license: BSD-3-Clause
-  release: 14
+  release: 15
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -727,7 +727,7 @@ hyprpaper:
   - '%{_bindir}/hyprpaper'
   - '%{_userunitdir}/hyprpaper.service'
   license: BSD-3-Clause
-  release: 14
+  release: 15
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -824,7 +824,7 @@ hyprpwcenter:
   - '%{_prefix}/bin/hyprpwcenter'
   - '%{_prefix}/share/applications/hyprpwcenter.desktop'
   license: BSD-3-Clause
-  release: 14
+  release: 15
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -935,7 +935,7 @@ hyprshutdown:
   - '%license LICENSE'
   - '%{_prefix}/bin/hyprshutdown'
   license: BSD-3-Clause
-  release: 18
+  release: 19
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -1013,7 +1013,7 @@ hyprsysteminfo:
   - '%{_prefix}/bin/hyprsysteminfo'
   - '%{_prefix}/share/applications/hyprsysteminfo.desktop'
   license: BSD-3-Clause
-  release: 18
+  release: 19
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -1058,7 +1058,7 @@ hyprtoolkit:
   - '%license LICENSE'
   - '%{_libdir}/libhyprtoolkit.so*'
   license: BSD-3-Clause
-  release: 14
+  release: 15
   source:
     archives:
     - '%{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz'
@@ -1942,7 +1942,7 @@ waypaper:
   - '%doc README.md'
   - '%license LICENSE'
   license: GPL-3.0-or-later
-  release: 10
+  release: 1
   requires:
   - gtk3
   - imageio-ffmpeg
@@ -1960,7 +1960,7 @@ waypaper:
     name: waypaper
   summary: GUI wallpaper manager for Wayland and Xorg Linux systems
   url: https://github.com/anufrievroman/waypaper
-  version: '2.8'
+  version: '2.9'
 screeninfo:
   auto_update:
     release_type: latest-tag

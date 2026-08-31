@@ -1,13 +1,13 @@
 %global debug_package %{nil}
 
 Name:           waypaper
-Version:        2.8
-Release:        10%{?dist}
+Version:        2.9
+Release:        1%{?dist}
 Summary:        GUI wallpaper manager for Wayland and Xorg Linux systems
 BuildArch:      noarch
 License:        GPL-3.0-or-later
 URL:            https://github.com/anufrievroman/waypaper
-Source0:        https://github.com/anufrievroman/waypaper/archive/refs/tags/2.8.tar.gz#/waypaper-2.8.tar.gz
+Source0:        https://github.com/anufrievroman/waypaper/archive/refs/tags/2.9.tar.gz#/waypaper-2.9.tar.gz
 
 BuildRequires:  pyproject-rpm-macros
 BuildRequires:  python3-devel
@@ -50,6 +50,6 @@ Package info:
 %license LICENSE
 
 %changelog
-* Sat Aug 29 2026 nett00n <copr@nett00n.org> - 2.8-10
+* Sun Aug 30 2026 nett00n <copr@nett00n.org> - 2.9-1
 
-- Update to 2.8
+- Update to 2.9
