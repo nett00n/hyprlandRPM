@@ -67,11 +67,15 @@ class TestFullCycleFinalize:
             build_db.set_stage(pkg, "spec", TARGET, run_id, "success")
             build_db.set_stage(pkg, "copr", TARGET, run_id, "unknown")
 
-        with patch.object(full_cycle, "print_summary"), patch.object(
-            full_cycle, "report_mock_failures"
-        ), patch.object(full_cycle, "report_copr_failures"):
+        with (
+            patch.object(full_cycle, "print_summary"),
+            patch.object(full_cycle, "report_mock_failures"),
+            patch.object(full_cycle, "report_copr_failures"),
+        ):
             # Should not raise SystemExit
-            full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=False)
+            full_cycle.finalize_report(
+                packages, TARGET, run_id, "", synchronous_copr=False
+            )
 
     def test_sync_copr_failed_is_failure(self):
         """When SYNCHRONOUS_COPR_BUILD=true, 'failed' COPR state is failure."""
@@ -79,12 +83,15 @@ class TestFullCycleFinalize:
         run_id = build_db.start_run(TARGET, "fedora", "44", "x86_64")
         build_db.set_stage("pkg1", "copr", TARGET, run_id, "failed")
 
-        with patch.object(full_cycle, "print_summary"), patch.object(
-            full_cycle, "report_mock_failures"
-        ), patch.object(
-            full_cycle, "report_copr_failures"
-        ) as mock_report_copr, pytest.raises(SystemExit) as exc:
-            full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=True)
+        with (
+            patch.object(full_cycle, "print_summary"),
+            patch.object(full_cycle, "report_mock_failures"),
+            patch.object(full_cycle, "report_copr_failures") as mock_report_copr,
+            pytest.raises(SystemExit) as exc,
+        ):
+            full_cycle.finalize_report(
+                packages, TARGET, run_id, "", synchronous_copr=True
+            )
 
         assert exc.value.code == 1
         mock_report_copr.assert_called_once_with(
@@ -101,11 +108,15 @@ class TestFullCycleFinalize:
         run_id = build_db.start_run(TARGET, "fedora", "44", "x86_64")
         build_db.set_stage("pkg1", "copr", TARGET, run_id, "failed")
 
-        with patch.object(full_cycle, "print_summary"), patch.object(
-            full_cycle, "report_mock_failures"
-        ), patch.object(full_cycle, "report_copr_failures") as mock_report_copr:
+        with (
+            patch.object(full_cycle, "print_summary"),
+            patch.object(full_cycle, "report_mock_failures"),
+            patch.object(full_cycle, "report_copr_failures") as mock_report_copr,
+        ):
             # Should not raise SystemExit -- copr is excluded from any_failed when async.
-            full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=False)
+            full_cycle.finalize_report(
+                packages, TARGET, run_id, "", synchronous_copr=False
+            )
 
         mock_report_copr.assert_not_called()
 
@@ -115,12 +126,15 @@ class TestFullCycleFinalize:
         run_id = build_db.start_run(TARGET, "fedora", "44", "x86_64")
         build_db.set_stage("pkg1", "spec", TARGET, run_id, "failed")
 
-        with patch.object(full_cycle, "print_summary"), patch.object(
-            full_cycle, "report_mock_failures"
-        ), patch.object(full_cycle, "report_copr_failures"), pytest.raises(
-            SystemExit
-        ) as exc:
-            full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=False)
+        with (
+            patch.object(full_cycle, "print_summary"),
+            patch.object(full_cycle, "report_mock_failures"),
+            patch.object(full_cycle, "report_copr_failures"),
+            pytest.raises(SystemExit) as exc,
+        ):
+            full_cycle.finalize_report(
+                packages, TARGET, run_id, "", synchronous_copr=False
+            )
 
         assert exc.value.code == 1
 
@@ -131,11 +145,15 @@ class TestFullCycleFinalize:
         build_db.set_stage("pkg1", "validate", TARGET, run_id, "failed")
         build_db.set_stage("pkg1", "spec", TARGET, run_id, "success")
 
-        with patch.object(full_cycle, "print_summary"), patch.object(
-            full_cycle, "report_mock_failures"
-        ), patch.object(full_cycle, "report_copr_failures"):
+        with (
+            patch.object(full_cycle, "print_summary"),
+            patch.object(full_cycle, "report_mock_failures"),
+            patch.object(full_cycle, "report_copr_failures"),
+        ):
             # Should not raise SystemExit
-            full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=False)
+            full_cycle.finalize_report(
+                packages, TARGET, run_id, "", synchronous_copr=False
+            )
 
     def test_only_considers_packages_in_this_run(self):
         """A failure recorded for a package outside this run's package set doesn't count.
@@ -149,24 +167,34 @@ class TestFullCycleFinalize:
         build_db.set_stage("pkg1", "spec", TARGET, run_id, "success")
         build_db.set_stage("some-other-pkg", "spec", TARGET, run_id, "failed")
 
-        with patch.object(full_cycle, "print_summary"), patch.object(
-            full_cycle, "report_mock_failures"
-        ), patch.object(full_cycle, "report_copr_failures"):
+        with (
+            patch.object(full_cycle, "print_summary"),
+            patch.object(full_cycle, "report_mock_failures"),
+            patch.object(full_cycle, "report_copr_failures"),
+        ):
             # Should not raise SystemExit -- "some-other-pkg" isn't in `packages`.
-            full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=False)
+            full_cycle.finalize_report(
+                packages, TARGET, run_id, "", synchronous_copr=False
+            )
 
     def test_finish_run_records_exit_state(self):
         packages = {"pkg1": {}}
         run_id = build_db.start_run(TARGET, "fedora", "44", "x86_64")
         build_db.set_stage("pkg1", "spec", TARGET, run_id, "success")
 
-        with patch.object(full_cycle, "print_summary"), patch.object(
-            full_cycle, "report_mock_failures"
-        ), patch.object(full_cycle, "report_copr_failures"):
-            full_cycle.finalize_report(packages, TARGET, run_id, "", synchronous_copr=False)
+        with (
+            patch.object(full_cycle, "print_summary"),
+            patch.object(full_cycle, "report_mock_failures"),
+            patch.object(full_cycle, "report_copr_failures"),
+        ):
+            full_cycle.finalize_report(
+                packages, TARGET, run_id, "", synchronous_copr=False
+            )
 
         conn = build_db.connect()
-        row = conn.execute("SELECT exit_state FROM runs WHERE id = ?", (run_id,)).fetchone()
+        row = conn.execute(
+            "SELECT exit_state FROM runs WHERE id = ?", (run_id,)
+        ).fetchone()
         assert row["exit_state"] == "ok"
 
 
@@ -243,7 +271,9 @@ def _patched_pipeline(
         enter(patch.object(full_cycle._stage["stage-validate"], "run_global_checks"))
         enter(
             patch.object(
-                full_cycle._stage["stage-validate"], "run_for_package", return_value=True
+                full_cycle._stage["stage-validate"],
+                "run_for_package",
+                return_value=True,
             )
         )
         enter(
@@ -259,12 +289,17 @@ def _patched_pipeline(
             )
         )
         copr_mock = enter(
-            patch.object(full_cycle._stage["stage-copr"], "run_for_package", return_value=True)
+            patch.object(
+                full_cycle._stage["stage-copr"], "run_for_package", return_value=True
+            )
         )
-        enter(patch.object(full_cycle, "print_chroot_coverage", return_value=coverage_ok))
+        enter(
+            patch.object(full_cycle, "print_chroot_coverage", return_value=coverage_ok)
+        )
         enter(
             patch.dict(
-                os.environ, {"REQUIRE_CHROOT_COVERAGE": "true" if require_coverage else ""}
+                os.environ,
+                {"REQUIRE_CHROOT_COVERAGE": "true" if require_coverage else ""},
             )
         )
 
@@ -272,7 +307,9 @@ def _patched_pipeline(
         if spy_forced_stages:
             forced_stages_spy = enter(
                 patch.object(
-                    full_cycle, "compute_forced_stages", wraps=full_cycle.compute_forced_stages
+                    full_cycle,
+                    "compute_forced_stages",
+                    wraps=full_cycle.compute_forced_stages,
                 )
             )
 
@@ -280,28 +317,61 @@ def _patched_pipeline(
 
 
 class TestCoprGatedByMockFailure:
-    """Regression coverage for issue #8: per-package pipelines used to submit
-    each package to Copr as soon as its own mock succeeded, so a healthy early
-    package (hyprutils) could already be public by the time a later, dependent
-    package (Hyprland) failed mock. Copr submission must now be an all-or-nothing
-    pass gated on every package's mock having succeeded this run.
+    """Regression coverage for issue #8 and docs/todo.md TODO-0084.
+
+    Per-package pipelines used to submit each package to Copr as soon as its
+    own mock succeeded, so a healthy early package (hyprutils) could already be
+    public by the time a later, dependent package (Hyprland) failed mock. The
+    two-pass structure (mock every package, submit as a separate pass after)
+    already prevents that, so Copr submission blocks only a failed package and
+    its transitive dependents -- not the whole run (TODO-0084): an unrelated
+    package, and a failed package's own already-published dependencies, still
+    submit.
+
+    Fixture graph for the transitive-scope tests:
+    aquamarine <- Hyprland <- hyprland-plugins, plus unrelated mpvpaper.
     """
 
-    def _run(self, packages, mock_outcomes, copr_repo="nett00n/hyprland", skip_copr=False):
-        """Run run_build_pipeline with heavy mocking; return (run_id, copr_mock)."""
+    def _run(
+        self,
+        packages,
+        mock_outcomes,
+        copr_repo="nett00n/hyprland",
+        skip_copr=False,
+        all_packages=None,
+    ):
+        """Run run_build_pipeline with heavy mocking; return (run_id, copr_mock).
+
+        all_packages, if given, is what get_packages() (the full package set)
+        returns -- lets a test model a PACKAGE=-filtered run where `packages`
+        is a subset.
+        """
         run_id = build_db.start_run(TARGET, "fedora", "44", "x86_64")
 
         def fake_mock_run_for_package(
-            pkg, meta, fedora_version, target, proceed, mock_failed, all_pkgs, run_id_, repo_dir
+            pkg,
+            meta,
+            fedora_version,
+            target,
+            proceed,
+            mock_failed,
+            all_pkgs,
+            run_id_,
+            repo_dir,
         ):
             ok = mock_outcomes[pkg]
-            build_db.set_stage(pkg, "mock", target, run_id_, "success" if ok else "failed")
+            build_db.set_stage(
+                pkg, "mock", target, run_id_, "success" if ok else "failed"
+            )
             mock_failed[pkg] = not ok
             return ok
 
-        with patch.object(
-            full_cycle, "get_packages", return_value=packages
-        ), _patched_pipeline(fake_mock_run_for_package) as (copr_mock, _):
+        with (
+            patch.object(
+                full_cycle, "get_packages", return_value=all_packages or packages
+            ),
+            _patched_pipeline(fake_mock_run_for_package) as (copr_mock, _),
+        ):
             full_cycle.run_build_pipeline(
                 packages,
                 TARGET,
@@ -314,29 +384,113 @@ class TestCoprGatedByMockFailure:
 
         return run_id, copr_mock
 
-    def test_one_package_mock_failure_blocks_copr_for_all(self):
-        packages = {"hyprutils": {}, "Hyprland": {}}
+    def test_unrelated_package_still_submitted(self):
+        """The core TODO-0084 regression: mpvpaper has no relation to aquamarine
+        and must reach Copr even though aquamarine's mock failed."""
+        packages = {
+            "aquamarine": {},
+            "Hyprland": {"depends_on": ["aquamarine"]},
+            "mpvpaper": {},
+        }
         run_id, copr_mock = self._run(
-            packages, {"hyprutils": True, "Hyprland": False}
+            packages,
+            {"aquamarine": False, "Hyprland": True, "mpvpaper": True},
         )
 
-        # hyprutils succeeded its own mock build, but must NOT reach Copr.
-        copr_mock.assert_not_called()
-        hyprutils_entry = build_db.get_stage("hyprutils", "copr", TARGET)
-        hyprland_entry = build_db.get_stage("Hyprland", "copr", TARGET)
-        assert "blocked" in hyprutils_entry["reason"]
-        assert "blocked" in hyprland_entry["reason"]
-        assert "Hyprland" in hyprutils_entry["reason"]
+        called_pkgs = {c.args[0] for c in copr_mock.call_args_list}
+        assert called_pkgs == {"mpvpaper"}
+
+    def test_failed_package_itself_blocked(self):
+        packages = {"aquamarine": {}, "mpvpaper": {}}
+        run_id, copr_mock = self._run(packages, {"aquamarine": False, "mpvpaper": True})
+
+        called_pkgs = {c.args[0] for c in copr_mock.call_args_list}
+        assert "aquamarine" not in called_pkgs
+        entry = build_db.get_stage("aquamarine", "copr", TARGET)
+        assert "blocked" in entry["reason"]
+        assert "aquamarine" in entry["reason"]
+
+    def test_direct_dependent_blocked(self):
+        packages = {
+            "aquamarine": {},
+            "Hyprland": {"depends_on": ["aquamarine"]},
+        }
+        run_id, copr_mock = self._run(packages, {"aquamarine": False, "Hyprland": True})
+
+        called_pkgs = {c.args[0] for c in copr_mock.call_args_list}
+        assert "Hyprland" not in called_pkgs
+        entry = build_db.get_stage("Hyprland", "copr", TARGET)
+        assert "blocked" in entry["reason"]
+        assert "aquamarine" in entry["reason"]
+
+    def test_transitive_dependent_blocked(self):
+        packages = {
+            "aquamarine": {},
+            "Hyprland": {"depends_on": ["aquamarine"]},
+            "hyprland-plugins": {"depends_on": ["Hyprland"]},
+        }
+        run_id, copr_mock = self._run(
+            packages,
+            {"aquamarine": False, "Hyprland": True, "hyprland-plugins": True},
+        )
+
+        called_pkgs = {c.args[0] for c in copr_mock.call_args_list}
+        assert "hyprland-plugins" not in called_pkgs
+        entry = build_db.get_stage("hyprland-plugins", "copr", TARGET)
+        assert "blocked" in entry["reason"]
+        assert "aquamarine" in entry["reason"]
+
+    def test_dependent_with_passing_mock_still_blocked(self):
+        """Graph-membership-only rule: Hyprland's own mock succeeded, but it
+        depends on the failed aquamarine, so it is blocked regardless."""
+        packages = {
+            "aquamarine": {},
+            "Hyprland": {"depends_on": ["aquamarine"]},
+        }
+        run_id, copr_mock = self._run(packages, {"aquamarine": False, "Hyprland": True})
+
+        hyprland_mock = build_db.get_stage("Hyprland", "mock", TARGET)
+        assert hyprland_mock["state"] == "success"
+        called_pkgs = {c.args[0] for c in copr_mock.call_args_list}
+        assert "Hyprland" not in called_pkgs
+
+    def test_dependency_of_failed_package_not_blocked(self):
+        """aquamarine is Hyprland's dependency -- already published, unaffected
+        by Hyprland's later mock failure -- so it must still submit."""
+        packages = {
+            "aquamarine": {},
+            "Hyprland": {"depends_on": ["aquamarine"]},
+        }
+        run_id, copr_mock = self._run(packages, {"aquamarine": True, "Hyprland": False})
+
+        called_pkgs = {c.args[0] for c in copr_mock.call_args_list}
+        assert called_pkgs == {"aquamarine"}
 
     def test_all_mock_success_copr_runs_for_all(self):
         packages = {"hyprutils": {}, "Hyprland": {}}
-        run_id, copr_mock = self._run(
-            packages, {"hyprutils": True, "Hyprland": True}
-        )
+        run_id, copr_mock = self._run(packages, {"hyprutils": True, "Hyprland": True})
 
         assert copr_mock.call_count == 2
         called_pkgs = {c.args[0] for c in copr_mock.call_args_list}
         assert called_pkgs == {"hyprutils", "Hyprland"}
+
+    def test_package_filtered_run_dependent_outside_run_ignored(self):
+        """PACKAGE=aquamarine: hyprland-plugins (a real dependent, but outside
+        this run's package set) must not appear in the blocked map or crash."""
+        all_packages = {
+            "aquamarine": {},
+            "Hyprland": {"depends_on": ["aquamarine"]},
+            "hyprland-plugins": {"depends_on": ["Hyprland"]},
+        }
+        packages = {"aquamarine": {}}
+        run_id, copr_mock = self._run(
+            packages, {"aquamarine": False}, all_packages=all_packages
+        )
+
+        copr_mock.assert_not_called()
+        entry = build_db.get_stage("aquamarine", "copr", TARGET)
+        assert "blocked" in entry["reason"]
+        assert build_db.get_stage("hyprland-plugins", "copr", TARGET) is None
 
     def test_skip_copr_env_bypasses_gate_entirely(self):
         """SKIP_COPR=true still just skips -- no blocked-reason noise."""
@@ -376,7 +530,9 @@ class TestResolveForcePackages:
 
     def test_package_filter_ignores_names_not_in_run(self):
         packages = {"hyprutils": {}}
-        result = full_cycle.resolve_force_packages(True, "Hyprland, hyprutils", packages)
+        result = full_cycle.resolve_force_packages(
+            True, "Hyprland, hyprutils", packages
+        )
         assert result == {"hyprutils"}
 
 
@@ -393,18 +549,27 @@ class TestForceRebuildOverridesProceed:
         received_proceed: dict[str, bool] = {}
 
         def fake_mock_run_for_package(
-            pkg, meta, fedora_version, target, proceed, mock_failed, all_pkgs, run_id_, repo_dir
+            pkg,
+            meta,
+            fedora_version,
+            target,
+            proceed,
+            mock_failed,
+            all_pkgs,
+            run_id_,
+            repo_dir,
         ):
             received_proceed[pkg] = proceed
             build_db.set_stage(pkg, "mock", target, run_id_, "success")
             mock_failed[pkg] = False
             return True
 
-        with patch.object(
-            full_cycle, "get_packages", return_value=packages
-        ), _patched_pipeline(fake_mock_run_for_package, spy_forced_stages=True) as (
-            _,
-            forced_stages_spy,
+        with (
+            patch.object(full_cycle, "get_packages", return_value=packages),
+            _patched_pipeline(fake_mock_run_for_package, spy_forced_stages=True) as (
+                _,
+                forced_stages_spy,
+            ),
         ):
             full_cycle.run_build_pipeline(
                 packages,
@@ -424,7 +589,8 @@ class TestForceRebuildOverridesProceed:
         assert received_proceed == {"hyprutils": True, "Hyprland": False}
 
         force_all_by_pkg = {
-            call.args[0]: call.kwargs["force_all"] for call in forced_stages_spy.call_args_list
+            call.args[0]: call.kwargs["force_all"]
+            for call in forced_stages_spy.call_args_list
         }
         assert force_all_by_pkg["Hyprland"] is True
         assert force_all_by_pkg["hyprutils"] is False
@@ -448,11 +614,10 @@ class TestFullCyclePreflight:
         monkeypatch.setenv("COPR_REPO", "nett00n/hyprland")
         monkeypatch.delenv("SKIP_COPR", raising=False)
 
-        with patch.object(
-            full_cycle, "preflight", return_value=False
-        ) as preflight_mock, patch.object(
-            full_cycle, "prepare_packages"
-        ) as prepare_packages_mock:
+        with (
+            patch.object(full_cycle, "preflight", return_value=False) as preflight_mock,
+            patch.object(full_cycle, "prepare_packages") as prepare_packages_mock,
+        ):
             with pytest.raises(SystemExit) as exc_info:
                 full_cycle.main()
 
@@ -464,8 +629,11 @@ class TestFullCyclePreflight:
         monkeypatch.setenv("COPR_REPO", "nett00n/hyprland")
         monkeypatch.setenv("SKIP_COPR", "true")
 
-        with patch.object(full_cycle, "preflight") as preflight_mock, patch.object(
-            full_cycle, "prepare_packages", side_effect=SystemExit("stop-here")
+        with (
+            patch.object(full_cycle, "preflight") as preflight_mock,
+            patch.object(
+                full_cycle, "prepare_packages", side_effect=SystemExit("stop-here")
+            ),
         ):
             with pytest.raises(SystemExit):
                 full_cycle.main()
@@ -484,19 +652,28 @@ class TestCoprGatedByChrootCoverage:
         run_id = build_db.start_run(TARGET, "fedora", "44", "x86_64")
 
         def fake_mock_run_for_package(
-            pkg, meta, fedora_version, target, proceed, mock_failed, all_pkgs, run_id_, repo_dir
+            pkg,
+            meta,
+            fedora_version,
+            target,
+            proceed,
+            mock_failed,
+            all_pkgs,
+            run_id_,
+            repo_dir,
         ):
             build_db.set_stage(pkg, "mock", target, run_id_, "success")
             mock_failed[pkg] = False
             return True
 
-        with patch.object(
-            full_cycle, "get_packages", return_value=packages
-        ), _patched_pipeline(
-            fake_mock_run_for_package,
-            coverage_ok=coverage_ok,
-            require_coverage=require_coverage,
-        ) as (copr_mock, _):
+        with (
+            patch.object(full_cycle, "get_packages", return_value=packages),
+            _patched_pipeline(
+                fake_mock_run_for_package,
+                coverage_ok=coverage_ok,
+                require_coverage=require_coverage,
+            ) as (copr_mock, _),
+        ):
             full_cycle.run_build_pipeline(
                 packages,
                 TARGET,
@@ -630,7 +807,11 @@ class TestPackageVarSemantics:
         against the shell directly instead.
         """
         guard = 'case "{}" in *,*) echo MATCHED;; *) echo NO_MATCH;; esac'
-        for value, expected in [("", "NO_MATCH"), ("hyprutils", "NO_MATCH"), ("a,b", "MATCHED")]:
+        for value, expected in [
+            ("", "NO_MATCH"),
+            ("hyprutils", "NO_MATCH"),
+            ("a,b", "MATCHED"),
+        ]:
             result = subprocess.run(
                 ["sh", "-c", guard.format(value)], capture_output=True, text=True
             )
@@ -714,9 +895,7 @@ class TestSingleContainerTargets:
         assert analyze_line.rstrip().endswith("pkg-log-analysis.py a b")
 
     def test_stage_log_analyze_respects_skip_packages(self):
-        stdout = self._dry_run(
-            "stage-log-analyze", "PACKAGE=a,b,c", "SKIP_PACKAGES=b"
-        )
+        stdout = self._dry_run("stage-log-analyze", "PACKAGE=a,b,c", "SKIP_PACKAGES=b")
         analyze_line = next(
             line for line in stdout.splitlines() if "pkg-log-analysis.py" in line
         )

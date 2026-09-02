@@ -37,7 +37,13 @@ from lib import build_db
 from lib.cache import compute_input_hashes
 from lib.config import env_flag
 from lib.copr import preflight, print_chroot_coverage
-from lib.deps import build_dep_graph, effective_deps, topological_sort, transitive_deps
+from lib.deps import (
+    build_dep_graph,
+    effective_deps,
+    reverse_graph,
+    topological_sort,
+    transitive_deps,
+)
 from lib.gitmodules import ensure_initialized, parse_gitmodules
 from lib.log_analysis import report_mock_failures, report_copr_failures
 from lib.pipeline import (
@@ -261,7 +267,7 @@ def setup_run(
 def mock_failed_packages(packages: dict, target: str) -> list[str]:
     """Return names of packages whose mock stage ended this run in a "failed" state.
 
-    Used to gate Copr submission on the whole run, not just the failed package:
+    Used as the basis for gating Copr submission (see copr_blocked_packages()):
     per-package pipelines used to submit each package to Copr as soon as its
     own mock succeeded, so a healthy early package (e.g. hyprutils) could
     already be public on Copr by the time a later, dependent package (e.g.
@@ -273,6 +279,36 @@ def mock_failed_packages(packages: dict, target: str) -> list[str]:
         for pkg in packages
         if (build_db.get_stage(pkg, "mock", target) or {}).get("state") == "failed"
     )
+
+
+def copr_blocked_packages(
+    packages: dict, all_packages: dict, target: str
+) -> dict[str, list[str]]:
+    """Map each package that must not be submitted to Copr this run -> the
+    failed package(s) responsible (a failed package maps to itself).
+
+    Scope is pure dependency-graph membership: a failed package plus its
+    transitive dependents (packages that consume its RPM), not its own
+    dependencies (already published, unaffected) and not unrelated packages.
+    Never special-cased on whether a dependent's own mock happened to pass --
+    it may have built against a stale, already-published copy of the failed
+    ancestor. See docs/todo.md TODO-0084.
+
+    Graph is built over `all_packages` (not the filtered `packages`) so
+    dependents resolve correctly on a PACKAGE=-filtered run; the result is
+    still restricted to packages actually in this run.
+    """
+    failed = mock_failed_packages(packages, target)
+    if not failed:
+        return {}
+    dependents = reverse_graph(build_dep_graph(all_packages))
+    blocked: dict[str, list[str]] = {}
+    for name in failed:
+        blocked.setdefault(name, []).append(name)
+        for dependent in transitive_deps(name, dependents):
+            if dependent in packages:
+                blocked.setdefault(dependent, []).append(name)
+    return blocked
 
 
 def run_build_pipeline(
@@ -300,8 +336,10 @@ def run_build_pipeline(
     succeeded" resume.
 
     Copr submission runs as a separate pass AFTER every package has gone through
-    mock, and is skipped entirely (for every package) if any package's mock stage
-    failed this run -- a broken dependency set must never be partially published.
+    mock. A package's own mock failure, or a mock failure anywhere in its
+    transitive dependency chain, blocks that package's submission this run --
+    see copr_blocked_packages(). Unrelated packages and the failed package's own
+    (already-published) dependencies still submit normally.
 
     If synchronous_copr is False (default), COPR builds use --nowait for async submission.
     """
@@ -582,23 +620,27 @@ def run_build_pipeline(
                     )
 
     # Copr: a separate pass, only after every package has gone through mock.
-    # If anything failed mock this run, no package is submitted -- see
-    # mock_failed_packages() docstring.
-    blockers = (
-        [] if skip_copr or not copr_repo else mock_failed_packages(packages, target)
+    # A failed package and its transitive dependents are blocked; unrelated
+    # packages and the failed package's own dependencies still submit --
+    # see copr_blocked_packages().
+    blocked = (
+        {}
+        if skip_copr or not copr_repo
+        else copr_blocked_packages(packages, all_packages, target)
     )
-    if blockers:
-        print(
-            f"\n  ✗ mock failed for: {', '.join(blockers)} -- "
-            "skipping Copr submission for all packages this run",
-            file=sys.stderr,
-        )
+    if blocked:
+        failed = mock_failed_packages(packages, target)
+        held_back = sorted(set(blocked) - set(failed))
+        msg = f"\n  ✗ mock failed for: {', '.join(failed)}"
+        if held_back:
+            msg += f" -- also holding back dependent(s): {', '.join(held_back)}"
+        print(msg, file=sys.stderr)
 
     # Pre-submission chroot coverage gate (docs/bugs.md BUG-0018): warns by
-    # default, blocks (like the mock-failure `blockers` case above) only under
+    # default, blocks (like the mock-failure `blocked` case above) only under
     # REQUIRE_CHROOT_COVERAGE=true.
     coverage_blocked = False
-    if not skip_copr and copr_repo and not blockers:
+    if not skip_copr and copr_repo and len(blocked) < len(packages):
         require_coverage = env_flag("REQUIRE_CHROOT_COVERAGE")
         covered = print_chroot_coverage(copr_repo, packages)
         if not covered and require_coverage:
@@ -625,15 +667,9 @@ def run_build_pipeline(
         if not copr_repo:
             continue
 
-        if blockers:
-            event(
-                "copr",
-                target,
-                pkg,
-                "skip",
-                reason=f"blocked: mock failed for {', '.join(blockers)}",
-                ver=pkg_ver,
-            )
+        if pkg in blocked:
+            reason = f"blocked: mock failed for {', '.join(blocked[pkg])}"
+            event("copr", target, pkg, "skip", reason=reason, ver=pkg_ver)
             # state=skipped, matching every other upstream-failure skip case
             # in the pipeline (e.g. "spec failed", "srpm failed").
             build_db.set_stage(
@@ -642,7 +678,7 @@ def run_build_pipeline(
                 target,
                 run_id,
                 "skipped",
-                reason=f"blocked: mock failed for {', '.join(blockers)}",
+                reason=reason,
             )
             continue
 

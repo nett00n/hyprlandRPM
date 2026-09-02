@@ -22,6 +22,14 @@ History before this file's introduction is not backfilled - see `git log`.
   deliberately not re-run: the rewrite already goes through `write_yaml_file`'s
   `FORMAT_FILE`, the same formatter `make fmt` uses, so the file is already
   formatting-clean. Fixes #BUG-0044.
+- Changed: `full-cycle.py`'s post-mock Copr-submission gate now blocks only a
+  mock-failed package and its transitive dependents, not the whole run. New
+  `copr_blocked_packages()` (`full-cycle.py`) replaces the old all-or-nothing
+  `blockers` check; a new `lib.deps.reverse_graph()` builds the dependents map
+  it walks (also now reused by `topological_sort()`, which built the same
+  inversion inline before). Unrelated packages, and a failed package's own
+  already-published dependencies, are submitted normally instead of being held
+  back. Fixes TODO-0084.
 
 ## 2026-08-28
 

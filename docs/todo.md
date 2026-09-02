@@ -359,36 +359,6 @@ docs/bugs.md's `## update-daily` section instead.
   so ("accepted trade-off for simpler code"), contradicting the function name.
   Misleading name on the function that rewrites packages.yaml on every nightly run.
   Rename, e.g. to `update_package_versions()` [P3/D1]
-- #TODO-0084 a single mock failure blocks Copr submission for every package this
-  run, not just the ones actually affected. `mock_failed_packages()`
-  (`full-cycle.py:261-275`) returns every package with a failed mock stage; if
-  non-empty, the Copr-submission loop (`full-cycle.py:592-651`) skips every
-  package, unrelated ones included. The gate's docstring cites "issue #8" (don't
-  publish an inconsistent dependency set), but today's two-pass structure (mock
-  for every package first, submission as a separate pass after) already
-  prevents the premature-publish case that motivated it, so the all-or-nothing
-  scope is broader than it needs to be.
-
-  Wanted: block only the failed package(s) plus their transitive dependents
-  (packages that consume the failed package's RPM), not its own dependencies
-  (already published, unaffected by a later failure downstream) or unrelated
-  packages -- e.g. if `aquamarine` fails, `mpvpaper` should still be submitted;
-  anything depending on aquamarine, transitively, should not. `lib/deps.py` has
-  the pieces but not this query: `build_dep_graph()`/`transitive_deps()`
-  (`:38-43`, `:79-88`) walk dependency-wards; `topological_sort()` (`:52-56`)
-  already builds the reverse `dependents` map internally but doesn't expose it
-  -- a `transitive_dependents()` counterpart is the natural addition.
-
-  Verified this has to be decided by graph membership alone, not by whether the
-  dependent's own mock happened to pass: a dependent CAN build successfully
-  against a stale, already-published copy of a failed ancestor, since a failed
-  mock leaves the old RPM untouched in `local-repo/` (`update_local_repo()`/
-  `prune_local_repo()`, `stage-mock.py:124-171`, only touch RPMs actually
-  produced this run) and internal `BuildRequires` are unversioned both locally
-  and on Copr (`resolve_dep_versions()`, `stage-spec.py:40-73`, only queries
-  stock Fedora repos, so `spec.j2:37-59`'s version-pin branch never matches this
-  project's own packages). So implement the block as pure graph membership --
-  never special-case "but this dependent's own mock passed" [P2/D3]
 
 ## Source verification
 

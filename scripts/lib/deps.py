@@ -43,17 +43,25 @@ def build_dep_graph(all_packages: dict) -> dict[str, set[str]]:
     }
 
 
+def reverse_graph(graph: dict[str, set[str]]) -> dict[str, set[str]]:
+    """Invert {pkg: deps} into {pkg: dependents}. Every key of `graph` is preserved
+    as a key in the result (possibly with an empty set); a dep name that isn't
+    itself a key in `graph` is not added as one."""
+    dependents: dict[str, set[str]] = {node: set() for node in graph}
+    for node, deps in graph.items():
+        for dep in deps:
+            if dep in dependents:
+                dependents[dep].add(node)
+    return dependents
+
+
 def topological_sort(graph: dict[str, set[str]]) -> list[str]:
     """Kahn's algorithm: return packages in dependency-first build order.
 
     Packages with no deps come first. Raises ValueError on cycles.
     """
     # Count in-degree: how many dependencies each package has
-    dependents: dict[str, set[str]] = {node: set() for node in graph}
-    for node, deps in graph.items():
-        for dep in deps:
-            if dep in dependents:
-                dependents[dep].add(node)
+    dependents = reverse_graph(graph)
     in_degree: dict[str, int] = {node: 0 for node in graph}
     for node, deps in graph.items():
         in_degree[node] = len(deps)

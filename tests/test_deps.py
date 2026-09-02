@@ -12,6 +12,7 @@ from lib.deps import (
     declared_deps,
     effective_deps,
     build_dep_graph,
+    reverse_graph,
     topological_sort,
     transitive_deps,
 )
@@ -154,6 +155,44 @@ class TestBuildDepGraph:
         packages = {}
         graph = build_dep_graph(packages)
         assert graph == {}
+
+
+class TestReverseGraph:
+    """Test reverse_graph(), the {pkg: deps} -> {pkg: dependents} inversion."""
+
+    def test_empty_graph(self):
+        assert reverse_graph({}) == {}
+
+    def test_single_node_no_deps(self):
+        assert reverse_graph({"a": set()}) == {"a": set()}
+
+    def test_linear_chain(self):
+        """a -> b -> c means b and c each gain one dependent."""
+        graph = {"a": {"b"}, "b": {"c"}, "c": set()}
+        assert reverse_graph(graph) == {"a": set(), "b": {"a"}, "c": {"b"}}
+
+    def test_diamond(self):
+        """a -> b,c; b,c -> d means d has two dependents."""
+        graph = {"a": {"b", "c"}, "b": {"d"}, "c": {"d"}, "d": set()}
+        result = reverse_graph(graph)
+        assert result["d"] == {"b", "c"}
+        assert result["b"] == {"a"}
+        assert result["c"] == {"a"}
+        assert result["a"] == set()
+
+    def test_every_key_preserved_even_with_no_dependents(self):
+        graph = {"a": set(), "b": set(), "c": set()}
+        result = reverse_graph(graph)
+        assert set(result.keys()) == {"a", "b", "c"}
+        assert all(v == set() for v in result.values())
+
+    def test_dangling_dep_not_added_as_key(self):
+        """A dep name that isn't itself a key in `graph` doesn't appear as one
+        in the result -- it just doesn't get a reverse edge recorded."""
+        graph = {"a": {"missing"}}
+        result = reverse_graph(graph)
+        assert result == {"a": set()}
+        assert "missing" not in result
 
 
 class TestTopologicalSort:
