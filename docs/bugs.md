@@ -162,15 +162,6 @@ re-verified 2026-08-18, revalidation step added 2026-08-29 (BUG-0044):
   `full-cycle.py:153`), and `readme`+`copr-description` run seconds later -- the
   publish step is simply one poll too early for whatever was just resubmitted [P2/D3]
 
-- #BUG-0043 no concurrency guard on a job documented as cron-driven. Nothing takes a
-  lock -- repo-wide grep for `flock`/`fcntl`/pidfile/lockfile across `Makefile` and
-  `scripts/` is empty. 49 packages at up to `CMD_TIMEOUT=3600s` *per command* can
-  easily outrun the cron interval, and two overlapping runs write the same
-  build-report.db (sqlite WAL gives it some protection), the same rpmbuild-*/mock-*
-  podman volumes, the same `local-repo/<target>/` directory, the same packages.yaml,
-  and the same git index -- `git pull --rebase origin main` under `PUSH=1`
-  (`Makefile:564`) is the sharpest edge, two runs rebasing concurrently [P1/D2]
-
 ## Packaging metadata
 
 - #BUG-0047 `lib/rpm_macros.py:normalize_file_entry`'s forward direction (abs -> macro)

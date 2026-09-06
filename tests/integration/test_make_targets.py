@@ -1,6 +1,7 @@
 """Integration tests for make targets and pipeline components."""
 
 import contextlib
+import fcntl
 import os
 import subprocess
 import sys
@@ -1186,3 +1187,137 @@ class TestSrpmBlocking:
         assert result is True
         entry = build_db.get_stage(pkg, "srpm", TARGET)
         assert entry["state"] == "skipped"
+
+
+class TestPipelineLock:
+    """Coverage for docs/bugs.md BUG-0043: update-daily/full-cycle/full-cycle-matrix
+    share a non-blocking flock (default path logs/.pipeline.lock, overridden here to
+    a tmp_path file via PIPELINE_LOCK_FILE= so tests never touch real repo state) so
+    two overlapping runs (e.g. a slow nightly cron job still going when the next one
+    fires) refuse instead of corrupting build-report.db, the mock/rpmbuild podman
+    volumes, or the git index.
+
+    Note on `make -n` here: GNU make still runs a recipe line for real under -n if
+    the line's raw, as-written text contains "$(MAKE)" (see full-cycle-matrix's own
+    `for`-loop and TestFullCycleMatrixTarget's comment) -- our guard lines qualify,
+    so `flock` really runs and really succeeds/fails even under -n. But -n *also*
+    prints the recipe's raw template text regardless of which branch executes, so
+    the string "already in progress" always appears once from that static dump.
+    A REAL refusal additionally executes the `echo` in the failing branch, printing
+    it a second time -- so the signal is an occurrence *count*, not presence, paired
+    with whether recursion actually reached a downstream target (here: check-venv's
+    "test -x .venv/bin/python3" line, which only prints if `_full-cycle` was truly
+    reached -- chosen over check-image's own line since that one differs under
+    NO_CONTAINER=1, which the surrounding test run may or may not have set).
+    """
+
+    def _lock_file(self, tmp_path) -> Path:
+        return tmp_path / "pipeline.lock"
+
+    def _dry_run(self, target: str, lock_file: Path, *extra_args: str):
+        return subprocess.run(
+            ["make", "-n", target, f"PIPELINE_LOCK_FILE={lock_file}", *extra_args],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_update_daily_dry_run_takes_lock_then_recurses(self, tmp_path):
+        result = self._dry_run(
+            "update-daily", self._lock_file(tmp_path), "COPR_REPO=nett00n/hyprland"
+        )
+
+        assert result.returncode == 0
+        assert "flock" in result.stdout
+        assert "PIPELINE_LOCK_HELD=1" in result.stdout
+        # Real recursion into _update-daily reached its own recipe body.
+        assert "rm -f logs/.update-daily-failed" in result.stdout
+
+    def test_second_run_refuses_while_lock_held(self, tmp_path):
+        lock_file = self._lock_file(tmp_path)
+        with open(lock_file, "w") as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+            result = subprocess.run(
+                [
+                    "make",
+                    "full-cycle",
+                    f"PIPELINE_LOCK_FILE={lock_file}",
+                    "COPR_REPO=nett00n/hyprland",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "NO_CONTAINER": "1"},
+            )
+
+            assert result.returncode != 0
+            assert "already in progress" in result.stdout
+            # The lock check must fire before any real build work -- full-cycle.py
+            # is never reached.
+            assert "full-cycle.py" not in result.stdout
+
+    def test_lock_released_after_holder_exits(self, tmp_path):
+        lock_file = self._lock_file(tmp_path)
+        with open(lock_file, "w") as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        # `held` is closed now -- the flock releases with it, same as a crashed or
+        # finished holder process. A fresh attempt must succeed, not see a stale lock.
+
+        result = self._dry_run("full-cycle", lock_file, "COPR_REPO=nett00n/hyprland")
+
+        assert result.returncode == 0
+        # Static template text only (never really executed) -- one occurrence.
+        assert result.stdout.count("already in progress") == 1
+        # Real recursion into _full-cycle reached check-image's recipe.
+        assert "test -x .venv/bin/python3" in result.stdout
+
+    def test_full_cycle_matrix_inner_full_cycle_does_not_relock(self, tmp_path):
+        lock_file = self._lock_file(tmp_path)
+        result = self._dry_run(
+            "full-cycle-matrix", lock_file, "MATRIX_VERSIONS=43", "COPR_REPO="
+        )
+
+        assert result.returncode == 0
+        # The outer full-cycle-matrix takes the lock for real once; its nested
+        # `make full-cycle` (from the version loop, itself force-run under -n)
+        # must inherit PIPELINE_LOCK_HELD=1 and skip straight past its own guard
+        # instead of trying to flock a file it's already holding. Two static
+        # template occurrences are expected here (one from full-cycle-matrix's own
+        # guard, one from full-cycle's) -- a real self-refusal would add a THIRD,
+        # really-executed echo and suppress the downstream check-venv recursion,
+        # exactly like test_second_run_refuses.
+        assert result.stdout.count("already in progress") == 2
+        assert "test -x .venv/bin/python3" in result.stdout
+
+    def test_lock_disable_bypasses_guard_even_when_lock_held(self, tmp_path):
+        lock_file = self._lock_file(tmp_path)
+        with open(lock_file, "w") as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+            result = self._dry_run(
+                "full-cycle",
+                lock_file,
+                "COPR_REPO=nett00n/hyprland",
+                "LOCK_DISABLE=1",
+            )
+
+        assert result.returncode == 0
+        assert result.stdout.count("already in progress") == 1
+        assert "test -x .venv/bin/python3" in result.stdout
+
+    def test_pipeline_lock_held_bypasses_guard_even_when_lock_held(self, tmp_path):
+        lock_file = self._lock_file(tmp_path)
+        with open(lock_file, "w") as held:
+            fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+            result = self._dry_run(
+                "full-cycle",
+                lock_file,
+                "COPR_REPO=nett00n/hyprland",
+                "PIPELINE_LOCK_HELD=1",
+            )
+
+        assert result.returncode == 0
+        assert result.stdout.count("already in progress") == 1
+        assert "test -x .venv/bin/python3" in result.stdout

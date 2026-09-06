@@ -295,6 +295,15 @@ submodules/ README.md docs/README.copr.md docs/full-report.md` — the automatio
 unattended from an external nightly cron (the repo itself has no scheduler); pass `PUSH=1` for
 that.
 
+**Concurrency:** `update-daily`, `full-cycle`, and `full-cycle-matrix` all take a shared
+`flock` on `logs/.pipeline.lock` before doing any work. A second run started while one of
+these is still in progress refuses immediately with an error naming the holder (PID and start
+time) and exits non-zero -- it never waits, so an overrunning nightly job shows up as a loud
+cron failure instead of a silent skip or a corrupted `build-report.db`/git state. This also
+means a manual `make full-cycle` cannot run while the nightly job is still going. Bypass with
+`LOCK_DISABLE=1` if you deliberately need overlapping runs (e.g. two disjoint `PACKAGE=`
+scopes) or the host lacks `flock` (util-linux).
+
 A one-off package build failure (e.g. a chroot-specific mock failure) does **not** abort the
 run: it's recorded in `build-report.db` as usual, `readme`/`copr-description`/the docs commit
 still happen (so the night's version bumps and submodule moves aren't lost), and

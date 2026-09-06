@@ -12,6 +12,17 @@ entry as `- <Added|Changed|Fixed|Removed>: <what changed>`. Full ruleset in
 
 History before this file's introduction is not backfilled - see `git log`.
 
+## 2026-09-06
+
+- Fixed: `update-daily`, `full-cycle`, and `full-cycle-matrix` now take a shared,
+  non-blocking `flock` on `logs/.pipeline.lock` before doing any work, and refuse
+  (exit non-zero, naming the holder) instead of running concurrently. Previously
+  nothing in the repo guarded against two overlapping runs -- a real risk for a
+  cron-driven job that can outrun its interval -- writing the same
+  `build-report.db`, mock/rpmbuild podman volumes, `local-repo/`, `packages.yaml`,
+  and git index, with concurrent `git pull --rebase`/`push` under `PUSH=1` as the
+  sharpest edge. `LOCK_DISABLE=1` bypasses the guard deliberately. Fixes #BUG-0043.
+
 ## 2026-08-29
 
 - Fixed: `make update-daily` re-runs `validate-packages` (no `fmt`) after

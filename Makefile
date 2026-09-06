@@ -132,9 +132,18 @@ define run_with_result
 	@$1 && echo $(HIGHLIGHT_PREFIX) "✓ $2" || (echo $(HIGHLIGHT_PREFIX) "✗ $3"; exit 1)
 endef
 
+# Concurrency guard (docs/bugs.md BUG-0043): update-daily/full-cycle/full-cycle-matrix
+# each flock this file before doing any work, so two overlapping runs refuse instead
+# of corrupting build-report.db, the shared podman volumes, or the git index. Not a
+# shared $(call ...) macro: make only recurses under `-n` when "$(MAKE)" is literal
+# text in the target's own recipe, so each guard is written out per-target.
+PIPELINE_LOCK_FILE ?= logs/.pipeline.lock
+PIPELINE_LOCK_HELD ?= # set below before recursing, so nested targets skip the lock instead of deadlocking on it
+LOCK_DISABLE ?= # bypass for hosts without flock, or a deliberate parallel run
+
 
 .DEFAULT_GOAL := help
-.PHONY: help setup-venv install-dev setup-volumes test coverage lint lint-ruff lint-flake lint-mypy lint-yaml lint-rpm fmt fmt-ruff fmt-yaml validate-packages pre-commit update-versions list-tags scaffold-package add-submodule add-new delete-package set-release gather-requires gen-report readme readme-shell copr-description normalize-paths sort-lists container-build container-enter container-clean container-volume-clean container-all sources full-cycle full-cycle-matrix update-daily build-pop stage-validate stage-show-plan stage-spec stage-vendor refresh-checksums check-checksums stage-srpm stage-mock stage-copr stage-log-analyze check-image check-venv save-last-build clean clean-logs clean-localrepo clean-mock-cache clean-all db-usage db-prune db-shell db-nuke submodules-update submodules-purge sync-hard-reset
+.PHONY: help setup-venv install-dev setup-volumes test coverage lint lint-ruff lint-flake lint-mypy lint-yaml lint-rpm fmt fmt-ruff fmt-yaml validate-packages pre-commit update-versions list-tags scaffold-package add-submodule add-new delete-package set-release gather-requires gen-report readme readme-shell copr-description normalize-paths sort-lists container-build container-enter container-clean container-volume-clean container-all sources full-cycle _full-cycle full-cycle-matrix _full-cycle-matrix update-daily _update-daily build-pop stage-validate stage-show-plan stage-spec stage-vendor refresh-checksums check-checksums stage-srpm stage-mock stage-copr stage-log-analyze check-image check-venv save-last-build clean clean-logs clean-localrepo clean-mock-cache clean-all db-usage db-prune db-shell db-nuke submodules-update submodules-purge sync-hard-reset
 
 save-last-build: ## Save a build-report.db snapshot before clean (local-repo/ is a plain source-tree directory now, not volume-backed, so `clean`/`clean-logs` never touch its RPMs -- see docs/CHANGELOG.md 2026-08-11)
 	@mkdir -p logs
@@ -507,7 +516,24 @@ DRY_RUN ?=
 SYNCHRONOUS_COPR_BUILD ?=
 REQUIRE_CHROOT_COVERAGE ?=
 
-full-cycle: check-image check-venv setup-volumes ## Run full cycle with YAML report: spec → srpm → mock → copr (PACKAGE, COPR_REPO, FORCE_REBUILD, env vars)
+full-cycle: ## Run full cycle with YAML report: spec → srpm → mock → copr (PACKAGE, COPR_REPO, FORCE_REBUILD, env vars)
+	@mkdir -p logs
+	@if [ "$(PIPELINE_LOCK_HELD)" = "1" ] || [ "$(LOCK_DISABLE)" = "1" ]; then \
+		$(MAKE) _full-cycle; \
+	elif ! command -v flock >/dev/null 2>&1; then \
+		echo $(HIGHLIGHT_PREFIX) "Error: flock not found (util-linux); install it, or bypass with LOCK_DISABLE=1"; \
+		exit 1; \
+	else \
+		exec 9>$(PIPELINE_LOCK_FILE); \
+		flock -n 9 || { \
+			echo $(HIGHLIGHT_PREFIX) "Error: another pipeline run is already in progress ($$(cat $(PIPELINE_LOCK_FILE).owner 2>/dev/null || echo 'holder unknown')) -- refusing to run concurrently"; \
+			exit 1; \
+		}; \
+		echo "PID $$$$, started $$(date --rfc-3339=seconds), target _full-cycle" > $(PIPELINE_LOCK_FILE).owner; \
+		PIPELINE_LOCK_HELD=1 $(MAKE) _full-cycle; \
+	fi
+
+_full-cycle: check-image check-venv setup-volumes
 	$(call run_with_result,$(CONTAINER_RUN) env \
 		FEDORA_VERSION=$(FEDORA_VERSION) \
 		MOCK_CHROOT=$(MOCK_CHROOT) \
@@ -527,6 +553,23 @@ full-cycle: check-image check-venv setup-volumes ## Run full cycle with YAML rep
 MATRIX_VERSIONS ?= $(SUPPORTED)
 
 full-cycle-matrix: ## Build every MATRIX_VERSIONS chroot locally (default: all SUPPORTED, x86_64 only), then submit to Copr once (PACKAGE, COPR_REPO, requires 'make container-all' first)
+	@mkdir -p logs
+	@if [ "$(PIPELINE_LOCK_HELD)" = "1" ] || [ "$(LOCK_DISABLE)" = "1" ]; then \
+		$(MAKE) _full-cycle-matrix; \
+	elif ! command -v flock >/dev/null 2>&1; then \
+		echo $(HIGHLIGHT_PREFIX) "Error: flock not found (util-linux); install it, or bypass with LOCK_DISABLE=1"; \
+		exit 1; \
+	else \
+		exec 9>$(PIPELINE_LOCK_FILE); \
+		flock -n 9 || { \
+			echo $(HIGHLIGHT_PREFIX) "Error: another pipeline run is already in progress ($$(cat $(PIPELINE_LOCK_FILE).owner 2>/dev/null || echo 'holder unknown')) -- refusing to run concurrently"; \
+			exit 1; \
+		}; \
+		echo "PID $$$$, started $$(date --rfc-3339=seconds), target _full-cycle-matrix" > $(PIPELINE_LOCK_FILE).owner; \
+		PIPELINE_LOCK_HELD=1 $(MAKE) _full-cycle-matrix; \
+	fi
+
+_full-cycle-matrix:
 	@for v in $(MATRIX_VERSIONS); do \
 		echo $(HIGHLIGHT_PREFIX) "Fedora $$v"; \
 		$(MAKE) full-cycle FEDORA_VERSION=$$v PACKAGE=$(PACKAGE) SKIP_COPR=true || exit 1; \
@@ -539,6 +582,23 @@ full-cycle-matrix: ## Build every MATRIX_VERSIONS chroot locally (default: all S
 	fi
 
 update-daily: ## Update versions, validate+format packages.yaml, build (package failures reported but don't block docs/commit), generate docs, push to COPR (requires COPR_REPO), git commit (PUSH=1 to also git push)
+	@mkdir -p logs
+	@if [ "$(PIPELINE_LOCK_HELD)" = "1" ] || [ "$(LOCK_DISABLE)" = "1" ]; then \
+		$(MAKE) _update-daily; \
+	elif ! command -v flock >/dev/null 2>&1; then \
+		echo $(HIGHLIGHT_PREFIX) "Error: flock not found (util-linux); install it, or bypass with LOCK_DISABLE=1"; \
+		exit 1; \
+	else \
+		exec 9>$(PIPELINE_LOCK_FILE); \
+		flock -n 9 || { \
+			echo $(HIGHLIGHT_PREFIX) "Error: another pipeline run is already in progress ($$(cat $(PIPELINE_LOCK_FILE).owner 2>/dev/null || echo 'holder unknown')) -- refusing to run concurrently"; \
+			exit 1; \
+		}; \
+		echo "PID $$$$, started $$(date --rfc-3339=seconds), target _update-daily" > $(PIPELINE_LOCK_FILE).owner; \
+		PIPELINE_LOCK_HELD=1 $(MAKE) _update-daily; \
+	fi
+
+_update-daily:
 	@test -n "$(COPR_REPO)" || (echo "$(HIGHLIGHT_PREFIX) Error: COPR_REPO is not set (e.g. export COPR_REPO=nett00n/hyprland)"; exit 1)
 	@mkdir -p logs && rm -f logs/.update-daily-failed
 	$(MAKE) update-versions || exit 1
