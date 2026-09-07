@@ -1,7 +1,7 @@
 
 Name:           hyprland
 Version:        0.56.2
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        A Modern C++ Wayland Compositor
 License:        BSD-3-Clause
 URL:            https://github.com/hyprwm/Hyprland
@@ -72,6 +72,10 @@ Commit:            efb50993780079460b0cbed1363e2166a2de1d9f
 
 %prep
 %autosetup -p1 -n Hyprland-%{version}
+sed -i '/return (.* || std::ranges::starts_with(str_view, prefixes));/c\
+auto check = [&](auto prefix) { return std::string(str_view.begin(), str_view.end()).starts_with(prefix); };\
+return (... || check(prefixes));' src/helpers/MiscFunctions.cpp
+
 
 %build
 %cmake -Dglaze_DIR=%{_datadir}/glaze-v7
@@ -112,6 +116,6 @@ Development files for hyprland.
 %{_prefix}/share/pkgconfig/hyprland.pc
 
 %changelog
-* Wed Aug 05 2026 nett00n <copr@nett00n.org> - 0.56.2-9
+* Wed Aug 05 2026 nett00n <copr@nett00n.org> - 0.56.2-10
 
 - [gha] Nix: update inputs

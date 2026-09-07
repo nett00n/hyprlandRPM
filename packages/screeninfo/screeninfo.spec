@@ -2,7 +2,7 @@
 
 Name:           screeninfo
 Version:        0.8.1
-Release:        12%{?dist}
+Release:        13%{?dist}
 Summary:        Fetch location and size of physical screens
 BuildArch:      noarch
 License:        MIT
@@ -42,6 +42,6 @@ Package info:
 %license LICENSE.md
 
 %changelog
-* Sun Aug 09 2026 nett00n <copr@nett00n.org> - 0.8.1-12
+* Mon Sep 07 2026 nett00n <copr@nett00n.org> - 0.8.1-13
 
 - Update to 0.8.1

@@ -2,7 +2,7 @@
 
 Name:           snappy-switcher
 Version:        4.5.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        alt-tab switch window for wayland compositor
 License:        GPL-3.0
 URL:            https://github.com/OpalAayan/snappy-switcher
@@ -60,6 +60,6 @@ make %{?_smp_mflags}
 %{_sysconfdir}/xdg/snappy-switcher/config.ini
 
 %changelog
-* Thu Aug 20 2026 nett00n <copr@nett00n.org> - 4.5.0-1
+* Thu Aug 20 2026 nett00n <copr@nett00n.org> - 4.5.0-2
 
 - v4.5.0

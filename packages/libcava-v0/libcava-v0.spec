@@ -3,7 +3,7 @@
 
 Name:           libcava-v0
 Version:        0.10.7
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        cava built as a shared library
 License:        MIT
 URL:            https://github.com/LukashonakV/cava
@@ -68,6 +68,6 @@ Development files for libcava-v0.
 %{_libdir}/pkgconfig/libcava.pc
 
 %changelog
-* Sun Sep 06 2026 nett00n <copr@nett00n.org> - 0.10.7-9
+* Mon Sep 07 2026 nett00n <copr@nett00n.org> - 0.10.7-10
 
 - Update to 0.10.7

@@ -1,7 +1,7 @@
 
 Name:           mpvpaper
 Version:        1.9
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        A video wallpaper program for wlroots based wayland compositors.
 License:        GPL-3.0-or-later
 URL:            https://github.com/GhostNaN/mpvpaper
@@ -56,6 +56,6 @@ Development files for mpvpaper.
 %files devel
 
 %changelog
-* Fri Aug 28 2026 nett00n <copr@nett00n.org> - 1.9-6
+* Mon Sep 07 2026 nett00n <copr@nett00n.org> - 1.9-7
 
 - Update to 1.9
