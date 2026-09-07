@@ -123,6 +123,24 @@ def main() -> None:
                 f"(valid: {', '.join(sorted(RELEASE_TYPES))})"
             )
 
+        # A single spec is now shared across every chroot (see docs/operations.md),
+        # so lib.yaml_utils.apply_os_overrides() only resolves `skip` from a
+        # `fedora:` block -- any other key would silently be ignored rather than
+        # merged, which is worse than erroring here. A per-version spec
+        # difference belongs in build.prep/commands/install as a literal
+        # `%if 0%{?fedora} == N ... %endif` conditional instead.
+        fedora_blocks = (config or {}).get("fedora") or {}
+        for ver, override in fedora_blocks.items():
+            bad_keys = sorted((override or {}).keys() - {"skip"})
+            if bad_keys:
+                errors.append(
+                    f"  {pkg}: fedora.'{ver}' has unsupported key(s) "
+                    f"{', '.join(bad_keys)} (only 'skip' is supported -- write a "
+                    f"per-version difference as a literal '%if 0%{{?fedora}} == "
+                    f"{ver} ... %endif' conditional in build.prep/commands/install "
+                    "instead)"
+                )
+
     # Validate .gitmodules
     gitmodules_errors = validate_gitmodules()
     gitmodules_urls = collect_gitmodules_urls()

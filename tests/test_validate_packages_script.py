@@ -113,6 +113,72 @@ class TestReleaseTypeValidation:
         assert "✓ packages.yaml validation passed" in captured.out
 
 
+class TestFedoraOverrideValidation:
+    """A single spec is now shared across every chroot (see docs/operations.md), so
+    lib.yaml_utils.apply_os_overrides() only resolves `skip` from a `fedora:` block
+    -- any other key used to be silently merged and would now be silently dropped
+    instead, which is worse. A per-version spec difference belongs in
+    build.prep/commands/install as a literal `%if 0%{?fedora} == N ... %endif`
+    conditional. This gate must catch a non-`skip` key before it can reappear.
+    """
+
+    def _write_repo(self, tmp_path, fedora_block):
+        (tmp_path / "packages.yaml").write_text(
+            "pkg-a:\n"
+            "  depends_on: []\n"
+            "  url: https://github.com/org/a\n"
+            f"  fedora:\n{fedora_block}\n"
+        )
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "submodules/org/a"]\n'
+            "\tpath = submodules/org/a\n"
+            "\turl = https://github.com/org/a\n"
+            "\tignore = dirty\n"
+        )
+
+    def test_build_override_key_rejected(self, tmp_path, monkeypatch, capsys):
+        self._write_repo(
+            tmp_path,
+            "    '43':\n      build:\n        prep:\n        - echo hi\n",
+        )
+        monkeypatch.chdir(tmp_path)
+
+        with pytest.raises(SystemExit) as exc_info:
+            validate_packages.main()
+
+        assert exc_info.value.code != 0
+        captured = capsys.readouterr()
+        assert "pkg-a" in captured.err
+        assert "build" in captured.err
+        assert "%if 0%{?fedora}" in captured.err
+
+    def test_skip_key_is_valid(self, tmp_path, monkeypatch, capsys):
+        self._write_repo(tmp_path, "    '43':\n      skip: true\n")
+        monkeypatch.chdir(tmp_path)
+
+        validate_packages.main()  # must not raise SystemExit
+
+        captured = capsys.readouterr()
+        assert "✓ packages.yaml validation passed" in captured.out
+
+    def test_no_fedora_block_is_valid(self, tmp_path, monkeypatch, capsys):
+        (tmp_path / "packages.yaml").write_text(
+            "pkg-a:\n  depends_on: []\n  url: https://github.com/org/a\n"
+        )
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "submodules/org/a"]\n'
+            "\tpath = submodules/org/a\n"
+            "\turl = https://github.com/org/a\n"
+            "\tignore = dirty\n"
+        )
+        monkeypatch.chdir(tmp_path)
+
+        validate_packages.main()  # must not raise SystemExit
+
+        captured = capsys.readouterr()
+        assert "✓ packages.yaml validation passed" in captured.out
+
+
 class TestMainWiring:
     """Confirm main() surfaces url mismatches as warnings, not commit-blocking errors."""
 

@@ -15,6 +15,7 @@ from lib import build_db, paths
 from lib.copr import (
     COPR_BUILD_URL,
     COVERAGE_FAILED,
+    COVERAGE_SKIPPED,
     COVERAGE_UNBUILT,
     COVERAGE_UNVERIFIABLE,
     COVERAGE_VERIFIED,
@@ -25,6 +26,7 @@ from lib.copr import (
     fetch_failed_chroot_logs,
     get_build_chroots,
     get_project_chroots,
+    ineligible_packages,
     parse_build_id,
     poll_copr_status,
     preflight,
@@ -528,9 +530,38 @@ class TestChrootCoverage:
         assert result == {
             "fedora-44-x86_64": COVERAGE_VERIFIED,
             "fedora-43-x86_64": COVERAGE_FAILED,
-            "fedora-rawhide-x86_64": COVERAGE_UNBUILT,
+            # rawhide is no longer in SUPPORTED_FEDORA_VERSIONS/local_chroots()
+            # -- a Copr project that still lists it (or any other chroot this
+            # host's matrix doesn't cover) is UNVERIFIABLE, not UNBUILT, so it
+            # can never permanently block a submission (see
+            # chroot_coverage()'s docstring for the deadlock this avoids).
+            "fedora-rawhide-x86_64": COVERAGE_UNVERIFIABLE,
             "fedora-44-aarch64": COVERAGE_UNVERIFIABLE,
         }
+
+    def test_skipped_when_mock_configured_skip(self):
+        """A deliberate packages.yaml `fedora: '<ver>': skip: true` (stage-mock.py
+        writes state=skipped, reason="config: skip") must count the same as a
+        verified build -- it's an intentional opt-out, not a gap. See
+        docs/packaging.md "Per-Fedora-version spec differences"."""
+        run_id = build_db.start_run("fedora-43-x86_64", "fedora", "43", "x86_64")
+        build_db.set_stage(
+            "hyprutils", "mock", "fedora-43-x86_64", run_id, "skipped",
+            reason="config: skip",
+        )
+        result = chroot_coverage("hyprutils", ["fedora-43-x86_64"])
+        assert result == {"fedora-43-x86_64": COVERAGE_SKIPPED}
+
+    def test_unbuilt_when_skipped_for_other_reason(self):
+        """A "skipped" mock row for any other reason (e.g. srpm-stage failure
+        cascading downstream) must not be mistaken for a deliberate opt-out."""
+        run_id = build_db.start_run("fedora-43-x86_64", "fedora", "43", "x86_64")
+        build_db.set_stage(
+            "hyprutils", "mock", "fedora-43-x86_64", run_id, "skipped",
+            reason="srpm failed",
+        )
+        result = chroot_coverage("hyprutils", ["fedora-43-x86_64"])
+        assert result == {"fedora-43-x86_64": COVERAGE_UNBUILT}
 
 
 class TestPrintChrootCoverage:
@@ -563,6 +594,83 @@ class TestPrintChrootCoverage:
         from SUPPORTED_FEDORA_VERSIONS rather than reporting no coverage gap at all."""
         mock_chroots.return_value = []
         assert print_chroot_coverage("nett00n/hyprland", {"hyprutils": {}}) is False
+
+
+class TestIneligiblePackages:
+    """Per-package Copr submission gate (docs/CHANGELOG.md, docs/FRD.md
+    COPR-0017): a package is eligible once every chroot in `local_chroots()`
+    that the Copr project actually builds is verified or a deliberate skip.
+    """
+
+    @patch("lib.copr.get_project_chroots")
+    def test_verified_everywhere_is_eligible(self, mock_chroots):
+        mock_chroots.return_value = ["fedora-43-x86_64", "fedora-44-x86_64"]
+        run_id = build_db.start_run("fedora-43-x86_64", "fedora", "43", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-43-x86_64", run_id, "success")
+        run_id = build_db.start_run("fedora-44-x86_64", "fedora", "44", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-44-x86_64", run_id, "success")
+
+        assert ineligible_packages("nett00n/hyprland", {"hyprutils": {}}) == {}
+
+    @patch("lib.copr.get_project_chroots")
+    def test_failed_on_one_chroot_is_ineligible(self, mock_chroots):
+        mock_chroots.return_value = ["fedora-43-x86_64", "fedora-44-x86_64"]
+        run_id = build_db.start_run("fedora-43-x86_64", "fedora", "43", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-43-x86_64", run_id, "success")
+        run_id = build_db.start_run("fedora-44-x86_64", "fedora", "44", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-44-x86_64", run_id, "failed")
+
+        reasons = ineligible_packages("nett00n/hyprland", {"hyprutils": {}})
+
+        assert "hyprutils" in reasons
+        assert "fedora-44-x86_64" in reasons["hyprutils"]
+
+    @patch("lib.copr.get_project_chroots")
+    def test_unbuilt_chroot_is_ineligible(self, mock_chroots):
+        """Never having run mock at all for a chroot blocks the same as failing it."""
+        mock_chroots.return_value = ["fedora-43-x86_64", "fedora-44-x86_64"]
+        run_id = build_db.start_run("fedora-43-x86_64", "fedora", "43", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-43-x86_64", run_id, "success")
+
+        reasons = ineligible_packages("nett00n/hyprland", {"hyprutils": {}})
+
+        assert "fedora-44-x86_64" in reasons["hyprutils"]
+
+    @patch("lib.copr.get_project_chroots")
+    def test_config_skipped_chroot_is_eligible(self, mock_chroots):
+        """A deliberate packages.yaml skip counts as clear, not a gap."""
+        mock_chroots.return_value = ["fedora-43-x86_64", "fedora-44-x86_64"]
+        run_id = build_db.start_run("fedora-43-x86_64", "fedora", "43", "x86_64")
+        build_db.set_stage(
+            "hyprutils", "mock", "fedora-43-x86_64", run_id, "skipped",
+            reason="config: skip",
+        )
+        run_id = build_db.start_run("fedora-44-x86_64", "fedora", "44", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-44-x86_64", run_id, "success")
+
+        assert ineligible_packages("nett00n/hyprland", {"hyprutils": {}}) == {}
+
+    @patch("lib.copr.get_project_chroots")
+    def test_aarch64_gap_is_eligible(self, mock_chroots):
+        """aarch64 is never in local_chroots() -- it can never block (TODO-0024)."""
+        mock_chroots.return_value = ["fedora-44-x86_64", "fedora-44-aarch64"]
+        run_id = build_db.start_run("fedora-44-x86_64", "fedora", "44", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-44-x86_64", run_id, "success")
+
+        assert ineligible_packages("nett00n/hyprland", {"hyprutils": {}}) == {}
+
+    @patch("lib.copr.get_project_chroots")
+    def test_copr_chroot_outside_local_matrix_never_blocks(self, mock_chroots):
+        """The deadlock this specifically avoids: a Copr project still listing
+        a chroot this host's SUPPORTED_FEDORA_VERSIONS no longer builds (e.g.
+        a leftover fedora-rawhide-x86_64) must never make every package
+        ineligible forever -- there is no local mock row that could ever
+        satisfy it."""
+        mock_chroots.return_value = ["fedora-44-x86_64", "fedora-rawhide-x86_64"]
+        run_id = build_db.start_run("fedora-44-x86_64", "fedora", "44", "x86_64")
+        build_db.set_stage("hyprutils", "mock", "fedora-44-x86_64", run_id, "success")
+
+        assert ineligible_packages("nett00n/hyprland", {"hyprutils": {}}) == {}
 
 
 class TestDownloadChrootLog:

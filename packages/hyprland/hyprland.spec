@@ -72,10 +72,12 @@ Commit:            efb50993780079460b0cbed1363e2166a2de1d9f
 
 %prep
 %autosetup -p1 -n Hyprland-%{version}
+%if 0%{?fedora} == 43
 sed -i '/return (.* || std::ranges::starts_with(str_view, prefixes));/c\
 auto check = [&](auto prefix) { return std::string(str_view.begin(), str_view.end()).starts_with(prefix); };\
 return (... || check(prefixes));' src/helpers/MiscFunctions.cpp
 
+%endif
 
 %build
 %cmake -Dglaze_DIR=%{_datadir}/glaze-v7

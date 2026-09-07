@@ -22,6 +22,11 @@ stage_mock = importlib.import_module("scripts.stage-mock")
 stage_copr = importlib.import_module("scripts.stage-copr")
 
 TARGET = "fedora-44-x86_64"
+# stage-copr.py's run_for_package() always reads its srpm/mock rows from the
+# canonical target (docs/FRD.md COPR-0018: one spec, one SRPM shared via the
+# rpmbuild volume), regardless of the `target`/fedora_version it's called
+# with -- see TestMissingSrpmArtifactGuard.test_copr_skips_when_srpm_path_missing_on_disk.
+CANONICAL_TARGET = "fedora-43-x86_64"
 
 
 @pytest.fixture(autouse=True)
@@ -257,9 +262,9 @@ class TestMissingSrpmArtifactGuard:
         meta = {"version": "1.0.0", "release": 1}
         missing_srpm = tmp_path / "test-pkg-1.0.0-1.fc44.src.rpm"  # never created
         build_db.set_stage(
-            pkg, "srpm", TARGET, run_id, "success", path=str(missing_srpm)
+            pkg, "srpm", CANONICAL_TARGET, run_id, "success", path=str(missing_srpm)
         )
-        build_db.set_stage(pkg, "mock", TARGET, run_id, "success")
+        build_db.set_stage(pkg, "mock", CANONICAL_TARGET, run_id, "success")
         log_dir = tmp_path / "logs/build" / pkg
         log_dir.mkdir(parents=True)
 

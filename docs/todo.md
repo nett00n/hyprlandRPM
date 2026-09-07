@@ -3,7 +3,7 @@
 Cleanup, complexity, and unbuilt features. Automation behaving wrong today goes in
 `docs/bugs.md` instead. Entries are deleted when done (the fix gets a
 `docs/CHANGELOG.md` bullet); IDs are never reused or renumbered, so deletions leave
-gaps. Next free ID: **TODO-0085**.
+gaps. Next free ID: **TODO-0087**.
 
 Each entry ends with a `[P#/D#]` marker:
 
@@ -96,33 +96,51 @@ else is still fedora+x86_64-only:
   (`lib/paths.py:44-48`, read by every stage), so an arbitrary chroot can be forced in
   today -- but `DISTRO`/`ARCH` stay wrong and image/volume names don't follow. This is
   the keystone item for the whole section [P2/D4]
-- #TODO-0023 three podman volumes are keyed by Fedora version only, not arch:
-  `rpmbuild-$(FEDORA_VERSION)`, `mock-cache-$(FEDORA_VERSION)`,
-  `mock-root-$(FEDORA_VERSION)` (`Makefile:62-72`) -- two arches would clobber each
-  other on all three. (`local-repo/` is no longer a volume and is already arch-scoped
-  via its `<target>` layout, so this no longer applies there.) A rename orphans every
-  existing volume on every dev machine plus the `delete-package` sweep
-  (`Makefile:369-376`) and `container-volume-clean` [P2/D2]
+- #TODO-0023 two podman volumes are keyed by Fedora version only, not arch:
+  `mock-cache-$(FEDORA_VERSION)`, `mock-root-$(FEDORA_VERSION)` (`Makefile:74-77`) --
+  two arches would clobber each other on both. (`rpmbuild` is now a single
+  version-independent volume shared by every chroot the one container image builds,
+  so it no longer has a per-version name to clash on; `local-repo/` is no longer a
+  volume either and is already arch-scoped via its `<target>` layout.) A rename
+  orphans every existing volume on every dev machine plus `container-volume-clean`
+  (`Makefile:473-491`) [P2/D2]
 - #TODO-0024 aarch64 builds need qemu-user-static binfmt or a native runner; mock
   --forcearch is not enough for real cross-arch. Zero `qemu`/`binfmt`/`forcearch`
   references anywhere in the repo today; the only aarch64 awareness is
-  `lib/copr.py:204`'s reporting giving up with "not verifiable locally". Mostly a
+  `lib/copr.py:282`'s reporting giving up with "not verifiable locally". Mostly a
   multi-day infra decision (host binfmt registration, CI runner), not a code change
   [P1/D4]
 - #TODO-0025 packages.yaml has `fedora:` override blocks only (exactly one such block
   exists today, under `hyprland`, at `packages.yaml:378`) -> need distro-agnostic
-  override keys, and `lib/version.py:128-131`'s `nvr()` hardcodes the `.fcNN`/rawhide
-  dist tag (centos wants `.el10`). The packages.yaml side is nearly free to migrate
-  today since there's only the one block [P3/D4]
+  override keys, and `lib/version.py:128-130`'s `nvr()` hardcodes the `.fcNN` dist tag
+  (centos wants `.el10`). The packages.yaml side is nearly free to migrate today since
+  there's only the one block [P3/D4]
+- #TODO-0085 the single container image is pinned to one Fedora base (43,
+  `Containerfile`), so `rpmbuild -bs` (`stage-srpm.py`) always stamps the physical
+  SRPM's own dist tag as `.fc43` regardless of `FEDORA_VERSION` -- confirmed by hand:
+  building for target `fedora-45-x86_64` produced
+  `hyprutils-0.14.2-2.fc43.src.rpm` on disk while `build-report.db`'s `srpm` row for
+  that target records `version=0.14.2-2.fc45` (from `lib.version.nvr()`'s
+  target-computed label, `stage-srpm.py:83`). This is cosmetic, not a correctness bug:
+  `mock --rebuild`/Copr both re-expand `%{?dist}` from the target chroot's own
+  macros regardless of the SRPM's frozen release string -- confirmed by hand too, the
+  binary RPMs mock produced for `fedora-45-x86_64` correctly came out `.fc45` -- and
+  every cache/artifact check in `lib/pipeline.py` compares the DB's own recorded label
+  against itself, never against the literal filename. Still worth fixing so
+  `build-report.db`/logs don't show a version string the physical file disagrees
+  with; likely means `nvr()` should stop pretending the SRPM's own dist tag is
+  target-specific once there's only one canonical build of it [P3/D3]
 - #TODO-0026 `artifacts` table has no arch column (`lib/build_db.py:58-69`); a noarch
   subpackage's arch != its target's arch. Best folded into TODO-0018's schema
   migration rather than done separately [P3/D4]
-- #TODO-0027 copr rows are keyed by the local mock target (`stage-copr.py:66,110,150`
-  resolve one local `target`), but COPR fans out to its own chroots ->  a real matrix
-  needs copr rows keyed by the COPR chroot instead. Needs a `copr_chroot` dimension in
-  `stage_results` (or a separate table), plus `fetch_failed_chroot_logs`/
-  `print_chroot_coverage` rework. Do together with TODO-0018/TODO-0026's schema bump
-  [P2/D4]
+- #TODO-0027 copr rows are keyed by one `target` (`stage-copr.py:73-138` resolve a
+  single local `target` per run), but COPR fans out to its own chroots -> a real
+  matrix needs copr rows keyed by the COPR chroot instead. Needs a `copr_chroot`
+  dimension in `stage_results` (or a separate table), plus `fetch_failed_chroot_logs`/
+  `print_chroot_coverage` rework. Do together with TODO-0018/TODO-0026's schema bump.
+  Still open after the per-package Copr gate (`lib.copr.ineligible_packages()`): that
+  gate reads per-chroot *mock* rows (already correctly per-chroot), not the copr
+  stage's own single row, so it sidesteps this rather than fixing it [P2/D4]
 - #TODO-0028 gen-report/templates assume one target per report
   (`gen-report.py:251`'s `run.fedora_version`, consumed by
   `templates/full-report.md.j2:8`); a matrix view needs a package x target grid.
@@ -133,6 +151,13 @@ else is still fedora+x86_64-only:
 - #TODO-0030 two different multi-package loop strategies coexist: Makefile-side
   `_PKGS` loop (`Makefile:123`, used by `sources` and `stage-log-analyze`) vs
   pass-PACKAGE-to-python (every `stage-*` target) -> pick one [P3/D1]
+- #TODO-0086 `full-cycle-matrix`'s `matrix-chroot-%` targets (`Makefile`) build every
+  chroot in `MATRIX_VERSIONS` serially via `$(MAKE) -k`, even though the chroots are
+  independent once the canonical one has run. `-j` isn't supported: the canonical
+  chroot's release-bump step (`SKIP_RELEASE_BUMP`, BUG-0049) writes the shared
+  `packages.yaml` while every other chroot's `full-cycle` call reads it, and the
+  pipeline `flock` (BUG-0043) refuses a second concurrent `make` invocation by
+  design anyway -- both would need solving first [P3/D3]
 - #TODO-0031 `HIGHLIGHT_PREFIX` default (`Makefile:13`) bakes literal quote chars into
   the value as a hack so unquoted `echo $(HIGHLIGHT_PREFIX) "text"` works;
   check-image/check-venv/setup-volumes instead embed it inside a quoted string ->
@@ -330,12 +355,6 @@ docs/bugs.md's `## update-daily` section instead.
   time in the unattended cron flow the target is documented for, and is paid 3x by
   `make full-cycle-matrix` (once per Fedora version). Gate on `sys.stdout.isatty()`
   [P2/D1]
-- #TODO-0065 the nightly build runs one `FEDORA_VERSION` (default 43, via
-  `Makefile:552`'s bare `full-cycle` call) while `SUPPORTED := 43 44 rawhide`.
-  `make full-cycle-matrix` now exists to cover the whole x86_64 matrix locally (see
-  docs/bugs.md BUG-0018), but `update-daily` doesn't call it -- switching would
-  roughly triple nightly build time. Nothing to *do* until that tradeoff is ruled on
-  [P2/D3]
 - #TODO-0066 nothing in the daily flow reports what happened beyond a commit message
   containing a timestamp. `update-daily` runs `make stage-log-analyze` after `readme`
   every night (closes BUG-0041 -- that's what puts the analysis before the next run's

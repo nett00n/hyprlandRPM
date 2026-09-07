@@ -240,6 +240,38 @@ make set-release PACKAGE=pkg1,pkg2 RELEASE=10 LOCK=1       # comma-separated, mu
 
 `release_lock: true` in `packages.yaml` skips auto-management until the lock is removed.
 
+## Per-Fedora-version spec differences
+
+A single spec and a single SRPM are generated once and reused across every chroot in the
+matrix (COPR-0018) -- there is no per-`FEDORA_VERSION` spec content any more. If a package
+needs different behavior on one Fedora version, write it directly as an rpm conditional in
+the relevant `build.prep`/`commands`/`install` list; rpm evaluates it per chroot when
+`mock`/Copr rebuild the SRPM, so one spec is correct by construction:
+
+```yaml
+my-package:
+  build:
+    prep:
+    - '%if 0%{?fedora} == 43'
+    - sed -i 's/old/new/' src/foo.cpp
+    - '%endif'
+```
+
+The only thing a `fedora:` block still does is skip a version entirely:
+
+```yaml
+my-package:
+  fedora:
+    '43':
+      skip: true
+```
+
+`scripts/validate-packages.py` rejects any other key under a `fedora:` block (e.g.
+`build`/`build_requires`) -- that used to be merged into the package dict per version by
+`lib.yaml_utils.apply_os_overrides()`, but merging stopped being sound once the spec it
+produced was no longer regenerated per version (see docs/CHANGELOG.md, docs/FRD.md
+COPR-0018). Write the conditional in the base fields instead, as above.
+
 ## Template snippets (`templates/*.j2`)
 
 Naming marks the include graph: `_*.j2` are leaf snippets with no includes (e.g. `_logo.j2`,

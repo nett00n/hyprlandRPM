@@ -311,6 +311,13 @@ Hyprland:
     commands:
     - '%cmake -Dglaze_DIR=%{_datadir}/glaze-v7'
     - '%cmake_build'
+    prep:
+    - '%if 0%{?fedora} == 43'
+    - |
+      sed -i '/return (.* || std::ranges::starts_with(str_view, prefixes));/c\
+      auto check = [&](auto prefix) { return std::string(str_view.begin(), str_view.end()).starts_with(prefix); };\
+      return (... || check(prefixes));' src/helpers/MiscFunctions.cpp
+    - '%endif'
     system: cmake
   build_requires:
   - aquamarine-devel
@@ -375,14 +382,6 @@ Hyprland:
     files:
     - '%{_includedir}/hyprland/'
     - '%{_prefix}/share/pkgconfig/hyprland.pc'
-  fedora:
-    '43':
-      build:
-        prep:
-        - |
-          sed -i '/return (.* || std::ranges::starts_with(str_view, prefixes));/c\
-          auto check = [&](auto prefix) { return std::string(str_view.begin(), str_view.end()).starts_with(prefix); };\
-          return (... || check(prefixes));' src/helpers/MiscFunctions.cpp
   files:
   - '%doc README.md'
   - '%license LICENSE'

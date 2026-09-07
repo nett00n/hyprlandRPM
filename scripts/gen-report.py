@@ -238,7 +238,7 @@ def main() -> None:
         parser.error("--output must be given once per --format (or not at all)")
 
     target = resolve_target(
-        os.environ.get("FEDORA_VERSION", "43"), os.environ.get("MOCK_CHROOT", "")
+        os.environ.get("FEDORA_VERSION", "44"), os.environ.get("MOCK_CHROOT", "")
     )
     run_row = build_db.latest_run(target)
     if run_row is None:

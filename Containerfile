@@ -1,6 +1,8 @@
-ARG FEDORA_VERSION=43
-
-FROM registry.fedoraproject.org/fedora-toolbox:${FEDORA_VERSION}
+# One image builds every SUPPORTED chroot via `mock -r` -- mock does not need a
+# matching host, so this is pinned to the oldest supported Fedora version rather
+# than parameterized per FEDORA_VERSION (Makefile no longer passes a build-arg
+# for it; see docs/CHANGELOG.md and docs/FRD.md COPR-0011).
+FROM registry.fedoraproject.org/fedora-toolbox:43
 
 ARG UID=1000
 ARG GID=1000

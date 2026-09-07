@@ -3,6 +3,7 @@
 import contextlib
 import fcntl
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -642,6 +643,53 @@ class TestFullCyclePreflight:
         preflight_mock.assert_not_called()
 
 
+class TestSkipReleaseBumpFlag:
+    """full-cycle.py's own handling of SKIP_RELEASE_BUMP (docs/bugs.md BUG-0049;
+    the Makefile wiring that sets it per-chroot is covered by
+    TestMatrixSkipsReleaseBumpOnNonCanonicalVersions above). update_package_releases()
+    must run when the flag is unset, and must not run at all when it's true.
+    """
+
+    def _run_main(self, monkeypatch, skip_release_bump):
+        monkeypatch.delenv("COPR_REPO", raising=False)
+        monkeypatch.setenv("FEDORA_VERSION", "44")
+        if skip_release_bump:
+            monkeypatch.setenv("SKIP_RELEASE_BUMP", "true")
+        else:
+            monkeypatch.delenv("SKIP_RELEASE_BUMP", raising=False)
+
+        with (
+            patch.object(
+                full_cycle, "prepare_packages", return_value={"hyprutils": {}}
+            ),
+            patch.object(full_cycle, "preflight_autoheal"),
+            patch.object(full_cycle, "get_package_log_dir") as log_dir_mock,
+            patch.object(full_cycle, "BUILD_LOG_DIR"),
+            patch.object(full_cycle, "setup_run", return_value=1),
+            patch.object(
+                full_cycle, "update_package_releases", return_value={}
+            ) as update_mock,
+            patch.object(
+                full_cycle,
+                "resolve_force_packages",
+                side_effect=SystemExit("stop-here"),
+            ),
+        ):
+            log_dir_mock.return_value.exists.return_value = False
+            with pytest.raises(SystemExit):
+                full_cycle.main()
+
+        return update_mock
+
+    def test_skip_release_bump_true_skips_update_package_releases(self, monkeypatch):
+        update_mock = self._run_main(monkeypatch, skip_release_bump=True)
+        update_mock.assert_not_called()
+
+    def test_skip_release_bump_unset_calls_update_package_releases(self, monkeypatch):
+        update_mock = self._run_main(monkeypatch, skip_release_bump=False)
+        update_mock.assert_called_once()
+
+
 class TestCoprGatedByChrootCoverage:
     """Coverage for docs/bugs.md BUG-0018's pre-submit gate: REQUIRE_CHROOT_COVERAGE=true
     must block Copr submission the same way a mock failure already does, while the
@@ -759,6 +807,207 @@ class TestFullCycleMatrixTarget:
         # Real invocation this time (COPR_REPO set) -- its own recipe body,
         # naming the script, gets dry-run-printed in turn.
         assert "scripts/stage-copr.py" in result.stdout
+
+
+class TestMatrixNoEarlyAbort:
+    """Coverage for the matrix's -k-compatible rework: a failing chroot must not
+    stop the rest of the matrix, nor skip Copr submission for packages that
+    built cleanly elsewhere. Confirmed for real (not just this dry-run text)
+    by running `make full-cycle-matrix PACKAGE=hyprutils MATRIX_VERSIONS="43 99
+    44" COPR_REPO=`: fedora-99 fails fast (unsupported FEDORA_VERSION), 43 and
+    44 both still complete, the "COPR_REPO not set" branch is still reached
+    afterward, and the overall exit code is nonzero -- exactly the shape
+    these dry-run assertions check without needing a container.
+    """
+
+    def test_loop_no_longer_contains_early_abort(self):
+        result = subprocess.run(
+            ["make", "-n", "full-cycle-matrix", "MATRIX_VERSIONS=43 44", "COPR_REPO="],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        # `|| exit 1` legitimately appears elsewhere in the dry-run text (the
+        # PIPELINE_LOCK_HELD guard, container-build's own error handling) --
+        # what must be gone specifically is the old per-version abort on the
+        # `$(MAKE) full-cycle ...` call itself.
+        for line in result.stdout.splitlines():
+            if "make full-cycle FEDORA_VERSION=" in line or line.strip().startswith(
+                "SKIP_RELEASE_BUMP="
+            ):
+                assert "|| exit 1" not in line
+        assert "make -k matrix-chroot-43 matrix-chroot-44; \\" in result.stdout
+
+    def test_uses_make_dash_k_over_matrix_chroot_targets(self):
+        result = subprocess.run(
+            ["make", "-n", "full-cycle-matrix", "MATRIX_VERSIONS=43 44", "COPR_REPO="],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert "make -k matrix-chroot-43 matrix-chroot-44" in result.stdout
+
+    def test_canonical_chroot_is_ordered_before_others_regardless_of_list_order(self):
+        """The canonical chroot performs the release bump (BUG-0049), so every
+        other chroot must build after it even if MATRIX_VERSIONS lists it
+        last -- an order-only prerequisite, not list order, must enforce
+        this."""
+        result = subprocess.run(
+            [
+                "make",
+                "-n",
+                "full-cycle-matrix",
+                "MATRIX_VERSIONS=45 44 43",
+                "COPR_REPO=",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        order = re.findall(r'"Fedora (\d+)"', result.stdout)
+        assert order == ["43", "45", "44"]
+
+    def test_stage_copr_call_is_not_conditioned_on_matrix_success(self):
+        """The `if -n "$(COPR_REPO)"` branch must be reached unconditionally --
+        not gated behind the matrix loop's own exit status -- so packages that
+        built cleanly are still submitted even if another chroot failed."""
+        result = subprocess.run(
+            [
+                "make",
+                "-n",
+                "full-cycle-matrix",
+                "MATRIX_VERSIONS=43",
+                "COPR_REPO=nett00n/hyprland",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        matrix_call_pos = result.stdout.index("make -k matrix-chroot-43")
+        status_capture_pos = result.stdout.index("matrix_status=$?")
+        copr_call_pos = result.stdout.index("make stage-copr")
+        exit_pos = result.stdout.rindex("exit $matrix_status")
+        assert matrix_call_pos < status_capture_pos < copr_call_pos < exit_pos
+
+
+class TestMatrixSkipsReleaseBumpOnNonCanonicalVersions:
+    """Coverage for docs/bugs.md BUG-0049: update_package_releases() reads its
+    rebuild signal from the *spec* stage's row for the run's own `target`
+    (lib.yaml_utils.py), so a matrix run that called it once per chroot would
+    bump a package's release once per chroot too -- up to 3x in one nightly,
+    each rewriting the shared packages.yaml. full-cycle-matrix now sets
+    SKIP_RELEASE_BUMP=true for every chroot except CANONICAL_FEDORA_VERSION,
+    so full-cycle.py's pre-build release step runs exactly once per matrix run
+    regardless of how many chroots are in MATRIX_VERSIONS.
+    """
+
+    def test_canonical_version_does_not_skip_release_bump(self):
+        result = subprocess.run(
+            [
+                "make",
+                "-n",
+                "full-cycle-matrix",
+                "MATRIX_VERSIONS=43 44 45",
+                "COPR_REPO=",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        lines = [
+            line
+            for line in result.stdout.splitlines()
+            if "scripts/full-cycle.py" in line
+        ]
+        assert len(lines) == 3
+        canonical_line = next(line for line in lines if "FEDORA_VERSION=43 " in line)
+        non_canonical_lines = [
+            line for line in lines if "FEDORA_VERSION=43 " not in line
+        ]
+        assert len(non_canonical_lines) == 2
+        assert "SKIP_RELEASE_BUMP= " in canonical_line
+        for line in non_canonical_lines:
+            assert "SKIP_RELEASE_BUMP=true" in line
+
+    def test_matrix_versions_without_canonical_skips_bump_everywhere(self):
+        """Documented edge case: if MATRIX_VERSIONS excludes the canonical
+        version entirely, no invocation runs the release bump this run --
+        picking an arbitrary substitute would be more surprising than simply
+        not bumping."""
+        result = subprocess.run(
+            ["make", "-n", "full-cycle-matrix", "MATRIX_VERSIONS=44 45", "COPR_REPO="],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        lines = [
+            line
+            for line in result.stdout.splitlines()
+            if "scripts/full-cycle.py" in line
+        ]
+        assert len(lines) == 2
+        for line in lines:
+            assert "SKIP_RELEASE_BUMP=true" in line
+
+
+class TestSkipPackagesForceRebuildForwarding:
+    """Coverage for docs/bugs.md BUG-0046: full-cycle-matrix's per-version loop
+    didn't forward SKIP_PACKAGES/FORCE_REBUILD to its nested full-cycle calls, and
+    full-cycle's own container recipe never forwarded SKIP_PACKAGES into the script
+    env at all (only FORCE_REBUILD was present there) -- so even a plain `make
+    full-cycle SKIP_PACKAGES=x` silently dropped it.
+    """
+
+    def test_full_cycle_forwards_skip_packages_into_script_env(self):
+        result = subprocess.run(
+            ["make", "-n", "full-cycle", "SKIP_PACKAGES=foo,bar", "COPR_REPO="],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        assert "SKIP_PACKAGES=foo,bar" in result.stdout
+        # Must reach the actual script invocation, not just be echoed somewhere.
+        script_pos = result.stdout.index("scripts/full-cycle.py")
+        skip_pos = result.stdout.rindex("SKIP_PACKAGES=foo,bar")
+        assert skip_pos < script_pos
+
+    def test_full_cycle_matrix_forwards_both_vars_to_nested_full_cycle(self):
+        result = subprocess.run(
+            [
+                "make",
+                "-n",
+                "full-cycle-matrix",
+                "SKIP_PACKAGES=foo",
+                "FORCE_REBUILD=1",
+                "MATRIX_VERSIONS=43",
+                "COPR_REPO=",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+        # The matrix is now real matrix-chroot-% targets, not a shell `for`
+        # loop -- both vars must reach the nested full-cycle call each one
+        # makes.
+        chroot_pos = result.stdout.index("make full-cycle FEDORA_VERSION=43")
+        assert "SKIP_PACKAGES=foo" in result.stdout[chroot_pos:]
+        assert "FORCE_REBUILD=1" in result.stdout[chroot_pos:]
 
 
 class TestPackageVarSemantics:
@@ -1052,10 +1301,10 @@ class TestUpdateDailyResilience:
 
     def test_full_cycle_failure_does_not_abort_chain(self):
         stdout = self._dry_run()
-        assert "make full-cycle || touch logs/.update-daily-failed" in stdout
+        assert "make full-cycle-matrix || touch logs/.update-daily-failed" in stdout
         # readme/copr-description and the git commit block must appear AFTER the
-        # full-cycle line, i.e. not gated behind its success.
-        full_cycle_pos = stdout.index("make full-cycle || touch")
+        # full-cycle-matrix line, i.e. not gated behind its success.
+        full_cycle_pos = stdout.index("make full-cycle-matrix || touch")
         readme_pos = stdout.index("make readme copr-description")
         commit_pos = stdout.index('git commit -m "Daily update:')
         marker_check_pos = stdout.index("if [ -f logs/.update-daily-failed ]")
@@ -1078,7 +1327,7 @@ class TestUpdateDailyResilience:
         # Exactly one "...fmt" gate: the pre-build one. The post-build gate is
         # validate-packages alone.
         assert stdout.count("make validate-packages fmt") == 1
-        full_cycle_pos = stdout.index("make full-cycle || touch")
+        full_cycle_pos = stdout.index("make full-cycle-matrix || touch")
         readme_pos = stdout.index("make readme copr-description")
         second_validate_pos = stdout.index("make validate-packages", full_cycle_pos)
         assert full_cycle_pos < second_validate_pos < readme_pos

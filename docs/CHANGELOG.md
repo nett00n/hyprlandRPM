@@ -12,6 +12,113 @@ entry as `- <Added|Changed|Fixed|Removed>: <what changed>`. Full ruleset in
 
 History before this file's introduction is not backfilled - see `git log`.
 
+## 2026-09-08
+
+- Changed: Copr submission is now gated per package instead of all-or-nothing.
+  `lib.copr.ineligible_packages()` holds back any package not yet `verified`
+  (or deliberately `skipped`) on every locally-buildable chroot -- the new
+  `COVERAGE_SKIPPED` coverage verdict, and a new `local_chroots()` helper that
+  fixes a real deadlock: `chroot_coverage()` used to call any same-arch
+  chroot outside `SUPPORTED_FEDORA_VERSIONS` (e.g. a Copr project still
+  listing `fedora-rawhide-x86_64` after the matrix dropped it, docs/todo.md
+  TODO-0085's neighbor) `unbuilt` rather than `unverifiable`, which would have
+  permanently blocked every package under the new strict gate. `lib.copr`
+  also gained `block_transitive_dependents()`, the dependency-cascade
+  primitive `copr_blocked_packages()` (full-cycle.py's per-target gate) was
+  refactored onto; `stage-copr.py`'s `main()` -- the standalone entry point
+  `full-cycle-matrix` submits through, which previously held back a
+  package's own srpm/mock failure but never its dependents' -- now calls it
+  directly over `ineligible_packages()`'s result, spanning every chroot in
+  the matrix rather than one target. `stage-copr.py` also now reads the
+  submission SRPM from the canonical target's `srpm`/`mock` rows
+  (`lib.paths.CANONICAL_FEDORA_VERSION`), not the default `FEDORA_VERSION`'s --
+  with the rpmbuild volume shared (COPR-0018) both point at the same file
+  today, but only the canonical one is guaranteed populated.
+  `REQUIRE_CHROOT_COVERAGE`'s existing all-or-nothing abort is unchanged but
+  now largely redundant. See docs/FRD.md COPR-0017, docs/operations.md
+  "`full-cycle` flags".
+- Fixed: `full-cycle-matrix` no longer bumps a package's release once per
+  matrix chroot. `update_package_releases()` decides "needs a rebuild" from
+  the *spec* stage's row for its own `target` (`lib/yaml_utils.py`'s
+  `update_package_releases`), which is per-chroot -- so calling it on every
+  `full-cycle FEDORA_VERSION=<v>` in the matrix loop (as `update-daily`
+  switching to `full-cycle-matrix` newly does, see the 2026-09-07 section
+  below) found no row for the second and third chroot and bumped the release
+  again each time, rewriting the shared `packages.yaml` up to three times a
+  night. New `SKIP_RELEASE_BUMP` env flag (`full-cycle.py`), set to `true` by
+  `full-cycle-matrix` for every chroot except `CANONICAL_FEDORA_VERSION` --
+  the release step now runs exactly once per matrix run regardless of how
+  many chroots are in `MATRIX_VERSIONS` (and not at all if `MATRIX_VERSIONS`
+  excludes the canonical version). Fixes #BUG-0049.
+- Changed: `full-cycle-matrix` no longer aborts the whole matrix run the
+  moment one chroot fails. `MATRIX_VERSIONS` is now expanded into real
+  `matrix-chroot-<version>` targets (a shell `for` loop before, so `make -k`
+  had no effect -- it only ever continues across targets) and
+  `_full-cycle-matrix` runs them via `$(MAKE) -k`, so a failing chroot no
+  longer stops the others. The canonical chroot -- which alone performs the
+  release bump (BUG-0049 above) -- is an order-only prerequisite of every
+  other chroot target regardless of `MATRIX_VERSIONS`' list order, so it
+  always builds first. Copr submission still runs afterward for whatever
+  built cleanly (per-package gating unchanged from the 2026-09-08 section
+  above); the target's own exit code is nonzero if any chroot failed, which
+  `update-daily` already tolerated the same way a plain `full-cycle` failure
+  always was. Confirmed by hand: `make full-cycle-matrix PACKAGE=hyprutils
+  MATRIX_VERSIONS="43 99 44" COPR_REPO=` -- an invalid `FEDORA_VERSION=99`
+  chroot -- ran 43 (canonical) to completion, failed 99, still ran 44 to
+  completion, still reached the "COPR_REPO not set" branch, and exited 2
+  overall. `-j` (parallel chroots) is deliberately not attempted yet: the
+  canonical phase's `packages.yaml` rewrite isn't concurrency-safe against
+  the other chroots reading it, and the pipeline `flock` (BUG-0043) refuses
+  a second concurrent `make` invocation by design regardless (docs/todo.md
+  TODO-0086).
+
+## 2026-09-07
+
+- Changed: `update-daily` now runs `full-cycle-matrix` instead of a single
+  `full-cycle` (default `FEDORA_VERSION`), building every `MATRIX_VERSIONS`
+  chroot (default all of `SUPPORTED`: 43/44/45) locally before a single
+  Copr submission -- roughly triples nightly build time in exchange for
+  catching a chroot-specific failure before it reaches Copr instead of only
+  after (see docs/bugs.md BUG-0018). Closes TODO-0065.
+- Fixed: `full-cycle`'s container recipe now forwards `SKIP_PACKAGES` into
+  `full-cycle.py`'s environment (it already forwarded `FORCE_REBUILD`), and
+  `full-cycle-matrix`'s per-version loop now forwards both `SKIP_PACKAGES` and
+  `FORCE_REBUILD` to its nested `full-cycle` calls. Previously a matrix run
+  silently ignored both, and even a plain `full-cycle` run silently ignored
+  `SKIP_PACKAGES`. Fixes #BUG-0046.
+- Changed: `SUPPORTED` is now `43 44 45` (was `43 44 rawhide`), and the default
+  `FEDORA_VERSION` is now `44` (was `43`). `lib.paths.mock_chroot()` and
+  `lib.version.nvr()` drop their rawhide special cases -- a `fedora-<N>-x86_64`
+  chroot and an `fcN` dist tag are formatted the same way for every supported
+  version now, including 45. `FEDORA_VERSION=rawhide`/`MOCK_CHROOT=fedora-rawhide-x86_64`
+  still work as a manual override; only the supported matrix changed.
+- Changed: the container image is now single and version-independent
+  (`Containerfile` no longer takes a `FEDORA_VERSION` build-arg; pinned to Fedora
+  43, the oldest `SUPPORTED` version) -- `mock -r` doesn't need a matching host,
+  so one image builds every chroot in `SUPPORTED`. `container-build`/`container-all`
+  (now an alias)/`container-clean`/`container-enter`/`check-image` all drop their
+  per-version image tag. The `rpmbuild` podman volume is likewise now shared
+  across every `FEDORA_VERSION` rather than one volume per version, which is what
+  makes "one spec, one SRPM" true by construction -- confirmed by hand: a spec and
+  SRPM built once for `fedora-43-x86_64` were mock-built as-is into correctly
+  `.fc45`-tagged binaries for `fedora-45-x86_64`, with no re-run of `rpmbuild -bs`
+  needed for that target's own `stage-mock` to find the SRPM once its own `srpm`
+  stage had recorded a row for it. `mock-cache-<ver>`/`mock-root-<ver>` stay
+  per-version deliberately (mock already namespaces those internally; see
+  docs/todo.md TODO-0023). See docs/FRD.md COPR-0011, docs/todo.md TODO-0085 for a
+  related cosmetic bookkeeping gap this surfaced (not a correctness bug).
+- Changed: `lib.yaml_utils.apply_os_overrides()` no longer merges a `fedora:`
+  override block's `build_requires`/`requires`/`build.*`/`source.patches` into
+  the package dict per version -- it only resolves `skip` now.
+  `scripts/validate-packages.py` rejects any other key under `fedora:`.
+  Confirmed by hand: the repo's only such override (`Hyprland`'s f43-only
+  `%prep` sed, previously under `fedora: '43': build: prep:`) was rewritten as
+  a literal `%if 0%{?fedora} == 43 ... %endif` block directly in `build.prep`
+  -- `stage-spec` now generates byte-identical `packages/hyprland/hyprland.spec`
+  content whether run with `FEDORA_VERSION=43` or `44`. See docs/FRD.md
+  COPR-0018, docs/packaging.md "Per-Fedora-version spec differences" for the
+  idiom.
+
 ## 2026-09-06
 
 - Fixed: `update-daily`, `full-cycle`, and `full-cycle-matrix` now take a shared,

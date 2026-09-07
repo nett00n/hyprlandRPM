@@ -26,6 +26,11 @@ main = stage_validate.main
 spec_run_for_package = stage_spec.run_for_package
 
 TARGET = "fedora-44-x86_64"
+# stage-copr.py's run_for_package() always reads its srpm/mock rows from the
+# canonical target (docs/FRD.md COPR-0018: one spec, one SRPM shared via the
+# rpmbuild volume), regardless of the `target`/fedora_version it's called
+# with -- see TestStageCoprBlocking below.
+CANONICAL_TARGET = "fedora-43-x86_64"
 
 
 @pytest.fixture(autouse=True)
@@ -408,8 +413,8 @@ class TestStageCoprBlocking:
         """Test COPR skipped when SRPM failed."""
         pkg = "test-pkg"
         meta = {"version": "1.0.0", "release": 1}
-        build_db.set_stage(pkg, "srpm", TARGET, run_id, "failed")
-        build_db.set_stage(pkg, "mock", TARGET, run_id, "success")
+        build_db.set_stage(pkg, "srpm", CANONICAL_TARGET, run_id, "failed")
+        build_db.set_stage(pkg, "mock", CANONICAL_TARGET, run_id, "success")
 
         result = stage_copr.run_for_package(
             pkg,
@@ -424,15 +429,16 @@ class TestStageCoprBlocking:
 
         assert result is True
         assert build_db.get_stage(pkg, "copr", TARGET)["state"] == "skipped"
+        assert build_db.get_stage(pkg, "copr", TARGET)["reason"] == "srpm failed"
 
     def test_copr_blocked_by_mock_failure(self, run_id):
         """Test COPR skipped when mock failed."""
         pkg = "test-pkg"
         meta = {"version": "1.0.0", "release": 1}
         build_db.set_stage(
-            pkg, "srpm", TARGET, run_id, "success", path="/some/path.src.rpm"
+            pkg, "srpm", CANONICAL_TARGET, run_id, "success", path="/some/path.src.rpm"
         )
-        build_db.set_stage(pkg, "mock", TARGET, run_id, "failed")
+        build_db.set_stage(pkg, "mock", CANONICAL_TARGET, run_id, "failed")
 
         result = stage_copr.run_for_package(
             pkg,
@@ -447,6 +453,7 @@ class TestStageCoprBlocking:
 
         assert result is True
         assert build_db.get_stage(pkg, "copr", TARGET)["state"] == "skipped"
+        assert build_db.get_stage(pkg, "copr", TARGET)["reason"] == "mock failed"
 
     def test_copr_sync_failure_records_build_id_and_fetches_logs(
         self, run_id, tmp_path
@@ -461,8 +468,10 @@ class TestStageCoprBlocking:
         # SRPM before ever calling copr-cli (docs/bugs.md BUG-0015).
         srpm_path = tmp_path / "path.src.rpm"
         srpm_path.write_bytes(b"srpm")
-        build_db.set_stage(pkg, "srpm", TARGET, run_id, "success", path=str(srpm_path))
-        build_db.set_stage(pkg, "mock", TARGET, run_id, "success")
+        build_db.set_stage(
+            pkg, "srpm", CANONICAL_TARGET, run_id, "success", path=str(srpm_path)
+        )
+        build_db.set_stage(pkg, "mock", CANONICAL_TARGET, run_id, "success")
 
         stdout = (
             f"Uploading package {srpm_path}\n"
@@ -494,6 +503,108 @@ class TestStageCoprBlocking:
         assert entry["state"] == "failed"
         assert entry["build_id"] == 10798066
         mock_fetch_logs.assert_called_once_with(pkg, 10798066)
+
+
+class TestStageCoprMainGating:
+    """stage-copr.py's main() (the entry point `full-cycle-matrix` submits
+    through) previously had no per-package gating at all beyond each
+    package's own srpm/mock state -- no cross-chroot eligibility check, and no
+    transitive-dependent hold-back for a mock failure (that lived only in
+    full-cycle.py, see docs/CHANGELOG.md). Both are now shared via lib.copr's
+    copr_blocked_packages()/ineligible_packages(), exercised here through
+    main() itself rather than the underlying helpers (already covered
+    directly in tests/test_copr.py's TestIneligiblePackages).
+    """
+
+    def _run_main(self, packages, monkeypatch):
+        monkeypatch.setenv("COPR_REPO", "nett00n/hyprland")
+        monkeypatch.delenv("PACKAGE", raising=False)
+        monkeypatch.delenv("SKIP_PACKAGES", raising=False)
+        monkeypatch.delenv("REQUIRE_CHROOT_COVERAGE", raising=False)
+        submitted = []
+
+        def fake_run_for_package(pkg, meta, fedora_version, copr_repo, proceed, target, run_id, synchronous=False):
+            submitted.append(pkg)
+            build_db.set_stage(pkg, "copr", target, run_id, "success")
+            return True
+
+        with (
+            patch.object(stage_copr, "prepare_stage", return_value=(packages, packages)),
+            patch.object(stage_copr, "preflight", return_value=True),
+            patch.object(stage_copr, "print_chroot_coverage", return_value=True),
+            patch.object(stage_copr, "run_for_package", side_effect=fake_run_for_package),
+            # ineligible_packages() (unconditionally called by main() now)
+            # hits the real Copr API via get_project_chroots() unless pinned --
+            # [] falls through to the same SUPPORTED_FEDORA_VERSIONS-derived
+            # fallback the real API-unreachable path uses, keeping every test
+            # here deterministic and offline.
+            patch("lib.copr.get_project_chroots", return_value=[]),
+        ):
+            stage_copr.main()
+
+        return submitted
+
+    def test_dependent_of_failed_mock_is_held_back(self, monkeypatch):
+        """A mock failure and its transitive dependent are both skipped before
+        run_for_package is ever called for either -- matching full-cycle.py's
+        own gating (copr_blocked_packages()), which stage-copr.py previously
+        had no equivalent of at all."""
+        packages = {
+            "hyprutils": {"version": "1.0", "release": 1, "depends_on": []},
+            "Hyprland": {"version": "1.0", "release": 1, "depends_on": ["hyprutils"]},
+        }
+        chroots = ("fedora-43-x86_64", "fedora-44-x86_64", "fedora-45-x86_64")
+        run_id = build_db.start_run(CANONICAL_TARGET, "fedora", "43", "x86_64")
+        for chroot in chroots:
+            build_db.set_stage("hyprutils", "mock", chroot, run_id, "failed")
+            # Hyprland's own coverage is otherwise clean -- the only reason it
+            # must be held back is the dependency relationship below, not its
+            # own ineligibility (which would make this test indistinguishable
+            # from test_ineligible_package_skipped_others_still_submitted).
+            build_db.set_stage("Hyprland", "mock", chroot, run_id, "success")
+
+        submitted = self._run_main(packages, monkeypatch)
+
+        assert submitted == []
+        hyprutils_entry = build_db.get_stage("hyprutils", "copr", TARGET)
+        hyprland_entry = build_db.get_stage("Hyprland", "copr", TARGET)
+        assert hyprutils_entry["state"] == "skipped"
+        assert hyprutils_entry["reason"].startswith("blocked: not verified on:")
+        assert hyprland_entry["state"] == "skipped"
+        assert hyprland_entry["reason"] == "blocked: dependency ineligible: hyprutils"
+
+    def test_ineligible_package_skipped_others_still_submitted(self, monkeypatch):
+        """A package not yet verified on every locally-buildable chroot gets a
+        skipped row naming the chroot, while an eligible, unrelated package
+        still submits -- the strict default this whole step adds."""
+        packages = {
+            "hyprutils": {"version": "1.0", "release": 1, "depends_on": []},
+            "Hyprland": {"version": "1.0", "release": 1, "depends_on": []},
+        }
+        build_db.start_run(CANONICAL_TARGET, "fedora", "43", "x86_64")
+
+        submitted = self._run_main(packages, monkeypatch)
+
+        # With an empty build_db, real chroot_coverage() scores both packages
+        # UNBUILT on every locally-buildable chroot -- confirm that (not
+        # run_for_package's own srpm/mock guard) is what held them back.
+        assert submitted == []
+        for pkg in packages:
+            entry = build_db.get_stage(pkg, "copr", TARGET)
+            assert entry["state"] == "skipped"
+            assert entry["reason"].startswith("blocked: not verified on:")
+
+    def test_eligible_package_is_submitted(self, monkeypatch):
+        """Sanity check for the two tests above: a package verified on every
+        locally-buildable chroot is not held back by either gate."""
+        packages = {"hyprutils": {"version": "1.0", "release": 1, "depends_on": []}}
+        run_id = build_db.start_run(CANONICAL_TARGET, "fedora", "43", "x86_64")
+        for chroot in ("fedora-43-x86_64", "fedora-44-x86_64", "fedora-45-x86_64"):
+            build_db.set_stage("hyprutils", "mock", chroot, run_id, "success")
+
+        submitted = self._run_main(packages, monkeypatch)
+
+        assert submitted == ["hyprutils"]
 
 
 class TestStageShowPlan:

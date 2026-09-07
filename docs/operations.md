@@ -41,36 +41,59 @@ make full-cycle PACKAGE=<name> FORCE_REBUILD=1                             # ign
 ```
 
 Copr submission runs as its own pass, only after every package in the run has gone through
-`mock` — if any package's `mock` stage failed, **no package is submitted**, so a healthy package
-never publishes while a sibling in the same dependency set is broken. By default COPR builds are
-submitted with `--nowait` (async); `SYNCHRONOUS_COPR_BUILD=true` waits for completion instead.
+`mock` — but it is gated **per package**, not all-or-nothing: a package not yet clear on every
+locally-buildable chroot, and its transitive dependents (which may have built against a stale
+copy of it), are held back individually with a reason naming the chroot; everything else in the
+same run still submits (`lib.copr.ineligible_packages()`/`block_transitive_dependents()`). This
+applies both to a plain `full-cycle` run and to standalone `make stage-copr` (the path
+`full-cycle-matrix` submits through) — the two previously had a gap here: only `full-cycle` held
+back a failed package's dependents, `stage-copr` did not. By default COPR builds are submitted
+with `--nowait` (async); `SYNCHRONOUS_COPR_BUILD=true` waits for completion instead.
 
 Before submitting, `full-cycle`/`stage-copr` also print a per-chroot local-mock coverage table
 (queried from the Copr project's actual chroot list): each chroot is `verified` (this package's
-local mock succeeded for it), `failed`, `unbuilt` (same arch, never tried locally), or `not
-verifiable locally` (aarch64 — mock can't cross-build here, see `docs/todo.md` TODO-0024). By
-default this only warns and still submits; `REQUIRE_CHROOT_COVERAGE=true` blocks the submission
-instead whenever a same-arch chroot is `failed`/`unbuilt` (an aarch64 gap alone never blocks —
-there is no local way to close it yet).
+local mock succeeded for it), `failed`, `unbuilt` (never tried locally), `skipped` (a deliberate
+`packages.yaml` `fedora: '<ver>': skip: true` opt-out, see `docs/packaging.md` "Per-Fedora-version
+spec differences"), or `not verifiable locally` (aarch64, or any chroot for a Fedora version this
+host's `SUPPORTED` no longer builds — mock can't satisfy either locally, see `docs/todo.md`
+TODO-0024). The per-package gate above already holds back anything not `verified`/`skipped` on a
+locally-buildable chroot by default, which makes `REQUIRE_CHROOT_COVERAGE=true` (block the whole
+submission instead of individual packages whenever any locally-buildable chroot is
+`failed`/`unbuilt`) largely redundant now — it still exists for an all-or-nothing policy, but a
+`not verifiable locally` gap alone never blocks either way, since there is no local way to close
+it.
 
 ### Building every chroot locally before submitting
 
 A single `full-cycle` run only builds one `FEDORA_VERSION`'s x86_64 chroot, but Copr fans a
-submission out to every chroot configured on the project (fedora-43/44/rawhide x86_64/aarch64
-for `nett00n/hyprland`) — a chroot-specific failure (e.g. a newer libstdc++ needed than an older
-Fedora ships) can pass local mock and still fail on Copr (see `docs/bugs.md` BUG-0018). To catch
-that before submitting:
+submission out to every chroot configured on the project (x86_64/aarch64 for whichever Fedora
+versions `nett00n/hyprland` has enabled) — a chroot-specific failure (e.g. a newer libstdc++
+needed than an older Fedora ships) can pass local mock and still fail on Copr (see
+`docs/bugs.md` BUG-0018). To catch that before submitting:
 
 ```shell
-make container-all                                                    # build images for all SUPPORTED versions once
+make container-build                                                  # build the single container image once
 make full-cycle-matrix PACKAGE=<name> COPR_REPO=nett00n/hyprland       # build every MATRIX_VERSIONS chroot locally, then submit once
 make full-cycle-matrix PACKAGE=<name> MATRIX_VERSIONS="43 44"          # limit to specific versions
 ```
 
+`make container-all` is still accepted as an alias for `container-build` -- there is only one
+image now (built via `mock -r`, which doesn't need a matching host), so there is nothing left
+to build "for all versions".
+
 This loops `full-cycle FEDORA_VERSION=<v> SKIP_COPR=true` per `MATRIX_VERSIONS` (default: every
-`SUPPORTED` version), then submits to Copr exactly once — Copr already fans one SRPM out to all
-its own chroots, so submitting per version would create duplicate builds. aarch64 chroots are
-still not covered by this (no cross-arch build path locally yet).
+`SUPPORTED` version — 43/44/45), then submits to Copr exactly once via `stage-copr` -- Copr
+already fans one SRPM out to all its own chroots, so submitting per version would create
+duplicate builds. That final submission is gated per package (see "`full-cycle` flags" above):
+only a package verified (or deliberately skipped) on every version in the matrix, and not a
+dependent of one that isn't, actually gets submitted. aarch64 chroots are still not covered by
+this (no cross-arch build path locally yet).
+
+Only the `CANONICAL_FEDORA_VERSION` chroot's `full-cycle` call runs the pre-build release
+auto-increment step -- every other chroot in the loop gets `SKIP_RELEASE_BUMP=true`, so a
+package's release advances once per matrix run, not once per chroot (docs/bugs.md BUG-0049; see
+"Release auto-increment" in docs/packaging.md for the step itself). If `MATRIX_VERSIONS` is
+overridden to exclude the canonical version, no invocation bumps the release that run.
 
 ### Check build logs
 
@@ -184,12 +207,18 @@ asks for confirmation): `make db-nuke`.
 
 ## Container volumes
 
-Per-`FEDORA_VERSION` named volumes persist state across the `--rm` containers every `make`
-target runs in: `rpmbuild-<ver>` (SOURCES/SRPMS/RPMS) and `mock-cache-<ver>`/`mock-root-<ver>`
-(mock's own `/var/cache/mock` and `/var/lib/mock` — the bootstrapped buildroot and dnf package
-cache). Without the last two, every `make full-cycle`/nightly run would re-bootstrap every
-chroot from scratch; with them, only the first build after `container-volume-clean` pays that
-cost, and it grows to roughly 1-1.5GB per Fedora version.
+One shared `rpmbuild` volume (SOURCES/SRPMS/RPMS) persists across every `FEDORA_VERSION`,
+mounted into the same single container image every `make` target runs in — this is what
+makes "one spec, one SRPM" true by construction: there is only ever one `~/rpmbuild/SRPMS`
+to build into or read from, whichever chroot a stage is targeting.
+
+`mock-cache-<ver>`/`mock-root-<ver>` (mock's own `/var/cache/mock` and `/var/lib/mock` — the
+bootstrapped buildroot and dnf package cache) stay per-`FEDORA_VERSION`, deliberately: mock
+already namespaces its cache/root state by chroot internally, so sharing these across
+versions would be redundant nesting rather than a correctness requirement the way the
+rpmbuild volume is (docs/todo.md TODO-0023). Without them, every `make full-cycle`/nightly
+run would re-bootstrap every chroot from scratch; with them, only the first build after
+`container-volume-clean` pays that cost, and each grows to roughly 1-1.5GB.
 
 To reset just the mock cache (e.g. it's resolving against a package that no longer matches
 what's actually installable):
@@ -198,9 +227,9 @@ what's actually installable):
 make clean-mock-cache FEDORA_VERSION=44   # drop mock-cache-44/mock-root-44 only
 ```
 
-`make container-volume-clean` removes both volumes for one (or, from the default
-`FEDORA_VERSION`, every `SUPPORTED`) version — use it for a full reset, e.g. after a mock/dnf
-upgrade in the base image.
+`make container-volume-clean` removes the mock volumes for one (or, from the default
+`FEDORA_VERSION`, every `SUPPORTED`) version, and the shared `rpmbuild` volume once — use it
+for a full reset, e.g. after a mock/dnf upgrade in the base image.
 
 ### local-repo layout
 
@@ -283,9 +312,24 @@ make update-daily COPR_REPO=nett00n/hyprland PUSH=1      # commit and push
 
 Runs: bump versions → `validate-packages` + `fmt` (packages.yaml sanity/formatting only —
 **not** the full `pre-commit` gate; `scripts/` lint/test health is already CI's job on every
-push/PR, an unrelated regression there shouldn't block tonight's Copr publish) → full build
-cycle → `validate-packages` again (no `fmt`) → regenerate docs → push COPR description →
-`git commit`. The second `validate-packages` exists because `full-cycle.py`'s
+push/PR, an unrelated regression there shouldn't block tonight's Copr publish) →
+`full-cycle-matrix` (builds every `MATRIX_VERSIONS` chroot locally -- default all of
+`SUPPORTED`, i.e. 43/44/45 -- before a single Copr submission; see docs/bugs.md
+BUG-0018) → `validate-packages` again (no `fmt`) → regenerate docs → push COPR description →
+`git commit`. Building the whole matrix nightly instead of just the default
+`FEDORA_VERSION` roughly triples build time in exchange for catching a chroot-specific
+failure (e.g. a newer libstdc++ requirement) before it ever reaches Copr, rather than only
+after (docs/bugs.md BUG-0018; this tradeoff was TODO-0065). A failing chroot doesn't stop
+the rest of the matrix (each chroot is a real `matrix-chroot-<version>` target, run via
+`make -k`) -- Copr submission still runs afterward for whatever built cleanly, gated per
+package as described above. `full-cycle-matrix`'s own nonzero exit in that case doesn't
+abort `update-daily`: `_update-daily`'s recipe runs it as
+`$(MAKE) full-cycle-matrix || touch logs/.update-daily-failed`, so docs still regenerate and
+the commit still happens, and only the final `update-daily` invocation itself exits nonzero
+(a loud cron failure, not a silent one) after cleaning up that marker.
+`SKIP_PACKAGES`/`FORCE_REBUILD` are honored the same way as a plain `full-cycle` run. The
+second `validate-packages` exists
+because `full-cycle.py`'s
 `update_package_releases()` rewrites `packages.yaml`'s release fields *after* the first gate
 ran, and that's the file the commit and the generated docs are built from (docs/bugs.md
 BUG-0044); it skips `fmt` because the rewrite already goes through the same formatter `make

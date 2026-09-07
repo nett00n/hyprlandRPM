@@ -14,7 +14,7 @@ from lib import build_db, paths
 import importlib
 gen_report = importlib.import_module("gen-report")
 
-TARGET = "fedora-43-x86_64"  # matches default FEDORA_VERSION="43" gen-report.py falls back to
+TARGET = "fedora-44-x86_64"  # matches default FEDORA_VERSION="44" gen-report.py falls back to
 
 
 class TestGenReportArgumentParsing:
@@ -246,7 +246,7 @@ class TestGenReportMain:
         build_db.close()
 
     def _seed_run(self, target: str = TARGET) -> None:
-        build_db.start_run(target, "fedora", "43", "x86_64")
+        build_db.start_run(target, "fedora", "44", "x86_64")
 
     def test_main_writes_to_stdout_by_default(self, tmp_path, capsys):
         """Should print to stdout when --output not provided."""
@@ -407,7 +407,7 @@ class TestGenReportMain:
     def test_main_reloads_stage_map_when_copr_status_updated(self, tmp_path):
         """After poll_copr_status reports a change, main() re-reads from the DB."""
         self._seed_run()
-        run_id = build_db.start_run(TARGET, "fedora", "43", "x86_64")
+        run_id = build_db.start_run(TARGET, "fedora", "44", "x86_64")
         build_db.set_stage("pkg1", "copr", TARGET, run_id, "unknown", build_id=123)
 
         with patch.object(gen_report, "PACKAGES_YAML", tmp_path / "packages.yaml"), \

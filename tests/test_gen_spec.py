@@ -5,7 +5,53 @@ from pathlib import Path
 import pytest
 
 from lib.jinja_utils import create_jinja_env
-from lib.yaml_utils import get_packages
+from lib.yaml_utils import apply_os_overrides, get_packages
+
+
+def _minimal_context(**overrides):
+    """Base spec.j2 context (mirrors TestRecommendsBuildContext in
+    tests/test_recommends.py), with prep_commands/etc. overridable per test."""
+    context = {
+        "name": "test-pkg",
+        "version": "1.0",
+        "release": 1,
+        "summary": "Test Package",
+        "license": "GPLv3",
+        "url": "https://example.com/test",
+        "description": "Test description",
+        "build_requires": [],
+        "requires": [],
+        "recommends": [],
+        "sources": [],
+        "patches": [],
+        "bundled_deps": [],
+        "prep_commands": [],
+        "build_cmd": "%cmake",
+        "install_cmd": "%cmake_install",
+        "files": ["%{_bindir}/test-pkg"],
+        "no_debug_package": False,
+        "no_lto": False,
+        "commit": None,
+        "buildarch": None,
+        "source_name": "test-pkg",
+        "source_dir": None,
+        "changelog": {
+            "date": "Mon Jan 01 2025",
+            "packager": "Test User <test@example.com>",
+            "version": "1.0",
+            "release": 1,
+            "notes": ["Initial release"],
+            "source_url": None,
+            "copr_url": None,
+            "tag": None,
+            "commit": None,
+        },
+        "devel": None,
+        "dep_versions": [],
+        "project_packages": [],
+    }
+    context.update(overrides)
+    return context
 
 
 class TestSpecFileLowercasing:
@@ -120,3 +166,52 @@ class TestSpecFileLowercasing:
                     f"Mixed-case spec file found: {incorrect_spec_path}. "
                     f"gen-spec.py should only create lowercase files."
                 )
+
+
+class TestPerVersionConditionalPrep:
+    """A single spec is now shared across every chroot (see docs/operations.md),
+    so a per-version spec difference (e.g. hyprland's f43-only sed,
+    packages.yaml's Hyprland entry) is written directly as a literal
+    `%if 0%{?fedora} == N ... %endif` conditional in build.prep -- prep_commands
+    render verbatim (templates/spec.j2's %prep loop), so rpm evaluates the
+    conditional per chroot at build time. apply_os_overrides() no longer merges
+    build.prep by version at all (see TestApplyOsOverrides in
+    tests/test_cache_and_yaml_utils.py); this only tests that the template
+    itself passes such a conditional through untouched.
+    """
+
+    def test_if_fedora_conditional_renders_verbatim(self):
+        env = create_jinja_env()
+        template = env.get_template("spec.j2")
+        context = _minimal_context(
+            prep_commands=[
+                "%if 0%{?fedora} == 43",
+                "sed -i 's/old/new/' src/foo.cpp",
+                "%endif",
+            ]
+        )
+
+        rendered = template.render(**context)
+
+        assert "%if 0%{?fedora} == 43" in rendered
+        assert "sed -i 's/old/new/' src/foo.cpp" in rendered
+        assert "%endif" in rendered
+
+    def test_apply_os_overrides_no_longer_touches_prep(self):
+        """The base build.prep list (with its own %if guard already baked in by
+        the package author) must survive apply_os_overrides() unchanged for
+        every fedora_version -- there is nothing left for it to merge."""
+        pkg = {
+            "version": "1.0",
+            "build": {
+                "prep": [
+                    "%if 0%{?fedora} == 43",
+                    "sed -i 's/old/new/' src/foo.cpp",
+                    "%endif",
+                ]
+            },
+        }
+
+        for fedora_version in ("43", "44", "45"):
+            result = apply_os_overrides(pkg, fedora_version)
+            assert result["build"]["prep"] == pkg["build"]["prep"]

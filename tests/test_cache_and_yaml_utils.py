@@ -197,7 +197,14 @@ class TestSkipPackages:
 
 
 class TestApplyOsOverrides:
-    """Test Fedora version-specific overrides."""
+    """A single spec is now shared across every chroot (see docs/operations.md), so
+    apply_os_overrides() only ever resolves the `skip` key -- a per-version spec
+    difference is written directly as a `%if 0%{?fedora} == N ... %endif`
+    conditional in packages.yaml instead (validate-packages.py rejects any other
+    `fedora:` key, see tests/test_validate_packages.py). Coverage here is just:
+    no block -> unchanged, a `fedora` block is always stripped, `skip` sets
+    `_skip`, non-`skip` keys are silently ignored (not merged), and int/string
+    version keys and exact-match priority all still resolve correctly."""
 
     def test_no_fedora_block_returns_original(self):
         """No fedora block returns package unchanged."""
@@ -205,8 +212,11 @@ class TestApplyOsOverrides:
         result = apply_os_overrides(pkg, "43")
         assert result == {"version": "1.0", "name": "foo"}
 
-    def test_matching_version_override(self):
-        """Matching fedora version applies override."""
+    def test_non_skip_override_keys_are_ignored(self):
+        """A non-`skip` key under a matching version block is no longer merged --
+        it's dropped along with the rest of the `fedora` block. Enforcing that
+        such a key shouldn't exist at all is validate-packages.py's job, not
+        this function's."""
         pkg = {
             "version": "1.0",
             "build_requires": ["a"],
@@ -214,14 +224,14 @@ class TestApplyOsOverrides:
                 "43": {
                     "build_requires": ["b"],
                 }
-            }
+            },
         }
         result = apply_os_overrides(pkg, "43")
-        assert result["build_requires"] == ["b"]
+        assert result["build_requires"] == ["a"]
         assert "fedora" not in result
 
     def test_non_matching_version_no_override(self):
-        """Non-matching fedora version no override applied."""
+        """Non-matching fedora version: block stripped, package otherwise unchanged."""
         pkg = {
             "version": "1.0",
             "build_requires": ["a"],
@@ -229,41 +239,41 @@ class TestApplyOsOverrides:
                 "44": {
                     "build_requires": ["b"],
                 }
-            }
+            },
         }
         result = apply_os_overrides(pkg, "43")
         assert result["build_requires"] == ["a"]
+        assert "fedora" not in result
 
-    def test_rawhide_override(self):
-        """rawhide fedora version override (only specific fields are merged)."""
+    def test_manual_rawhide_override_still_resolves_skip(self):
+        """rawhide is no longer in SUPPORTED_FEDORA_VERSIONS, but FEDORA_VERSION=rawhide
+        still works as a manual override (Makefile has no special case for it either)
+        -- apply_os_overrides() resolves its skip key like any other version string."""
         pkg = {
             "version": "1.0",
-            "build_requires": ["a"],
             "fedora": {
                 "rawhide": {
-                    "build_requires": ["b"],
+                    "skip": True,
                 }
-            }
+            },
         }
         result = apply_os_overrides(pkg, "rawhide")
-        # Only specific fields (build_requires, requires, build.*, source.patches) are merged
-        assert result["build_requires"] == ["b"]
+        assert result.get("_skip") is True
         assert "fedora" not in result
 
     def test_integer_fedora_version_match(self):
-        """Integer fedora versions work (only specific fields merged)."""
+        """Integer fedora version keys resolve `skip` the same as quoted strings."""
         pkg = {
             "name": "pkg",
-            "build_requires": ["base"],
             "fedora": {
                 44: {
-                    "build_requires": ["override"],
+                    "skip": True,
                 }
-            }
+            },
         }
         result = apply_os_overrides(pkg, "44")
-        assert result["build_requires"] == ["override"]
-        assert result["name"] == "pkg"  # Non-override fields preserved
+        assert result.get("_skip") is True
+        assert result["name"] == "pkg"
 
     def test_skip_flag_set(self):
         """Skip flag in override sets _skip."""
@@ -289,38 +299,18 @@ class TestApplyOsOverrides:
         result = apply_os_overrides(pkg, "43")
         assert "fedora" not in result
 
-    def test_nested_override_source_patches(self):
-        """Nested source/patches override."""
-        pkg = {
-            "source": {
-                "patches": ["a.patch"],
-            },
-            "fedora": {
-                "44": {
-                    "source": {
-                        "patches": ["b.patch"],
-                    }
-                }
-            }
-        }
-        result = apply_os_overrides(pkg, "44")
-        # Deep merge behavior depends on implementation
-        # Assuming shallow merge of source dict
-        assert "patches" in result.get("source", {})
-
     def test_multiple_fedora_overrides_exact_match_wins(self):
-        """Exact version match preferred over non-match (only specific fields merged)."""
+        """Exact version match preferred over non-match, for `skip` specifically."""
         pkg = {
             "name": "test",
-            "build_requires": ["base"],
             "fedora": {
-                "43": {"build_requires": ["test-fc43"]},
-                "44": {"build_requires": ["test-fc44"]},
-            }
+                "43": {"skip": True},
+                "44": {"skip": False},
+            },
         }
         result = apply_os_overrides(pkg, "43")
-        assert result["build_requires"] == ["test-fc43"]
-        assert result["name"] == "test"  # name not in override list
+        assert result.get("_skip") is True
+        assert result["name"] == "test"
 
 
 # TestLoadBuildStatus removed: load_build_status() no longer exists (build

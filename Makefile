@@ -8,8 +8,14 @@ SKIP_PACKAGES   := $(subst ",,$(SKIP_PACKAGES))
 LOG_LEVEL       := $(subst ",,$(LOG_LEVEL))
 CMD_TIMEOUT     := $(subst ",,$(CMD_TIMEOUT))
 # Fallback defaults if not set after stripping
-FEDORA_VERSION  ?= 43
-SUPPORTED        := 43 44 rawhide
+FEDORA_VERSION  ?= 44
+SUPPORTED        := 43 44 45
+# Mirrors scripts/lib/paths.py's CANONICAL_FEDORA_VERSION -- the one matrix
+# chroot full-cycle-matrix treats as authoritative (release bumps, and the
+# spec/srpm stage-copr.py submits from). Keep the two in sync by hand; no
+# single source of truth crosses the Make/Python boundary here, same as
+# SUPPORTED/SUPPORTED_FEDORA_VERSIONS already don't.
+CANONICAL_FEDORA_VERSION := 43
 IMAGE_NAME       := rpm-toolbox
 HIGHLIGHT_PREFIX ?= "█▓▒░"
 
@@ -27,11 +33,7 @@ LOG_LEVEL    ?=
 CMD_TIMEOUT  ?=
 MAKE_LOGS_DIR := ./logs/make
 
-ifeq ($(FEDORA_VERSION),rawhide)
-  MOCK_CHROOT := fedora-rawhide-x86_64
-else
-  MOCK_CHROOT := fedora-$(FEDORA_VERSION)-x86_64
-endif
+MOCK_CHROOT := fedora-$(FEDORA_VERSION)-x86_64
 
 # Container runtime: podman (default) or docker (fallback)
 CONTAINER_RUNTIME ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
@@ -60,13 +62,22 @@ USER_ID      := $(shell id -u)
 GROUP_ID     := $(shell id -g)
 HOME_DIR     := $(shell echo $$HOME)
 
-# Per-Fedora-version volumes (container user is set in Containerfile)
-RPMBUILD_VOLUME  := rpmbuild-$(FEDORA_VERSION)
+# Single container image builds every chroot via `mock -r`, so ~/rpmbuild is
+# shared across FEDORA_VERSION values rather than one volume per version --
+# that's what makes "one spec, one SRPM" true by construction: there is only
+# ever one ~/rpmbuild/SRPMS to build into or read from (container user is set
+# in Containerfile).
+RPMBUILD_VOLUME  := rpmbuild
 RPMBUILD_MOUNT   := $(RPMBUILD_VOLUME):/root/rpmbuild:z
 # Persist mock's buildroot cache/state across --rm containers (TODO-0014) so a
 # fresh `make full-cycle`/nightly run doesn't re-bootstrap every chroot from
 # scratch. Deliberately left owned by root (mock's own layout, root:mock
 # 2775) -- unlike RPMBUILD above, setup-volumes does not chown these.
+# Still per-FEDORA_VERSION: mock already namespaces its own cache/root state by
+# chroot internally, so sharing these across versions would be redundant
+# nesting, not a correctness requirement the way RPMBUILD above is -- and
+# de-versioning them would discard every host's existing warm buildroot cache
+# for no benefit. Left alone deliberately (see docs/todo.md TODO-0023).
 MOCKCACHE_VOLUME := mock-cache-$(FEDORA_VERSION)
 MOCKCACHE_MOUNT  := $(MOCKCACHE_VOLUME):/var/cache/mock:z
 MOCKROOT_VOLUME  := mock-root-$(FEDORA_VERSION)
@@ -105,7 +116,7 @@ CONTAINER_RUN := $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) run --rm --privileged $(
 	$(if $(LOG_LEVEL),-e LOG_LEVEL=$(LOG_LEVEL),) \
 	$(if $(NO_COLOR),-e NO_COLOR=$(NO_COLOR),) \
 	-w /work \
-	$(IMAGE_NAME):$(FEDORA_VERSION)
+	$(IMAGE_NAME)
 
 # Python in container using mounted .venv
 CONTAINER_PYTHON := $(CONTAINER_RUN) /work/.venv/bin/python3
@@ -207,13 +218,13 @@ sync-hard-reset: ## Hard-reset repo+submodules to origin/<current branch>, stash
 		echo $(HIGHLIGHT_PREFIX) "✓ Repo and submodules reset to origin/$$branch"
 
 # Prerequisite checks - fail fast on missing dependencies
-check-image: ## Verify container image exists for FEDORA_VERSION (no-op under NO_CONTAINER=1)
+check-image: ## Verify the (single, version-independent) container image exists (no-op under NO_CONTAINER=1)
 ifeq ($(NO_CONTAINER),1)
 	@true
 else
-	@$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) image inspect $(IMAGE_NAME):$(FEDORA_VERSION) >/dev/null 2>&1 || \
-		(echo "$(HIGHLIGHT_PREFIX) ✗ Container image not found: $(IMAGE_NAME):$(FEDORA_VERSION)"; \
-		 echo "$(HIGHLIGHT_PREFIX) Run: make container-build FEDORA_VERSION=$(FEDORA_VERSION)"; exit 1)
+	@$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) image inspect $(IMAGE_NAME) >/dev/null 2>&1 || \
+		(echo "$(HIGHLIGHT_PREFIX) ✗ Container image not found: $(IMAGE_NAME)"; \
+		 echo "$(HIGHLIGHT_PREFIX) Run: make container-build"; exit 1)
 endif
 
 check-venv: ## Verify .venv exists and has Python
@@ -229,7 +240,7 @@ ifeq ($(NO_CONTAINER),1)
 else
 	@$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(RPMBUILD_VOLUME) >/dev/null 2>&1 || \
 		($(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume create $(RPMBUILD_VOLUME) || exit 1; \
-		 $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) run --rm -v $(RPMBUILD_MOUNT) $(IMAGE_NAME):$(FEDORA_VERSION) \
+		 $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) run --rm -v $(RPMBUILD_MOUNT) $(IMAGE_NAME) \
 		 	chown -R $(USER_ID):$(GROUP_ID) /root/rpmbuild || exit 1)
 	@$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(MOCKCACHE_VOLUME) >/dev/null 2>&1 || \
 		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume create $(MOCKCACHE_VOLUME) || exit 1
@@ -242,7 +253,7 @@ help: ## Show this help
 	@echo "Usage: make [TARGET] [PACKAGE=<name>] [FEDORA_VERSION=<version>] [LOG_LEVEL=<level>] [CMD_TIMEOUT=<seconds>]"
 	@echo ""
 	@echo "  Supported versions : $(SUPPORTED)"
-	@echo "  Default version    : 43"
+	@echo "  Default version    : 44"
 	@echo "  Default LOG_LEVEL  : INFO"
 	@echo "  Default CMD_TIMEOUT: 3600 (60 minutes)"
 	@echo ""
@@ -375,13 +386,10 @@ delete-package: check-image check-venv setup-volumes ## Remove package from pack
 	     echo "$(HIGHLIGHT_PREFIX) Removed git submodule: $$_path"; \
 	   fi; \
 	 fi
-	@for ver in $(SUPPORTED); do \
-	  vol=rpmbuild-$$ver; \
-	  if $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $$vol >/dev/null 2>&1; then \
-	    $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) run --rm -v $$vol:/root/rpmbuild:z $(IMAGE_NAME):$$ver \
-	      rm -rf /root/rpmbuild/SOURCES/$(PACKAGE)-* /root/rpmbuild/SRPMS/$(PACKAGE)-* /root/rpmbuild/RPMS/*/$(PACKAGE)-* || exit 1; \
-	  fi; \
-	done
+	@if $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(RPMBUILD_VOLUME) >/dev/null 2>&1; then \
+	  $(CONTAINER_SUDO) $(CONTAINER_RUNTIME) run --rm -v $(RPMBUILD_MOUNT) $(IMAGE_NAME) \
+	    rm -rf /root/rpmbuild/SOURCES/$(PACKAGE)-* /root/rpmbuild/SRPMS/$(PACKAGE)-* /root/rpmbuild/RPMS/*/$(PACKAGE)-* || exit 1; \
+	fi
 	@echo "$(HIGHLIGHT_PREFIX) ✓ Removed $(PACKAGE)"
 
 set-release: check-image check-venv setup-volumes ## Set package release value (PACKAGE=<name|name1,name2,...> RELEASE=<num> required; LOCK=1 to prevent auto-increment)
@@ -423,7 +431,7 @@ db-shell: check-image check-venv ## Open an interactive sqlite3 shell on build-r
 		-v $(WORKDIR_MOUNT) \
 		-v $(VENV_MOUNT) \
 		-w /work \
-		$(IMAGE_NAME):$(FEDORA_VERSION) /work/.venv/bin/python3 -m sqlite3 build-report.db
+		$(IMAGE_NAME) /work/.venv/bin/python3 -m sqlite3 build-report.db
 
 db-nuke: ## DESTROY build-report.db entirely: artifact ledger + all run/stage history (irreversible; confirmation required)
 	@printf "$(HIGHLIGHT_PREFIX) Destroy build-report.db entirely (artifact ledger + all history)? [y/N] "; \
@@ -449,51 +457,47 @@ normalize-paths: check-image check-venv setup-volumes ## Normalize paths in pack
 sort-lists: check-image check-venv setup-volumes ## Sort build_requires/requires/files lists in packages.yaml (ARGS=--dry-run)
 	$(CONTAINER_PYTHON) scripts/sort-yaml-lists.py $(ARGS)
 
-container-build: ## Build image for FEDORA_VERSION
+container-build: ## Build the single container image (builds every SUPPORTED chroot via `mock -r`; version-independent, no FEDORA_VERSION build-arg)
 	$(call run_with_result,$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) build \
-		--build-arg FEDORA_VERSION=$(FEDORA_VERSION) \
 		--build-arg UID=$(USER_ID) \
 		--build-arg GID=$(GROUP_ID) \
-		-t $(IMAGE_NAME):$(FEDORA_VERSION) \
-		-f Containerfile .,Built $(IMAGE_NAME):$(FEDORA_VERSION),Container build failed)
+		-t $(IMAGE_NAME) \
+		-f Containerfile .,Built $(IMAGE_NAME),Container build failed)
 
-container-enter: ## Enter interactive shell in container for FEDORA_VERSION
+container-enter: ## Enter interactive shell in the container
 	$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) run -it --rm \
 		-v $(RPMBUILD_MOUNT) \
 		-v $(WORKDIR_MOUNT) \
 		-w /work \
-		$(IMAGE_NAME):$(FEDORA_VERSION) /bin/bash
+		$(IMAGE_NAME) /bin/bash
 
-container-clean: ## Remove image for FEDORA_VERSION
-	$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) image inspect $(IMAGE_NAME):$(FEDORA_VERSION) >/dev/null 2>&1 && \
-		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) rmi $(IMAGE_NAME):$(FEDORA_VERSION) || true
-	@echo $(HIGHLIGHT_PREFIX) "Cleaned $(IMAGE_NAME):$(FEDORA_VERSION)"
+container-clean: ## Remove the container image
+	$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) image inspect $(IMAGE_NAME) >/dev/null 2>&1 && \
+		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) rmi $(IMAGE_NAME) || true
+	@echo $(HIGHLIGHT_PREFIX) "Cleaned $(IMAGE_NAME)"
 
-container-volume-clean: ## Remove volumes (rpmbuild, mock-cache, mock-root) for FEDORA_VERSION (all if not specified); local-repo/ itself is a plain directory now, remove by hand if wanted
-	@if [ "$(FEDORA_VERSION)" = "43" ] && [ -z "$(RECURSIVE_CALL)" ]; then \
+container-volume-clean: ## Remove volumes: rpmbuild (shared, once) and mock-cache/mock-root (per FEDORA_VERSION; all SUPPORTED if not specified); local-repo/ itself is a plain directory now, remove by hand if wanted
+	@if [ "$(FEDORA_VERSION)" = "44" ] && [ -z "$(RECURSIVE_CALL)" ]; then \
+		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(RPMBUILD_VOLUME) >/dev/null 2>&1 && \
+			$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume rm $(RPMBUILD_VOLUME) || true; \
 		for v in $(SUPPORTED); do \
-			echo $(HIGHLIGHT_PREFIX) "Removing volumes for Fedora $$v..."; \
+			echo $(HIGHLIGHT_PREFIX) "Removing mock volumes for Fedora $$v..."; \
 			$(MAKE) container-volume-clean FEDORA_VERSION=$$v RECURSIVE_CALL=1 || exit 1; \
 		done; \
 		echo $(HIGHLIGHT_PREFIX) "All volumes cleaned"; \
 	else \
-		echo $(HIGHLIGHT_PREFIX) "Removing volumes for Fedora $(FEDORA_VERSION)..."; \
-		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(RPMBUILD_VOLUME) >/dev/null 2>&1 && \
-			$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume rm $(RPMBUILD_VOLUME) || true; \
+		echo $(HIGHLIGHT_PREFIX) "Removing mock volumes for Fedora $(FEDORA_VERSION)..."; \
 		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(MOCKCACHE_VOLUME) >/dev/null 2>&1 && \
 			$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume rm $(MOCKCACHE_VOLUME) || true; \
 		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(MOCKROOT_VOLUME) >/dev/null 2>&1 && \
 			$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume rm $(MOCKROOT_VOLUME) || true; \
 		$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume inspect $(LOCALREPO_VOLUME) >/dev/null 2>&1 && \
 			$(CONTAINER_SUDO) $(CONTAINER_RUNTIME) volume rm $(LOCALREPO_VOLUME) || true; \
-		echo $(HIGHLIGHT_PREFIX) "Cleaned volumes: $(RPMBUILD_VOLUME), $(MOCKCACHE_VOLUME), $(MOCKROOT_VOLUME)"; \
+		echo $(HIGHLIGHT_PREFIX) "Cleaned volumes: $(MOCKCACHE_VOLUME), $(MOCKROOT_VOLUME)"; \
 	fi
 
-container-all: ## Build images for all supported Fedora versions
-	@for v in $(SUPPORTED); do \
-		echo $(HIGHLIGHT_PREFIX) "Fedora $$v"; \
-		$(MAKE) container-build FEDORA_VERSION=$$v; \
-	done
+container-all: ## Alias for container-build -- kept for scripts/docs that still call it; one image now covers every SUPPORTED chroot
+	@$(MAKE) container-build
 
 sources: check-image check-venv setup-volumes ## Download sources for PACKAGE (or all) using spectool, then verify against sources.lock.yaml (runs in container)
 	@for pkg in $(_PKGS); do \
@@ -512,6 +516,7 @@ FORCE_REBUILD ?=
 PROCEED_BUILD ?=
 SKIP_MOCK ?=
 SKIP_COPR ?=
+SKIP_RELEASE_BUMP ?=
 DRY_RUN ?=
 SYNCHRONOUS_COPR_BUILD ?=
 REQUIRE_CHROOT_COVERAGE ?=
@@ -540,9 +545,11 @@ _full-cycle: check-image check-venv setup-volumes
 		PACKAGE=$(PACKAGE) \
 		COPR_REPO=$(COPR_REPO) \
 		FORCE_REBUILD=$(FORCE_REBUILD) \
+		SKIP_PACKAGES=$(SKIP_PACKAGES) \
 		PROCEED_BUILD=$(PROCEED_BUILD) \
 		SKIP_MOCK=$(SKIP_MOCK) \
 		SKIP_COPR=$(SKIP_COPR) \
+		SKIP_RELEASE_BUMP=$(SKIP_RELEASE_BUMP) \
 		DRY_RUN=$(DRY_RUN) \
 		SYNCHRONOUS_COPR_BUILD=$(SYNCHRONOUS_COPR_BUILD) \
 		REQUIRE_CHROOT_COVERAGE=$(REQUIRE_CHROOT_COVERAGE) \
@@ -551,8 +558,36 @@ _full-cycle: check-image check-venv setup-volumes
 		/work/.venv/bin/python3 scripts/full-cycle.py,Full cycle completed,Full cycle failed)
 
 MATRIX_VERSIONS ?= $(SUPPORTED)
+MATRIX_CHROOT_TARGETS := $(addprefix matrix-chroot-,$(MATRIX_VERSIONS))
+# Deliberately NOT declared .PHONY: doing so (even correctly, via this expanded
+# list rather than the unmatchable literal pattern "matrix-chroot-%") makes
+# GNU Make treat the target as already having an explicit rule and stop
+# searching for the matrix-chroot-% pattern rule below to supply a recipe --
+# reproduced in isolation, not a Makefile-specific bug. These targets never
+# correspond to a real file, so they already rebuild unconditionally without
+# .PHONY; it would only matter if a stray file literally named "matrix-chroot-N"
+# existed in the repo root.
 
-full-cycle-matrix: ## Build every MATRIX_VERSIONS chroot locally (default: all SUPPORTED, x86_64 only), then submit to Copr once (PACKAGE, COPR_REPO, requires 'make container-all' first)
+# The canonical chroot performs the release auto-increment (SKIP_RELEASE_BUMP,
+# docs/bugs.md BUG-0049) -- every other chroot in this run must build after
+# it, or it could cache its spec/SRPM against the pre-bump release and never
+# regenerate. Order-only (these are .PHONY convenience targets, not real
+# files with timestamps to protect) and only added when the canonical target
+# is actually part of this run's MATRIX_VERSIONS -- if a caller excludes it,
+# no release bump happens that run at all (docs/operations.md), so there is
+# nothing to race.
+ifneq ($(filter matrix-chroot-$(CANONICAL_FEDORA_VERSION),$(MATRIX_CHROOT_TARGETS)),)
+$(filter-out matrix-chroot-$(CANONICAL_FEDORA_VERSION),$(MATRIX_CHROOT_TARGETS)): | matrix-chroot-$(CANONICAL_FEDORA_VERSION)
+endif
+
+matrix-chroot-%: ## Build one Fedora chroot of the matrix via full-cycle (internal target used by full-cycle-matrix -- not meant to be invoked directly)
+	@echo $(HIGHLIGHT_PREFIX) "Fedora $*"
+	@if [ "$*" = "$(CANONICAL_FEDORA_VERSION)" ]; then bump=; else bump=true; fi; \
+	$(MAKE) full-cycle FEDORA_VERSION=$* PACKAGE=$(PACKAGE) SKIP_COPR=true \
+		SKIP_PACKAGES=$(SKIP_PACKAGES) FORCE_REBUILD=$(FORCE_REBUILD) \
+		SKIP_RELEASE_BUMP=$$bump
+
+full-cycle-matrix: ## Build every MATRIX_VERSIONS chroot locally (default: all SUPPORTED, x86_64 only; a failing chroot doesn't stop the rest -- see -k), then submit to Copr once for packages that built cleanly everywhere (PACKAGE, COPR_REPO, requires 'make container-build' first)
 	@mkdir -p logs
 	@if [ "$(PIPELINE_LOCK_HELD)" = "1" ] || [ "$(LOCK_DISABLE)" = "1" ]; then \
 		$(MAKE) _full-cycle-matrix; \
@@ -570,16 +605,15 @@ full-cycle-matrix: ## Build every MATRIX_VERSIONS chroot locally (default: all S
 	fi
 
 _full-cycle-matrix:
-	@for v in $(MATRIX_VERSIONS); do \
-		echo $(HIGHLIGHT_PREFIX) "Fedora $$v"; \
-		$(MAKE) full-cycle FEDORA_VERSION=$$v PACKAGE=$(PACKAGE) SKIP_COPR=true || exit 1; \
-	done
-	@if [ -n "$(COPR_REPO)" ]; then \
+	@$(MAKE) -k $(MATRIX_CHROOT_TARGETS); \
+	matrix_status=$$?; \
+	if [ -n "$(COPR_REPO)" ]; then \
 		$(MAKE) stage-copr FEDORA_VERSION=$(FEDORA_VERSION) PACKAGE=$(PACKAGE) COPR_REPO=$(COPR_REPO) \
 			REQUIRE_CHROOT_COVERAGE=$(REQUIRE_CHROOT_COVERAGE); \
 	else \
 		echo $(HIGHLIGHT_PREFIX) "COPR_REPO not set -- skipping Copr submission (local matrix build only)"; \
-	fi
+	fi; \
+	exit $$matrix_status
 
 update-daily: ## Update versions, validate+format packages.yaml, build (package failures reported but don't block docs/commit), generate docs, push to COPR (requires COPR_REPO), git commit (PUSH=1 to also git push)
 	@mkdir -p logs
@@ -604,7 +638,7 @@ _update-daily:
 	$(MAKE) update-versions || exit 1
 	$(MAKE) validate-packages fmt || exit 1
 	$(MAKE) refresh-checksums || exit 1
-	$(MAKE) full-cycle || touch logs/.update-daily-failed
+	$(MAKE) full-cycle-matrix || touch logs/.update-daily-failed
 	@# full-cycle.py's update_package_releases() rewrites packages.yaml after the
 	@# pre-build gate ran, so re-validate the file that actually gets committed and
 	@# rendered into the docs below (docs/bugs.md BUG-0044). No re-fmt: the rewrite

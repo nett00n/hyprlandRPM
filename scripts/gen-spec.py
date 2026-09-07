@@ -393,7 +393,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    fedora_version = os.environ.get("FEDORA_VERSION", "43")
+    fedora_version = os.environ.get("FEDORA_VERSION", "44")
     packages = get_packages()
     repo = load_repo_yaml()
     source_url = repo.get("source_url") or None

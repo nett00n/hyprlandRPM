@@ -128,56 +128,35 @@ def get_packages(path: Path = PACKAGES_YAML) -> dict:
 # Alias for compatibility
 load_packages = get_packages
 
-SUPPORTED_FEDORA_VERSIONS = {"43", "44", "rawhide"}
-OVERRIDE_LIST_FIELDS = {"build_requires", "requires"}
-OVERRIDE_BUILD_SUBKEYS = {"prep", "commands", "install"}
-OVERRIDE_SOURCE_SUBKEYS = {"patches"}
+SUPPORTED_FEDORA_VERSIONS = {"43", "44", "45"}
 
 
 def apply_os_overrides(pkg: dict, fedora_version: str) -> dict:
-    """Apply fedora-version-specific overrides to a package dict.
+    """Apply the package's `fedora:` override block, if any.
 
-    Returns a new dict with overrides applied, or the original if no overrides.
-    Sets pkg["_skip"] = True if this version should be skipped.
+    The single spec is now shared across every chroot (see docs/operations.md),
+    so a per-version spec difference belongs directly in packages.yaml's
+    build.prep/commands/install as a literal `%if 0%{?fedora} == N ... %endif`
+    conditional -- rpm evaluates it per chroot at build time. The only key this
+    still resolves is `skip`; validate-packages.py rejects any other `fedora:`
+    key so a merge-style override can't silently reappear.
+
+    Returns a new dict with pkg["_skip"] = True if this version should be
+    skipped, else the original dict with the `fedora` key stripped.
     """
     fedora_blocks = pkg.get("fedora", {})
     if not fedora_blocks:
         return pkg
 
-    # Try exact string match first (for "rawhide"), then int match
+    # Try exact string match first, then int match (packages.yaml may spell a
+    # version as a bare int or a quoted string depending on how it was authored)
     override = fedora_blocks.get(fedora_version) or fedora_blocks.get(
         int(fedora_version) if fedora_version.isdigit() else None
     )
-    if override is None:
-        result = {k: v for k, v in pkg.items() if k != "fedora"}
-        return result
 
     result = {k: v for k, v in pkg.items() if k != "fedora"}
-
-    if override.get("skip"):
+    if override is not None and override.get("skip"):
         result["_skip"] = True
-        return result
-
-    for field in OVERRIDE_LIST_FIELDS:
-        if field in override:
-            result[field] = override[field]
-
-    if "build" in override:
-        build_override = override["build"]
-        merged_build = dict(result.get("build") or {})
-        for subkey in OVERRIDE_BUILD_SUBKEYS:
-            if subkey in build_override:
-                merged_build[subkey] = build_override[subkey]
-        result["build"] = merged_build
-
-    if "source" in override:
-        source_override = override["source"]
-        merged_source = dict(result.get("source") or {})
-        for subkey in OVERRIDE_SOURCE_SUBKEYS:
-            if subkey in source_override:
-                merged_source[subkey] = source_override[subkey]
-        result["source"] = merged_source
-
     return result
 
 

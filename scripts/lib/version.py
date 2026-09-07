@@ -127,8 +127,7 @@ def rpm_version_from_tag(tag: str) -> str:
 
 def nvr(version: str, release: int | str, fedora_version: str) -> str:
     """Format a version-release-dist string."""
-    dist = "rawhide" if fedora_version == "rawhide" else f"fc{fedora_version}"
-    return f"{version}-{release}.{dist}"
+    return f"{version}-{release}.fc{fedora_version}"
 
 
 def clean_version(raw: str) -> str:

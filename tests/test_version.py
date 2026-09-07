@@ -169,15 +169,18 @@ class TestNvr:
         result = nvr("1.2.3", "%autorelease", "44")
         assert result == "1.2.3-%autorelease.fc44"
 
-    def test_nvr_with_rawhide(self):
-        """NVR with rawhide fedora version."""
+    def test_nvr_with_manual_rawhide_override(self):
+        """rawhide is no longer in SUPPORTED, but FEDORA_VERSION=rawhide still
+        works as a manual override (Makefile's MOCK_CHROOT derivation has no
+        special case either) -- nvr() formats it like any other version string,
+        with no rawhide-specific dist tag."""
         result = nvr("2.0.0", "1", "rawhide")
-        assert result == "2.0.0-1.rawhide"
+        assert result == "2.0.0-1.fcrawhide"
 
     def test_nvr_rawhide_with_complex_version(self):
-        """Complex version with rawhide."""
+        """Complex version with a manual rawhide override."""
         result = nvr("0.54.2^20260327git2c4852e", "1", "rawhide")
-        assert result == "0.54.2^20260327git2c4852e-1.rawhide"
+        assert result == "0.54.2^20260327git2c4852e-1.fcrawhide"
 
     def test_nvr_string_release(self):
         """Release as a string (not int)."""

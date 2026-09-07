@@ -4,7 +4,7 @@ Automation behaving wrong today. Complexity/cleanup/features go in `docs/todo.md
 instead. GitHub issues are for reporter-facing items (someone else's bug/request);
 this file is the maintainer's own log and may cite issue numbers. Entries are deleted
 when fixed (the fix gets a `docs/CHANGELOG.md` bullet); IDs are never reused or
-renumbered, so deletions leave gaps. Next free ID: **BUG-0049**.
+renumbered, so deletions leave gaps. Next free ID: **BUG-0050**.
 
 Each entry ends with a `[P#/D#]` marker:
 
@@ -77,10 +77,6 @@ difficulty. Move an entry into a real section below once it has all three.
   bite. `lib.copr.fetch_failed_chroot_logs` still downloads failed chroots' builder
   logs after the fact for `make stage-log-analyze`, which remains the only diagnostic
   for an aarch64-only failure [P2/D4]
-
-- #BUG-0046 `make full-cycle-matrix` (`Makefile:529-539`) does not pass
-  `SKIP_PACKAGES` or `FORCE_REBUILD` through to its per-version `full-cycle` calls, so
-  a matrix run silently ignores both [P2/D1]
 
 - #BUG-0048 `stage-show-plan.py` (`make stage-show-plan`, and the plan preview
   `full-cycle.py` prints before running) mislabels a dependent package as `cache`

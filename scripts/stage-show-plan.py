@@ -8,7 +8,7 @@ Must be run inside the rpm toolbox container (invoked via Makefile).
 Environment variables:
   PACKAGE         If set, show only these packages (comma-separated, optional)
   SKIP_PACKAGES   If set, exclude these packages (comma-separated, optional)
-  FEDORA_VERSION  Fedora version to target (default: 43)
+  FEDORA_VERSION  Fedora version to target (default: 44)
   MOCK_CHROOT     Override mock chroot (default: fedora-{FEDORA_VERSION}-x86_64)
   COPR_REPO       If set, include copr stage in plan (optional)
   FORCE_REBUILD   If '1'/'true', show every requested package's stages as "run"
@@ -57,7 +57,7 @@ def show_plan(
     """
     force_packages = force_packages or set()
     if not target:
-        fedora_version = os.environ.get("FEDORA_VERSION", "43")
+        fedora_version = os.environ.get("FEDORA_VERSION", "44")
         target = resolve_target(fedora_version, os.environ.get("MOCK_CHROOT", ""))
 
     # Load full package set (needed for compute_input_hashes to resolve deps)

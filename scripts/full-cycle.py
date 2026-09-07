@@ -7,7 +7,7 @@ prints a summary table. All state is recorded in build-report.db.
 Must be run inside the rpm toolbox container (invoked via Makefile).
 
 Environment variables:
-  FEDORA_VERSION             Fedora version to target (default: 43)
+  FEDORA_VERSION             Fedora version to target (default: 44)
   MOCK_CHROOT                Override mock chroot (default: fedora-{FEDORA_VERSION}-x86_64)
   COPR_REPO                  Copr repo slug, e.g. nett00n/hyprland (optional)
   PACKAGE                    Build only this package (optional, comma-separated)
@@ -20,6 +20,10 @@ Environment variables:
                               the cache; use `make build-pop` for a mock/copr-only force.
   SKIP_MOCK                  If 'true', skip mock build stage
   SKIP_COPR                  If 'true', skip copr submission stage
+  SKIP_RELEASE_BUMP          If 'true', skip the pre-build release auto-increment step
+                              (set by full-cycle-matrix for every non-canonical chroot,
+                              so a matrix run bumps each package's release once, not once
+                              per chroot -- see docs/bugs.md BUG-0049)
   SYNCHRONOUS_COPR_BUILD     If 'true', wait for COPR builds; default is async (--nowait)
   REQUIRE_CHROOT_COVERAGE    If 'true', block Copr submission instead of warning when a
                              chroot has no verified local mock build (see docs/bugs.md
@@ -36,11 +40,15 @@ import time
 from lib import build_db
 from lib.cache import compute_input_hashes
 from lib.config import env_flag
-from lib.copr import preflight, print_chroot_coverage
+from lib.copr import (
+    copr_blocked_packages,
+    mock_failed_packages,
+    preflight,
+    print_chroot_coverage,
+)
 from lib.deps import (
     build_dep_graph,
     effective_deps,
-    reverse_graph,
     topological_sort,
     transitive_deps,
 )
@@ -147,13 +155,13 @@ def print_proceed_status(packages: dict, target: str, copr_repo: str) -> None:
     print()
 
 
-def load_config() -> tuple[str, str, str, str, str, bool, bool, bool, bool]:
+def load_config() -> tuple[str, str, str, str, str, bool, bool, bool, bool, bool]:
     """Load environment variables.
 
     Returns (fedora_version, target, copr_repo, package_filter, skip_filter, skip_mock,
-    skip_copr, synchronous_copr, force_rebuild).
+    skip_copr, synchronous_copr, force_rebuild, skip_release_bump).
     """
-    fedora_version = os.environ.get("FEDORA_VERSION", "43")
+    fedora_version = os.environ.get("FEDORA_VERSION", "44")
     if fedora_version not in SUPPORTED_FEDORA_VERSIONS:
         sys.exit(
             f"error: unsupported FEDORA_VERSION={fedora_version!r}, "
@@ -167,6 +175,7 @@ def load_config() -> tuple[str, str, str, str, str, bool, bool, bool, bool]:
     skip_copr = env_flag("SKIP_COPR")
     synchronous_copr = env_flag("SYNCHRONOUS_COPR_BUILD")
     force_rebuild = env_flag("FORCE_REBUILD")
+    skip_release_bump = env_flag("SKIP_RELEASE_BUMP")
     if force_rebuild and env_flag("PROCEED_BUILD"):
         print(
             "warning: FORCE_REBUILD=1 and PROCEED_BUILD=true both set -- "
@@ -183,6 +192,7 @@ def load_config() -> tuple[str, str, str, str, str, bool, bool, bool, bool]:
         skip_copr,
         synchronous_copr,
         force_rebuild,
+        skip_release_bump,
     )
 
 
@@ -262,53 +272,6 @@ def setup_run(
     return build_db.start_run(
         target, DISTRO, fedora_version, ARCH, copr_repo, package_filter
     )
-
-
-def mock_failed_packages(packages: dict, target: str) -> list[str]:
-    """Return names of packages whose mock stage ended this run in a "failed" state.
-
-    Used as the basis for gating Copr submission (see copr_blocked_packages()):
-    per-package pipelines used to submit each package to Copr as soon as its
-    own mock succeeded, so a healthy early package (e.g. hyprutils) could
-    already be public on Copr by the time a later, dependent package (e.g.
-    Hyprland) failed mock -- publishing a dependency set that doesn't
-    actually work together. See docs/bugs.md / issue #8.
-    """
-    return sorted(
-        pkg
-        for pkg in packages
-        if (build_db.get_stage(pkg, "mock", target) or {}).get("state") == "failed"
-    )
-
-
-def copr_blocked_packages(
-    packages: dict, all_packages: dict, target: str
-) -> dict[str, list[str]]:
-    """Map each package that must not be submitted to Copr this run -> the
-    failed package(s) responsible (a failed package maps to itself).
-
-    Scope is pure dependency-graph membership: a failed package plus its
-    transitive dependents (packages that consume its RPM), not its own
-    dependencies (already published, unaffected) and not unrelated packages.
-    Never special-cased on whether a dependent's own mock happened to pass --
-    it may have built against a stale, already-published copy of the failed
-    ancestor. See docs/todo.md TODO-0084.
-
-    Graph is built over `all_packages` (not the filtered `packages`) so
-    dependents resolve correctly on a PACKAGE=-filtered run; the result is
-    still restricted to packages actually in this run.
-    """
-    failed = mock_failed_packages(packages, target)
-    if not failed:
-        return {}
-    dependents = reverse_graph(build_dep_graph(all_packages))
-    blocked: dict[str, list[str]] = {}
-    for name in failed:
-        blocked.setdefault(name, []).append(name)
-        for dependent in transitive_deps(name, dependents):
-            if dependent in packages:
-                blocked.setdefault(dependent, []).append(name)
-    return blocked
 
 
 def run_build_pipeline(
@@ -821,6 +784,7 @@ def main() -> None:
         skip_copr,
         synchronous_copr,
         force_rebuild,
+        skip_release_bump,
     ) = load_config()
 
     if copr_repo and not skip_copr and not preflight(copr_repo):
@@ -843,12 +807,23 @@ def main() -> None:
 
     run_id = setup_run(packages, target, fedora_version, copr_repo, package_filter)
 
-    # Pre-build: auto-increment/reset release values
-    release_updates = update_package_releases(packages, target)
-    if release_updates:
-        print(f"\nRelease updates: {release_updates}")
-        # Reload packages to pick up updated release values
-        packages = prepare_packages(package_filter, skip_filter)
+    # Pre-build: auto-increment/reset release values. Skipped under
+    # SKIP_RELEASE_BUMP=true (set by full-cycle-matrix for every non-canonical
+    # chroot): update_package_releases() reads its rebuild signal from the
+    # *spec* stage's row for this run's own `target` (lib.yaml_utils.py), so
+    # without this flag every chroot after the first would see no row yet,
+    # call it a rebuild, and bump the release again -- up to once per matrix
+    # chroot in one nightly, each rewriting the shared packages.yaml (see
+    # docs/bugs.md BUG-0049). The canonical chroot's full-cycle call is the
+    # only one that runs this.
+    if skip_release_bump:
+        print("\nSKIP_RELEASE_BUMP=true -- release auto-increment skipped this run")
+    else:
+        release_updates = update_package_releases(packages, target)
+        if release_updates:
+            print(f"\nRelease updates: {release_updates}")
+            # Reload packages to pick up updated release values
+            packages = prepare_packages(package_filter, skip_filter)
 
     proceed = env_flag("PROCEED_BUILD")
     force_packages = resolve_force_packages(force_rebuild, package_filter, packages)

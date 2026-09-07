@@ -17,7 +17,8 @@ import urllib.request
 from pathlib import Path
 
 from lib import build_db
-from lib.paths import ARCH, get_package_log_dir
+from lib.deps import build_dep_graph, reverse_graph, transitive_deps
+from lib.paths import ARCH, get_package_log_dir, mock_chroot
 from lib.subprocess_utils import run_cmd
 from lib.yaml_utils import SUPPORTED_FEDORA_VERSIONS
 
@@ -55,13 +56,26 @@ _COPR_TERMINAL_STATE_MAP = {
 }
 
 # Verdicts for chroot_coverage(): "verified"/"failed" come from a real local mock
-# row; "unbuilt" is a same-arch chroot nobody has tried locally yet; "unverifiable"
-# is a different-arch chroot (aarch64) mock can never build here -- see
-# docs/todo.md TODO-0024. Only the first three should ever gate a submission.
+# row; "unbuilt" is a same-arch chroot nobody has tried locally yet; "skipped" is
+# a deliberate opt-out (packages.yaml's fedora: '<ver>': skip: true, see
+# docs/packaging.md "Per-Fedora-version spec differences") and, like "verified",
+# must never block a submission; "unverifiable" is a different-arch chroot
+# (aarch64) mock can never build here -- see docs/todo.md TODO-0024.
 COVERAGE_VERIFIED = "verified"
 COVERAGE_FAILED = "failed"
 COVERAGE_UNBUILT = "unbuilt"
+COVERAGE_SKIPPED = "skipped"
 COVERAGE_UNVERIFIABLE = "unverifiable"
+
+
+def local_chroots() -> set[str]:
+    """Every chroot this host can actually mock-build: one x86_64 chroot per
+    SUPPORTED_FEDORA_VERSIONS. A Copr chroot outside this set (aarch64, or a
+    Fedora version no longer in SUPPORTED_FEDORA_VERSIONS) can never have a
+    local mock row -- see chroot_coverage()'s docstring for why that must
+    never gate a submission.
+    """
+    return {mock_chroot(v) for v in SUPPORTED_FEDORA_VERSIONS}
 
 
 def parse_build_id(output: str) -> int | None:
@@ -180,42 +194,62 @@ def chroot_coverage(pkg: str, chroots: list[str]) -> dict[str, str]:
     no chroot-name translation needed.
 
     Returns {chroot: verdict}, verdict one of COVERAGE_VERIFIED/_FAILED/
-    _UNBUILT/_UNVERIFIABLE (see the module-level constants' docstring).
+    _UNBUILT/_SKIPPED/_UNVERIFIABLE (see the module-level constants' docstring).
+
+    A chroot outside `local_chroots()` -- aarch64 (mock can't cross-build here,
+    TODO-0024), or an x86_64 chroot for a Fedora version this host's
+    SUPPORTED_FEDORA_VERSIONS no longer builds (e.g. a Copr project still
+    listing a since-dropped chroot) -- is UNVERIFIABLE either way: there is no
+    local mock row that could ever satisfy it, so it must never gate a
+    submission. Without this, a stale Copr-side chroot would score every
+    package UNBUILT forever and permanently block submission.
     """
+    buildable = local_chroots()
     coverage: dict[str, str] = {}
     for chroot in chroots:
-        if not chroot.endswith(f"-{ARCH}"):
+        if chroot not in buildable:
             coverage[chroot] = COVERAGE_UNVERIFIABLE
             continue
         entry = build_db.get_stage(pkg, "mock", chroot)
         state = entry.get("state") if entry else None
+        reason = entry.get("reason") if entry else None
         if state == "success":
             coverage[chroot] = COVERAGE_VERIFIED
         elif state == "failed":
             coverage[chroot] = COVERAGE_FAILED
+        elif state == "skipped" and reason == "config: skip":
+            coverage[chroot] = COVERAGE_SKIPPED
         else:
             coverage[chroot] = COVERAGE_UNBUILT
     return coverage
 
 
+def _project_chroots(copr_repo: str) -> tuple[list[str], bool]:
+    """Return (chroots, used_fallback) for `copr_repo` -- the live Copr API list,
+    or a same-arch fallback derived from SUPPORTED_FEDORA_VERSIONS if the API
+    couldn't be reached."""
+    chroots = get_project_chroots(copr_repo)
+    if chroots:
+        return chroots, False
+    return sorted(f"fedora-{v}-{ARCH}" for v in SUPPORTED_FEDORA_VERSIONS), True
+
+
 def print_chroot_coverage(copr_repo: str, packages: dict) -> bool:
     """Print a per-chroot local-mock coverage table before a Copr submission.
 
-    For each Copr chroot, reports how many of `packages` are verified
-    (local mock succeeded), failed, unbuilt (same arch, never tried locally),
-    or unverifiable (different arch -- aarch64 can't be mock-built here, see
-    docs/todo.md TODO-0024).
+    For each Copr chroot, reports how many of `packages` are verified (local
+    mock succeeded), failed, unbuilt (never tried locally), skipped
+    (deliberate opt-out), or unverifiable (not in `local_chroots()` -- aarch64,
+    or a Fedora version this host's SUPPORTED_FEDORA_VERSIONS no longer
+    builds, see docs/todo.md TODO-0024).
 
-    Returns False only if some same-arch chroot has any package that is
-    failed or unbuilt -- i.e. something `make full-cycle-matrix` could still
-    catch locally before submission. An all-aarch64 gap never returns False:
-    there is currently no way to close it locally, so it can't be a gate.
+    Returns False only if some locally-buildable chroot has any package that
+    is failed or unbuilt -- i.e. something `make full-cycle-matrix` could
+    still catch locally before submission. An all-unverifiable gap never
+    returns False: there is currently no way to close it locally, so it can't
+    be a gate.
     """
-    chroots = get_project_chroots(copr_repo)
-    fallback_used = False
-    if not chroots:
-        fallback_used = True
-        chroots = sorted(f"fedora-{v}-{ARCH}" for v in SUPPORTED_FEDORA_VERSIONS)
+    chroots, fallback_used = _project_chroots(copr_repo)
 
     print("\n=== Copr chroot coverage (local mock) ===")
     if fallback_used:
@@ -230,6 +264,7 @@ def print_chroot_coverage(copr_repo: str, packages: dict) -> bool:
             COVERAGE_VERIFIED: 0,
             COVERAGE_FAILED: 0,
             COVERAGE_UNBUILT: 0,
+            COVERAGE_SKIPPED: 0,
             COVERAGE_UNVERIFIABLE: 0,
         }
         for chroot in chroots
@@ -243,12 +278,15 @@ def print_chroot_coverage(copr_repo: str, packages: dict) -> bool:
     for chroot in chroots:
         counts = by_chroot[chroot]
         if counts[COVERAGE_UNVERIFIABLE]:
-            note = "not verifiable locally (aarch64, see TODO-0024)"
+            note = (
+                "not verifiable locally (aarch64, or unsupported here, see TODO-0024)"
+            )
         else:
             note = (
                 f"{counts[COVERAGE_VERIFIED]} verified, "
                 f"{counts[COVERAGE_FAILED]} failed, "
-                f"{counts[COVERAGE_UNBUILT]} unbuilt"
+                f"{counts[COVERAGE_UNBUILT]} unbuilt, "
+                f"{counts[COVERAGE_SKIPPED]} skipped"
             )
             if counts[COVERAGE_FAILED] or counts[COVERAGE_UNBUILT]:
                 ok = False
@@ -261,6 +299,101 @@ def print_chroot_coverage(copr_repo: str, packages: dict) -> bool:
             "or set REQUIRE_CHROOT_COVERAGE=true to block instead of warn."
         )
     return ok
+
+
+def ineligible_packages(copr_repo: str, packages: dict) -> dict[str, str]:
+    """Return {package: reason} for packages not yet clear to submit to Copr.
+
+    A package is eligible once every chroot in `local_chroots()` that this
+    Copr project actually builds is COVERAGE_VERIFIED or COVERAGE_SKIPPED --
+    i.e. it built cleanly (or was deliberately skipped) on every supported
+    Fedora version this host can mock-build. A Copr chroot outside
+    `local_chroots()` (aarch64, or a Fedora version this host's
+    SUPPORTED_FEDORA_VERSIONS no longer builds) never blocks -- see
+    chroot_coverage()'s docstring for why.
+    """
+    chroots, _ = _project_chroots(copr_repo)
+    reasons: dict[str, str] = {}
+    for pkg in packages:
+        verdicts = chroot_coverage(pkg, chroots)
+        bad = sorted(
+            chroot
+            for chroot, verdict in verdicts.items()
+            if verdict
+            not in (COVERAGE_VERIFIED, COVERAGE_SKIPPED, COVERAGE_UNVERIFIABLE)
+        )
+        if bad:
+            reasons[pkg] = f"not verified on: {', '.join(bad)}"
+    return reasons
+
+
+def mock_failed_packages(packages: dict, target: str) -> list[str]:
+    """Return names of packages whose mock stage ended this run in a "failed" state.
+
+    Used as the basis for gating Copr submission (see copr_blocked_packages()):
+    per-package pipelines used to submit each package to Copr as soon as its
+    own mock succeeded, so a healthy early package (e.g. hyprutils) could
+    already be public on Copr by the time a later, dependent package (e.g.
+    Hyprland) failed mock -- publishing a dependency set that doesn't
+    actually work together. See docs/bugs.md / issue #8.
+    """
+    return sorted(
+        pkg
+        for pkg in packages
+        if (build_db.get_stage(pkg, "mock", target) or {}).get("state") == "failed"
+    )
+
+
+def block_transitive_dependents(
+    names: list[str], packages: dict, all_packages: dict
+) -> dict[str, list[str]]:
+    """Map each package that must be held back -> the name(s) in `names`
+    responsible (a name maps to itself).
+
+    Scope is pure dependency-graph membership: `names` plus their transitive
+    dependents (packages that consume their RPM), not their own dependencies
+    (already published, unaffected) and not unrelated packages. Never
+    special-cased on whether a dependent's own state happened to look fine --
+    it may have built against a stale, already-published copy of a `names`
+    ancestor. See docs/todo.md TODO-0084.
+
+    Graph is built over `all_packages` (not the filtered `packages`) so
+    dependents resolve correctly on a PACKAGE=-filtered run; the result is
+    still restricted to packages actually in `packages`. The shared primitive
+    behind copr_blocked_packages() (one failed target) and stage-copr.py's
+    main() (every package ineligible_packages() marks not clear across the
+    whole matrix, not just one target).
+    """
+    if not names:
+        return {}
+    dependents = reverse_graph(build_dep_graph(all_packages))
+    blocked: dict[str, list[str]] = {}
+    for name in names:
+        blocked.setdefault(name, []).append(name)
+        for dependent in transitive_deps(name, dependents):
+            if dependent in packages:
+                blocked.setdefault(dependent, []).append(name)
+    return blocked
+
+
+def copr_blocked_packages(
+    packages: dict, all_packages: dict, target: str
+) -> dict[str, list[str]]:
+    """Map each package that must not be submitted to Copr this run -> the
+    failed package(s) responsible (a failed package maps to itself).
+
+    Scope is `target`'s mock failures plus their transitive dependents (see
+    block_transitive_dependents()). Used by `full-cycle.py`, where `target` is
+    the one chroot that invocation just built, so a single-target mock-failure
+    check is exactly right. `stage-copr.py`'s main() -- the standalone
+    submission `full-cycle-matrix` uses, spanning every chroot in the matrix,
+    not one target -- calls block_transitive_dependents() directly over
+    ineligible_packages()'s result instead of this function; see its
+    docstring.
+    """
+    return block_transitive_dependents(
+        mock_failed_packages(packages, target), packages, all_packages
+    )
 
 
 def get_build_chroots(build_id: int) -> list[dict]:

@@ -28,6 +28,16 @@ VENDOR_STORE_DIR = ROOT / ".cache" / "vendor"
 DISTRO = "fedora"
 ARCH = "x86_64"
 
+# The single container image (Containerfile) is pinned to this version -- the
+# oldest SUPPORTED_FEDORA_VERSIONS, so a `BuildRequires: X-devel >= <ver>`
+# resolved here (stage-spec.py's resolve_dep_versions()) stays satisfiable on
+# every newer supported chroot too. `stage-copr.py` submits from this target's
+# srpm row rather than the default FEDORA_VERSION's: with the rpmbuild volume
+# shared across every target (docs/FRD.md COPR-0018) every target's row points
+# at the same physical file today, but this is the one a matrix run is
+# expected to always have populated.
+CANONICAL_FEDORA_VERSION = "43"
+
 
 def get_package_log_dir(pkg_name: str) -> Path:
     """Return the build log directory for a package."""
@@ -36,8 +46,6 @@ def get_package_log_dir(pkg_name: str) -> Path:
 
 def mock_chroot(fedora_version: str) -> str:
     """Return the mock chroot name for the given Fedora version."""
-    if fedora_version == "rawhide":
-        return "fedora-rawhide-x86_64"
     return f"fedora-{fedora_version}-x86_64"
 
 
