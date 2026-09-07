@@ -5,7 +5,7 @@
 
 ![logo](https://cdn.statically.io/gh/nett00n/hyprland-copr@main/assets/logo/hyprland-copr-x4.png)
 
-![Fedora 43 Ready](https://img.shields.io/badge/Fedora-43-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF) ![Fedora 44 Ready](https://img.shields.io/badge/Fedora-44-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF) ![Fedora rawhide Ready](https://img.shields.io/badge/Fedora-rawhide-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
+![Fedora 43 Ready](https://img.shields.io/badge/Fedora-43-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF) ![Fedora 44 Ready](https://img.shields.io/badge/Fedora-44-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF) ![Fedora 45 Ready](https://img.shields.io/badge/Fedora-45-ready?style=for-the-badge&logo=fedora&logoColor=33CCFF&labelColor=1F1F1F&color=33CCFF)
 
 ![x86_64](https://img.shields.io/badge/arch-x86__64-supported?style=for-the-badge&logo=linux&logoColor=eceff4&labelColor=1F1F1F&color=a3be8c) ![aarch64](https://img.shields.io/badge/arch-aarch64-supported?style=for-the-badge&logo=arm&logoColor=eceff4&labelColor=1F1F1F&color=ebcb8b)
 
@@ -212,7 +212,7 @@ as well and make the source available. No warranty is provided
 
 ### Contributors
 
-- Vladimir nett00n Budylnikov- [github-actions[bot]](https://github.com/github-actions[bot])- Vladimir Budylnikov
+- Vladimir nett00n Budylnikov
 ---
 
 ## Additional Information
